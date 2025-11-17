@@ -31,4 +31,4 @@ Execution environment details (credentials, endpoints, infra-level settings) are
 ### Details
 [Unified Agent Contract](https://github.com/CharmAIOS/Charm/blob/main/docs/contract/uac.schema.json) (v0.1.0)
 
-[Minimal Valid UAC Object Example](https://github.com/CharmAIOS/Charm/blob/main/docs/contract/uac_sample.json)
+[Minimal Valid UAC Object Example](https://github.com/CharmAIOS/Charm/blob/main/docs/fixtures/crewai-research-agent/uac.sample.json)

@@ -8,14 +8,15 @@ SDK
 → **Renderer** → Target Profile  
 → **Loader** → Runnable StateGraph  
 
-
-### 1st Reference Route: CrewAI → LangGraph
-
 The pipeline is designed to support multiple source/target frameworks.
 
-For v0.1.0, we are focusing on a single reference route:
+## Route
+### 1st Reference Route
+For v0.1.0, we are focusing on a single reference route: CrewAI → LangGraph
 
-**CrewAI → (Parser) → UAC → (Renderer) → LangGraph Profile  
+Therefore, the current pipeline is as follows:
+
+CrewAI → (Parser) → UAC → (Renderer) → LangGraph Profile  
 → (Loader) → runnable LangGraph StateGraph
 
 This is the first end-to-end route we will implement.  

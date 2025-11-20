@@ -15,10 +15,7 @@ Charm is an open-source federated middleware that enables agents to migrate or e
 It empowers developers to compose, deploy, and scale agentic applications across diverse tools, frameworks, and platforms — all through a single unified API and a plugin-based architecture.
 
 ## Getting started
-### Learn more about Charm
-- [Basic Concepts](https://github.com/CharmAIOS/Charm/tree/main/docs/concepts)
-- [Architecture](https://github.com/CharmAIOS/Charm/blob/main/docs/ARCHITECTURE.md)
-- [Example applications](https://github.com/CharmAIOS/Charm/tree/main/docs/use-cases)
+To explore Charm’s core concepts and code in more detail, check out our [documentation](https://github.com/CharmAIOS/Charm/tree/main/docs).
 ### Installation
 
 ## Contributing

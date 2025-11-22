@@ -1,20 +1,61 @@
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
+
 from jsonschema import validate
 
+DEFAULT_SCHEMA_PATH = Path("docs/contracts/uac/schema.json")
+
+
 class CrewAIParser:
-    def __init__(self, schema_path: str = "docs/contracts/uac/schema.json"):
-        self.schema = json.loads(Path(schema_path).read_text())
+    """
+    v0 CrewAI → UAC Parser
+
+    - Dynamically loads a CrewAI fixture (agents.py)
+    - Collects Agent and Crew objects
+    - Normalizes them into a UAC dictionary
+    - Validates the output against the UAC schema
+    """
+
+    def __init__(self, schema_path: Union[str, Path] = DEFAULT_SCHEMA_PATH) -> None:
+        schema_path = Path(schema_path)
+        if not schema_path.exists():
+            raise FileNotFoundError(
+                f"UAC schema not found at {schema_path}. "
+                "Expected docs/contracts/uac/schema.json."
+            )
+        self.schema_path = schema_path
+        self.schema: Dict[str, Any] = json.loads(self.schema_path.read_text())
+
+    # ------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------
+    def parse_from_path(self, fixture_path: Union[str, Path]) -> Dict[str, Any]:
+        """
+        Convenience method for demo/testing.
+        Example:
+            parser.parse_from_path('fixtures/crewai-research-agent/agents.py')
+        """
+        module = self.load_fixture(fixture_path)
+        return self.parse(module)
 
     # ------------------------------------------------------------
     # Load CrewAI fixture dynamically
     # ------------------------------------------------------------
-    def load_fixture(self, fixture_path: str):
+    def load_fixture(self, fixture_path: Union[str, Path]) -> Any:
+        fixture_path = Path(fixture_path)
+
+        if not fixture_path.exists():
+            raise FileNotFoundError(f"CrewAI fixture not found at {fixture_path}")
+
         spec = importlib.util.spec_from_file_location("crewai_fixture", fixture_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Failed to load module spec for: {fixture_path}")
+
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        spec.loader.exec_module(module)  # type: ignore[arg-type]
+
         return module
 
     # ------------------------------------------------------------
@@ -27,25 +68,17 @@ class CrewAIParser:
 
         if not agents:
             raise ValueError("No Agent objects found in CrewAI fixture")
-        if not crew:
-            raise ValueError("No Crew object found in fixture")
+        if crew is None:
+            raise ValueError("No Crew object found in CrewAI fixture")
 
-        # -----------------------------
         # Normalize agents
-        # -----------------------------
-        uac_agents = []
-        for agent in agents:
-            uac_agents.append(self._convert_agent(agent))
+        uac_agents = [self._convert_agent(agent) for agent in agents]
 
-        # -----------------------------
-        # Normalize workflow
-        # -----------------------------
+        # Normalize workflow (v0: simple linear order)
         workflow = self._convert_workflow(crew, agents)
 
-        # -----------------------------
-        # Full UAC dict
-        # -----------------------------
-        uac = {
+        # Construct the UAC object (must match the UAC schema)
+        uac: Dict[str, Any] = {
             "uac_version": "1.0",
             "framework": "crewai",
             "agents": uac_agents,
@@ -64,10 +97,10 @@ class CrewAIParser:
     # ------------------------------------------------------------
     # Collectors
     # ------------------------------------------------------------
-    def _collect_agents(self, objects: List[Any]):
+    def _collect_agents(self, objects: List[Any]) -> List[Any]:
         return [o for o in objects if o.__class__.__name__ == "Agent"]
 
-    def _collect_crew(self, objects: List[Any]):
+    def _collect_crew(self, objects: List[Any]) -> Any:
         crews = [o for o in objects if o.__class__.__name__ == "Crew"]
         return crews[0] if crews else None
 
@@ -75,18 +108,19 @@ class CrewAIParser:
     # Agent → UAC Agent
     # ------------------------------------------------------------
     def _convert_agent(self, agent: Any) -> Dict[str, Any]:
-        name = getattr(agent, "name", "Unnamed Agent")
+        name = getattr(agent, "name", None) or getattr(agent, "role", "Unnamed Agent")
         role = getattr(agent, "role", "")
         persona = getattr(agent, "backstory", role)
         goal = getattr(agent, "goal", "")
         tools = getattr(agent, "tools", [])
+
         return {
             "id": name.lower().replace(" ", "_"),
             "persona": {
                 "name": name,
                 "description": persona,
             },
-            "goals": [goal],
+            "goals": [goal] if goal else [],
             "capabilities": [
                 {
                     "name": t.__class__.__name__,
@@ -109,16 +143,20 @@ class CrewAIParser:
         }
 
     # ------------------------------------------------------------
-    # Workflow (agents in execution order)
+    # Workflow (v0: simple sequential workflow)
     # ------------------------------------------------------------
     def _convert_workflow(self, crew: Any, agents: List[Any]) -> Dict[str, Any]:
-        agent_names = [getattr(a, "name", a.__class__.__name__) for a in agents]
-        # Build linear edges (naive but acceptable for this fixture)
-        edges = []
-        for i in range(len(agent_names) - 1):
-            edges.append({"from": agent_names[i], "to": agent_names[i + 1]})
+        agent_ids = [
+            (getattr(a, "name", None) or getattr(a, "role", a.__class__.__name__))
+            for a in agents
+        ]
+
+        edges: List[Dict[str, str]] = []
+        for i in range(len(agent_ids) - 1):
+            edges.append({"from": agent_ids[i], "to": agent_ids[i + 1]})
+
         return {
             "id": "crewai_workflow",
-            "nodes": agent_names,
+            "nodes": agent_ids,
             "edges": edges,
         }

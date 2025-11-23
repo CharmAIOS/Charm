@@ -17,6 +17,23 @@ It empowers developers to compose, deploy, and scale agentic applications across
 ## Getting started
 To explore Charm’s core concepts and code in more detail, check out our [documentation](https://github.com/CharmAIOS/Charm/tree/main/docs).
 ### Installation
+Charm is not published to PyPI yet.  
+To try the current demo from source:
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/CharmAIOS/Charm.git
+   cd Charm
+2. Create and activate a virtual environment
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+3. Install Charm in editable mode
+   ```bash 
+   pip install -e .
+4. Run the working demo
+   ```bash 
+   python -m charm.demo.run
 
 ## Contributing
 [Contributing Guidelines](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md)

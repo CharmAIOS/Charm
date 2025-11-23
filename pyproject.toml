@@ -1,0 +1,67 @@
+[metadata]
+license_file = "LICENSE"
+readme = "README.md"
+
+
+[project]
+name = "charm"
+version = "0.1.0"
+description = "A federated middleware for agentic AI"
+requires-python = ">=3.10"
+authors = [
+    {name = "Moxy Fu", email = "team@charmos.io"}
+]
+
+dependencies = [
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "mypy",
+    "pre-commit",
+]
+
+
+[tool.ruff]
+src = ["charm", "examples", "tests", "docs"]
+target-version = "py311"
+line-length = 100
+respect-gitignore = true
+
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "B",   # bugbear, common bug patterns
+    "I",   # import sorting
+]
+ignore = [
+    "E501",  # ignore line too long for now
+]
+
+
+[tool.ruff.format]
+docstring-code-format = true
+
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+show_error_codes = true
+
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--tb=short"
+

@@ -16,30 +16,19 @@ cd Charm
 3. Create and Activate a Virtual Environment
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 ``` 
-4. Install Python Dependencies
+4. Install Charm with development dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]" && pre-commit install
 ```
-5. Run the Sample Fixture
-
-Charm ships with a small CrewAI-based sample agent that we use as a fixture
-for the first route (CrewAI → LangGraph).
-
-To run the original CrewAI agent:
+5. Run the demo
 ```bash
-python docs/examples/crewai_research_agent.py
+python -m charm.demo.run
 ```
-This should:
-- Import the fixture agent from docs/fixtures/crewai-research-agent/agents.py
-- Execute the CrewAI flow using your local environment configuration
-
-6. Run the Smoke Tests
-
-Charm includes a minimal test to verify that the fixture is present and importable.
+6. Run Tests
 ```bash
-python -m pytest tests/fixtures/test_fixture_smoke.py
+pytest
 ```
 
 Useful paths when you start contributing:

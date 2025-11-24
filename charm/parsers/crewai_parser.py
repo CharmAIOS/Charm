@@ -13,9 +13,9 @@ class CrewAIParser:
     v0 CrewAI → UAC Parser
 
     - Dynamically loads a CrewAI fixture (agents.py)
-    - Collects Agent and Crew objects
-    - Normalizes them into a UAC dictionary
-    - Validates the output against the UAC schema
+    - Finds Agent and Crew objects
+    - Normalizes them into a UAC dict following Charm’s UAC schema
+    - Validates the output against schema.json
     """
 
     def __init__(self, schema_path: Union[str, Path] = DEFAULT_SCHEMA_PATH) -> None:
@@ -25,6 +25,7 @@ class CrewAIParser:
                 f"UAC schema not found at {schema_path}. "
                 "Expected docs/contracts/uac/schema.json."
             )
+
         self.schema_path = schema_path
         self.schema: Dict[str, Any] = json.loads(self.schema_path.read_text())
 
@@ -32,11 +33,6 @@ class CrewAIParser:
     # Public API
     # ------------------------------------------------------------
     def parse_from_path(self, fixture_path: Union[str, Path]) -> Dict[str, Any]:
-        """
-        Convenience method for demo/testing.
-        Example:
-            parser.parse_from_path('fixtures/crewai-research-agent/agents.py')
-        """
         module = self.load_fixture(fixture_path)
         return self.parse(module)
 
@@ -55,7 +51,6 @@ class CrewAIParser:
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)  # type: ignore[arg-type]
-
         return module
 
     # ------------------------------------------------------------
@@ -71,13 +66,9 @@ class CrewAIParser:
         if crew is None:
             raise ValueError("No Crew object found in CrewAI fixture")
 
-        # Normalize agents
         uac_agents = [self._convert_agent(agent) for agent in agents]
+        workflow = self._convert_workflow(agents)
 
-        # Normalize workflow (v0: simple linear order)
-        workflow = self._convert_workflow(crew, agents)
-
-        # Construct the UAC object (must match the UAC schema)
         uac: Dict[str, Any] = {
             "uac_version": "1.0",
             "framework": "crewai",
@@ -85,13 +76,11 @@ class CrewAIParser:
             "workflows": [workflow],
             "metadata": {
                 "source": "crewai",
-                "origin_file": getattr(fixture_module, "__file__", None),
+                "origin_file": str(getattr(fixture_module, "__file__", "")),
             },
         }
 
-        # Validate against schema
         validate(instance=uac, schema=self.schema)
-
         return uac
 
     # ------------------------------------------------------------
@@ -105,19 +94,32 @@ class CrewAIParser:
         return crews[0] if crews else None
 
     # ------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------
+    def _agent_id(self, agent: Any) -> str:
+        name = getattr(agent, "name", None) or getattr(agent, "role", "unnamed_agent")
+        return name.lower().replace(" ", "_")
+
+    # ------------------------------------------------------------
     # Agent → UAC Agent
     # ------------------------------------------------------------
     def _convert_agent(self, agent: Any) -> Dict[str, Any]:
-        name = getattr(agent, "name", None) or getattr(agent, "role", "Unnamed Agent")
+        agent_id = self._agent_id(agent)
         role = getattr(agent, "role", "")
         persona = getattr(agent, "backstory", role)
         goal = getattr(agent, "goal", "")
         tools = getattr(agent, "tools", [])
 
+        safe_attrs = {
+            k: str(getattr(agent, k))
+            for k in dir(agent)
+            if not k.startswith("_") and not callable(getattr(agent, k, None))
+        }
+
         return {
-            "id": name.lower().replace(" ", "_"),
+            "id": agent_id,
             "persona": {
-                "name": name,
+                "name": getattr(agent, "name", role),
                 "description": persona,
             },
             "goals": [goal] if goal else [],
@@ -125,38 +127,24 @@ class CrewAIParser:
                 {
                     "name": t.__class__.__name__,
                     "type": "tool",
-                    "metadata": {
-                        "origin": "crewai",
-                        "class": t.__class__.__name__,
-                    },
+                    "metadata": {"origin": "crewai", "class": t.__class__.__name__},
                 }
                 for t in tools
             ],
             "raw_framework_data": {
                 "repr": repr(agent),
-                "attributes": {
-                    k: str(getattr(agent, k))
-                    for k in dir(agent)
-                    if not k.startswith("_")
-                },
+                "attributes": safe_attrs,
             },
         }
 
     # ------------------------------------------------------------
     # Workflow (v0: simple sequential workflow)
     # ------------------------------------------------------------
-    def _convert_workflow(self, crew: Any, agents: List[Any]) -> Dict[str, Any]:
-        agent_ids = [
-            (getattr(a, "name", None) or getattr(a, "role", a.__class__.__name__))
-            for a in agents
-        ]
+    def _convert_workflow(self, agents: List[Any]) -> Dict[str, Any]:
+        node_ids = [self._agent_id(a) for a in agents]
 
-        edges: List[Dict[str, str]] = []
-        for i in range(len(agent_ids) - 1):
-            edges.append({"from": agent_ids[i], "to": agent_ids[i + 1]})
+        edges = []
+        for i in range(len(node_ids) - 1):
+            edges.append({"from": node_ids[i], "to": node_ids[i + 1]})
 
-        return {
-            "id": "crewai_workflow",
-            "nodes": agent_ids,
-            "edges": edges,
-        }
+        return {"id": "crewai_workflow", "nodes": node_ids, "edges": edges}

@@ -9,15 +9,6 @@ DEFAULT_SCHEMA_PATH = Path("docs/contracts/uac/schema.json")
 
 
 class CrewAIParser:
-    """
-    v0 CrewAI → UAC Parser
-
-    - Dynamically loads a CrewAI fixture (agents.py)
-    - Finds Agent and Crew objects
-    - Normalizes them into a UAC dict following Charm’s UAC schema
-    - Validates the output against schema.json
-    """
-
     def __init__(self, schema_path: Union[str, Path] = DEFAULT_SCHEMA_PATH) -> None:
         schema_path = Path(schema_path)
         if not schema_path.exists():

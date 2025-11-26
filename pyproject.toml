@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0","wheel"]
+build-backend = "setuptools.build_meta"
+
 [metadata]
 license_file = "LICENSE"
 readme = "README.md"
@@ -64,4 +68,8 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "--tb=short"
+
+
+[tool.setuptools.packages.find]
+include = ["charm*"]
 

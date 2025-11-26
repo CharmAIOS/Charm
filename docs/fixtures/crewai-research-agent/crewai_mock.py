@@ -20,22 +20,3 @@ class Crew:
     def __init__(self, agents=None, tasks=None):
         self.agents = agents or []
         self.tasks = tasks or []
-
-  --
-class Agent:
-    def __init__(self, role=None, goal=None, tools=None, verbose=None):
-        self.role = role
-        self.goal = goal
-        self.tools = tools or []
-        self.verbose = verbose
-
-class Task:
-    def __init__(self, description=None, expected_output=None, agent=None):
-        self.description = description
-        self.expected_output = expected_output
-        self.agent = agent
-
-class Crew:
-    def __init__(self, agents=None, tasks=None):
-        self.agents = agents or []
-        self.tasks = tasks or []

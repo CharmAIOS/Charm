@@ -9,16 +9,18 @@ DEFAULT_SCHEMA_PATH = Path("docs/contracts/uac/schema.json")
 
 
 class CrewAIParser:
-    def __init__(self, schema_path: Union[str, Path] = DEFAULT_SCHEMA_PATH) -> None:
+    def __init__(self, schema_path: Union[str, Path] = DEFAULT_SCHEMA_PATH, validate_schema: bool = True) -> None:
         schema_path = Path(schema_path)
-        if not schema_path.exists():
-            raise FileNotFoundError(
-                f"UAC schema not found at {schema_path}. "
-                "Expected docs/contracts/uac/schema.json."
-            )
+        self.validate_schema = validate_schema
+        if self.validate_schema:
+            if not schema_path.exists():
+                raise FileNotFoundError(
+                    f"UAC schema not found at {schema_path}. "
+                    "Expected docs/contracts/uac/schema.json."
+                )
 
-        self.schema_path = schema_path
-        self.schema: Dict[str, Any] = json.loads(self.schema_path.read_text())
+            self.schema_path = schema_path
+            self.schema: Dict[str, Any] = json.loads(self.schema_path.read_text())
 
     # ------------------------------------------------------------
     # Public API
@@ -71,7 +73,9 @@ class CrewAIParser:
             },
         }
 
-        validate(instance=uac, schema=self.schema)
+        if getattr(self, "validate_schema", False):
+            validate(instance=uac, schema=self.schema)
+
         return uac
 
     # ------------------------------------------------------------

@@ -2,7 +2,7 @@ from pathlib import Path
 import importlib.util
 
 # Path: fixtures/crewai-research-agent/agents.py
-FIXTURE_AGENT_PATH = Path("fixtures/crewai-research-agent/agents.py")
+FIXTURE_AGENT_PATH = Path("docs/fixtures/crewai-research-agent/agents.py")
 
 
 def test_fixture_agents_exist():

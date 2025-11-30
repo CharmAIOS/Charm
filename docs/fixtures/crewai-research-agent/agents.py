@@ -1,5 +1,5 @@
-from crewai import Agent, Task, Crew
-from crewai_tools import FileWriterTool, SerperDevTool
+from .mock.crewai import Agent, Task, Crew
+from .mock.crewai_tools import FileWriterTool, SerperDevTool
 import os
 
 os.environ["OPENAI_API_KEY"] = "<your-key>"

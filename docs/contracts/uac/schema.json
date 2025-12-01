@@ -1,324 +1,139 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://charm.ai/contracts/uac.schema.json",
-  "title": "Unified Agent Contract (UAC) v0.1.0",
-  "description": "A unified, framework-agnostic contract for representing agent definitions across CrewAI, LangGraph, and other systems.",
+  "$id": "https://charm.ai/contracts/uac.v0.2.0.schema.json",
+  "title": "Unified Agent Contract (UAC) v0.2.0",
+  "description": "Standard definition for Charm Agents, focusing on Interface Protocol, Runtime Adapter configuration, and Dependency Injection.",
   "type": "object",
-  "required": ["version", "persona", "goals", "capabilities"],
+  "required": ["version", "persona", "interface", "runtime"],
   "additionalProperties": false,
-  "patternProperties": {
-    "^x-": {}
-  },
   "properties": {
     "version": {
       "type": "string",
-      "description": "Schema version (semantic versioning)",
-      "default": "0.1.0"
+      "const": "0.2.0",
+      "description": "Contract version"
     },
+
     "persona": {
       "type": "object",
-      "required": ["name"],
+      "description": "Identity and metadata for Store display and Search",
+      "required": ["name", "description"],
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Agent's identity name"
-        },
-        "description": {
-          "type": "string",
-          "description": "Short description of the agent"
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "authors": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "license": { "type": "string" }
       }
     },
+
     "goals": {
       "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "minItems": 1,
-      "description": "High-level goals or objectives of the agent"
+      "items": { "type": "string" },
+      "description": "Semantic goals for planning and evaluation"
     },
-    "capabilities": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Semantic abilities, e.g. send_message, read_database"
-    },
-    "constraints": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Operational or ethical constraints the agent follows"
-    },
-    "tools": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "List of framework-exposed tools/plugins (e.g., notion.read_page)"
-    },
-    "prompts": {
+
+    "interface": {
       "type": "object",
-      "description": "Prompt templates used to define agent behavior",
+      "description": "The USB Protocol: Defines Inputs, Outputs, and State structure for interoperability.",
+      "required": ["input", "output"],
       "properties": {
-        "system": {
-          "type": "string"
-        },
-        "few_shots": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["role", "content"],
-            "properties": {
-              "role": {
-                "type": "string",
-                "enum": ["system", "user", "assistant"]
-              },
-              "content": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false,
-            "patternProperties": {
-              "^x-": {}
-            }
-          }
-        },
-        "templates": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "io_schemas": {
-      "type": "object",
-      "description": "I/O schemas defining expected input/output structure",
-      "properties": {
-        "inputs": {
+        "input": {
           "type": "object",
-          "description": "Input schema (JSON Schema)"
+          "description": "JSON Schema defining valid input arguments",
+          "additionalProperties": true
         },
-        "outputs": {
+        "output": {
           "type": "object",
-          "description": "Output schema (JSON Schema)"
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "model_prefs": {
-      "type": "object",
-      "description": "Model and inference preferences (optional overrides)",
-      "properties": {
-        "model": {
-          "type": "string"
+          "description": "JSON Schema defining standard output format",
+          "additionalProperties": true
         },
-        "temperature": {
-          "type": "number"
-        },
-        "max_tokens": {
-          "type": "integer"
-        },
-        "provider": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "interaction_prefs": {
-      "type": "object",
-      "description": "Preferences for multi-agent collaboration or turn-taking",
-      "properties": {
-        "turn_taking": {
-          "type": "string",
-          "enum": ["auto", "manual", "hybrid"]
-        },
-        "critique_style": {
-          "type": "string",
-          "enum": ["none", "light", "strict"]
-        },
-        "collaboration_mode": {
-          "type": "string",
-          "enum": ["single", "debate", "planner-worker"]
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "workflow": {
-      "type": "object",
-      "description": "Agent's internal workflow or execution graph definition",
-      "required": ["nodes"],
-      "properties": {
-        "nodes": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["id", "kind"],
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "kind": {
-                "type": "string",
-                "enum": ["llm", "tool", "decision", "subgraph", "opaque"],
-                "description": "Type of the node"
-              },
-              "label": {
-                "type": "string"
-              },
-              "ref": {
-                "type": "string"
-              },
-              "x-original": {
-                "type": "object",
-                "description": "Original definition snapshot for lossless preservation",
-                "properties": {
-                  "framework": {
-                    "type": "string"
-                  },
-                  "version": {
-                    "type": "string"
-                  },
-                  "raw": {}
-                },
-                "additionalProperties": true,
-                "patternProperties": {
-                  "^x-": {}
-                }
-              }
+        "state": {
+          "type": "object",
+          "description": "Schema of the persistent state. Required for Runtime to perform snapshot/resume.",
+          "properties": {
+            "format": { 
+              "type": "string", 
+              "enum": ["json", "binary", "pydantic_model"],
+              "default": "json"
             },
-            "additionalProperties": false,
-            "patternProperties": {
-              "^x-": {}
+            "schema": { "type": "object", "description": "Structure of the state object" }
+          }
+        }
+      }
+    },
+
+    "runtime": {
+      "type": "object",
+      "description": "Configuration for the Charm Runtime Adapter and Dependency Injection.",
+      "required": ["adapter"],
+      "properties": {
+        "adapter": {
+          "type": "object",
+          "description": "How to load and wrap the underlying agent.",
+          "required": ["type", "entry_point"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["langchain", "crewai", "llamaindex", "autogen", "charm_native", "custom"],
+              "description": "Which SDK adapter to use."
+            },
+            "entry_point": {
+              "type": "string",
+              "description": "Path to the agent object. e.g., 'src.my_agent:crew_instance'"
+            },
+            "environment_variables": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Required env vars (keys only) that Runtime must ensure exist."
             }
           }
         },
-        "edges": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["from", "to"],
-            "properties": {
-              "from": {
-                "type": "string"
-              },
-              "to": {
-                "type": "string"
-              },
-              "condition": {
-                "type": "string"
-              }
+        "injections": {
+          "type": "object",
+          "description": "Resources the agent expects the Runtime to inject.",
+          "properties": {
+            "llm_client": { 
+              "type": "boolean", 
+              "default": true, 
+              "description": "If true, Runtime injects a configured LLM client (standardized auth)."
             },
-            "additionalProperties": false,
-            "patternProperties": {
-              "^x-": {}
+            "tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of standard Charm Tools (IDs) to be injected. e.g. ['google-search', 'stripe-payment']"
+            },
+            "memory_store": {
+              "type": "boolean",
+              "description": "If true, Runtime injects a connection to the Charm Vector Store."
             }
           }
-        },
-        "entry": {
-          "type": "string"
-        },
-        "exits": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
       }
     },
+
     "policies": {
       "type": "object",
-      "description": "Governance and fallback policies controlling runtime decisions",
+      "description": "Governance rules enforced by the Runtime Wrapper.",
       "properties": {
-        "allow_degradation": {
-          "type": "boolean",
-          "default": true
-        },
-        "fallback_strategy": {
-          "type": "string",
-          "enum": ["via_secure_wrapper", "manual_confirmation", "skip"],
-          "default": "via_secure_wrapper"
-        },
-        "require_human_on_irreversible_actions": {
-          "type": "boolean",
-          "default": true
-        },
-        "require_equivalence": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Capabilities that must be strictly equivalent"
-        },
-        "allowed_degradations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["capability", "max_level"],
-            "properties": {
-              "capability": {
-                "type": "string"
-              },
-              "max_level": {
-                "type": "string",
-                "enum": ["minor", "moderate"]
-              }
-            },
-            "additionalProperties": false,
-            "patternProperties": {
-              "^x-": {}
-            }
+        "allow_internet_access": { "type": "boolean", "default": true },
+        "human_in_the_loop": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "triggers": { "type": "array", "items": { "type": "string" } }
           }
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
+        },
+        "max_steps": { "type": "integer", "default": 20 },
+        "budget_limit": { "type": "number", "description": "Max USD cost per run" }
       }
     },
-    "mapping_hints": {
+
+    "workflow": {
       "type": "object",
-      "description": "Hints for target framework selection or exclusion",
+      "description": "(Optional) Descriptive graph for observability. Not used for execution in Wrapper mode.",
       "properties": {
-        "target_framework_preference": {
-          "type": "string"
-        },
-        "disallow_targets": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "notes": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
+        "nodes": { "type": "array", "items": { "type": "object" } },
+        "edges": { "type": "array", "items": { "type": "object" } }
       }
     }
   }

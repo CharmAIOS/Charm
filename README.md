@@ -4,15 +4,21 @@
 
 <p align="center">
   <a href="https://github.com/CharmAIOS/Charm/tree/main/docs">Documentation</a> ·
-  <a href="https://github.com/CharmAIOS/Charm/tree/main/docs/use-cases">Examples</a> ·
   <a href="https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md">Contributing</a> ·
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 
-# Charm: Open-Source Federated Middleware for AI Agents
-Charm is an open-source federated middleware that enables agents to migrate or extend into different Agentic Development Environments while maintaining synchronized states and resumable task flows.
+# Charm: The Unified System Layer for Agentic Intelligence
+> **Current Status: v0.2.0 (Developer Preview)**
+>
+> v0.2.0 focuses on the **Development Layer**, providing a lightweight Adapter SDK and the Unified Agent Contract (UAC) to turn existing agents into Universal Charm Agents.
 
-It empowers developers to compose, deploy, and scale agentic applications across diverse tools, frameworks, and platforms — all through a single unified API and a plugin-based architecture.
+**Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents. It eliminates ecosystem fragmentation by providing a standardized architecture for agents to interoperate, scale, and collaborate across diverse frameworks and platforms.
+
+---
+
+## Why Charm?
+Before you dive deeper, we’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective
 
 ## Getting started
 To explore Charm’s core concepts and code in more detail, check out our [documentation](https://github.com/CharmAIOS/Charm/tree/main/docs).

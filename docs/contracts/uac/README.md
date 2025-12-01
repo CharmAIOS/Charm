@@ -1,61 +1,64 @@
-## Charm Unified Agent Contract Specification
+## Charm Unified Agent Contract (UAC) Specification v0.2.0
 
-The Unified Agent Contract (UAC) is Charm’s cross-framework semantic contract that defines a neutral, portable, framework-agnostic representation of an agent.
+The Unified Agent Contract (UAC) is Charm’s cross-framework semantic standard. It defines a neutral, portable, and framework-agnostic representation of an agent.
 
-It serves as the central contract that Charm uses to:
-- Serialize an agent into a standardized semantic format
-- Preserve all information needed for portability across frameworks
-- Enable deterministic rendering into multiple target runtimes
-- Maintain cross-framework consistency for workflow structure, capabilities, and execution semantics
-
+The UAC serves as the central contract that allows Charm to:
+- Standardize: Define an agent's interface, state schema, and dependencies in a unified semantic format.
+- Bridge: Provide the necessary metadata for Charm Adapters to wrap and execute agents from heterogeneous frameworks.
+- Distribute: Serve as the canonical manifest for the Charm Registry, enabling agents to be versioned, discovered, and governed.
 ### Objectives
 
-- Semantic Neutral Layer: Provide a neutral agent definition independent of any framework or runtime.
-- Portability and Mapping:  Serves as the basis for transformations performed by the agent parser and renderer.
-- Registry: UAC also serves as the canonical definition stored in Charm’s Registry, allowing agents to be versioned, synchronized, and redistributed across ecosystems
+- Semantic Neutrality: To provide a universal definition layer independent of any specific underlying framework or runtime implementation.
+- Interoperability Base: To serve as the source of truth for the Charm Runtime, guiding how adapters should load agents and inject dependencies.
+- Registry & Governance: To allow agents to be packaged, synchronized, and redistributed across ecosystems with clear permission boundaries.
 
-Charm treats the following as part of an agent’s portable contract:
-- Definition: persona, goals, capabilities, workflow (nodes + edges), policies
-- Portable configuration: model preferences, interaction style, tools, and mapping hints
+### Contract Scope
 
-Execution environment details (credentials, endpoints, infra-level settings) are **not** part of the UAC and are bound at runtime via Charm’s bridge and target loaders.
+Charm treats the UAC as a **declarative description** of the agent.
+#### Included in the Contract (Portable)
+* Identity (`persona`): Agent name, description, authors, license, and metadata.
+* Interface Protocol (`interface`):
+    * I/O definitions (Input/Output JSON Schemas).
+    * Persistent State structure (for snapshotting and restoration).
+* Runtime Configuration (`runtime`):
+    * Adapter Selection: Specifies which SDK adapter to use (e.g., `charm.adapters.crewai`).
+    * Dependency Injection: Explicitly declares required resources (e.g., `tools`, `llm_client`) to be injected by the runtime.
+* Governance (`policies`): Permission scopes, human-in-the-loop triggers, and resource limits.
+* Observability (`workflow`): Descriptive graphs (nodes + edges) for visualization and documentation.
+
+#### Excluded from the Contract (Runtime Bound)
+* Execution Environment: API keys, secrets, specific endpoint URLs, and infrastructure-level settings are **NOT** part of the UAC. These are bound dynamically at runtime via the Charm Bridge / Environment Variables.
 
 ### Design Principles
 
-1. Core Descriptive Set: Defines the core semantic structure shared by all agents.
-2. Optional Submodules: Additional layers designed for agents with different input types (e.g., prompt-based agents or graph-based multi-agent systems).
-3. Extensible Namespace: Any field can be extended via x-namespace.
-4. Unknown Node Handling: When the source framework contains nodes that are currently unsupported or cannot be equivalently converted, mark them and use x-original to preserve the complete original definition segment for future processing.
-5. Equivalence and degradation annotations: The conversion process should indicate support levels such as fully equivalent, unsupported, etc.
+1.  Core Descriptive Set: Defines the fundamental semantic structure shared by all agents (Identity, Interface, Adapter).
+2.  Dependency Injection First: The contract explicitly declares *what* the agent needs (e.g., "Google Search Tool"), leaving the *how* (actual API client instantiation) to the Charm Runtime.
+3.  Extensible Namespace: Any field can be extended via `x-namespace` properties to support framework-specific metadata without breaking the standard.
+4.  Descriptive Observability: For black-box agents (e.g., compiled binaries or complex code), the internal workflow graph serves as a documentation layer for observability, rather than an execution instruction.
 
 ### Versioning & Compatibility Policy
 
-- Every UAC must include a version field
-- New fields should be optional by default to maintain backward compatibility
-- For breaking changes:
-    - Bump the major version
-    - Provide an upgrader script to migrate older contracts
+* Semantic Versioning: Every UAC file must include a `version` field.
+* Backward Compatibility: New fields are optional by default.
+* Breaking Changes: Major version bumps require an upgrader script or migration guide for older contracts.
 
 ### Important Clarification
 
-The UAC is not a runtime object and does not contain executable code. It is a cross-framework semantic contract.
+> The UAC is a semantic contract, not executable code.
 
-A UAC may contain:
-- One agent (most cases)
-- Multiple agents (when the source framework defines a multi-agent system)
+* It does not contain the agent's logic.
+* It is not a packaging system.
+* It **mirrors and describes** the structure of the source agent, telling the Charm Runtime how to interact with it.
 
-But UAC is not a packaging or bundling system.
+#### Structure Mapping Examples
 
-It simply mirrors the source framework’s structure.
-
-Examples:
-|Source Framework|UAC Structure|
-|--------|-------------------------------------------------------------------------------------------------------|
-| CrewAI   | UAC.agents = list of agents   |
-| LangChain      |  UAC.agents = 1 |
-| Single-file custom agent     | UAC.agents = 1 |
+| Source Framework | UAC Runtime Configuration |
+| :--- | :--- |
+| **CrewAI** | Specifies `adapter.type = "crewai"`. Runtime loads the Crew structure and injects tools via the adapter. |
+| **LangChain** | Specifies `adapter.type = "langchain"`. Runtime wraps the Chain/Graph and maps the state schema. |
+| **Custom Code** | Specifies `adapter.type = "custom"`. Runtime loads the specified python class entry point. |
 
 ### Details
-[Unified Agent Contract](https://github.com/CharmAIOS/Charm/blob/main/docs/contract/uac.schema.json) (v0.1.0)
+[Unified Agent Contract](https://github.com/CharmAIOS/Charm/blob/main/docs/contract/uac.schema.json) (v0.2.0)
 
 [Minimal Valid UAC Object Example](https://github.com/CharmAIOS/Charm/blob/main/docs/fixtures/crewai-research-agent/uac.sample.json) (CrewAI)

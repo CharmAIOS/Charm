@@ -37,20 +37,20 @@ graph LR
         end
     end
 
-    Dev_A -->|1. Publish UAC| Catalog_Agent
-    Dev_B -->|1. Publish UTC| Catalog_Tool
-    Dev_C -->|1. Publish UAC| Catalog_Sub
+    Dev_A -->|Publish UAC| Catalog_Agent
+    Dev_B -->|Publish UTC| Catalog_Tool
+    Dev_C -->|Publish UAC| Catalog_Sub
 
-    Catalog_Agent ==>|2. User Installs| Agent_Instance
+    Catalog_Agent ==>|User Installs| Agent_Instance
     
     Catalog_Agent -.->|declares dependency| Catalog_Tool
     Catalog_Agent -.->|declares dependency| Catalog_Sub
     
-    Catalog_Tool -->|3. Auto-Download| Tool_Instance
-    Catalog_Sub -->|3. Auto-Download| Sub_Instance
+    Catalog_Tool -->|Auto-Download| Tool_Instance
+    Catalog_Sub -->|Auto-Download| Sub_Instance
 
-    Tool_Instance -->|4. Inject| Agent_Instance
-    Sub_Instance -->|4. Inject| Agent_Instance
+    Tool_Instance -->|Inject| Agent_Instance
+    Sub_Instance -->|Inject| Agent_Instance
 
     class Dev_A,Dev_B,Dev_C dev;
     class Catalog_Agent,Catalog_Tool,Catalog_Sub store;

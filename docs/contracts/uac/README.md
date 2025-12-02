@@ -59,6 +59,4 @@ Charm treats the UAC as a **declarative description** of the agent.
 | **Custom Code** | Specifies `adapter.type = "custom"`. Runtime loads the specified python class entry point. |
 
 ### Details
-[Unified Agent Contract](https://github.com/CharmAIOS/Charm/blob/main/docs/contract/uac.schema.json) (v0.2.0)
-
-[Minimal Valid UAC Object Example](https://github.com/CharmAIOS/Charm/blob/main/docs/fixtures/crewai-research-agent/uac.sample.json) (CrewAI)
+Unified Agent Contract (v0.2.0)

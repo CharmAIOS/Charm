@@ -1,24 +1,24 @@
 [build-system]
-requires = ["setuptools>=61.0","wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[metadata]
-license_file = "LICENSE"
-readme = "README.md"
-
-
 [project]
-name = "charm"
-version = "0.1.0"
-description = "A federated middleware for agentic AI"
+name = "charmos" 
+version = "0.2.0"
+description = "The Unified System Layer for Agentic Intelligence"
+readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    {name = "Moxy Fu", email = "team@charmos.io"}
+    {name = "ucmind", email = "team@charmos.io"}
 ]
 
 dependencies = [
+    "pydantic>=2.0.0", 
 ]
 
+[project.urls]
+Homepage = "https://charmos.io"
+Repository = "https://github.com/CharmAIOS/Charm"
 
 [project.optional-dependencies]
 dev = [
@@ -28,48 +28,24 @@ dev = [
     "pre-commit",
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
-src = ["charm", "examples", "tests", "docs"]
+src = ["src", "examples", "tests", "docs"]
 target-version = "py311"
 line-length = 100
-respect-gitignore = true
-
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "B",   # bugbear, common bug patterns
-    "I",   # import sorting
-]
-ignore = [
-    "E501",  # ignore line too long for now
-]
-
-
-[tool.ruff.format]
-docstring-code-format = true
-
+select = ["E", "F", "B", "I"]
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
 check_untyped_defs = true
-warn_unused_ignores = true
-show_error_codes = true
-
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
 addopts = "--tb=short"
-
-
-[tool.setuptools.packages.find]
-include = ["charm*"]
-

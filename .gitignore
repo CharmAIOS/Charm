@@ -1,42 +1,43 @@
-
-# OS / Editor junk
-.DS_Store
-.idea/
-.vscode/
-*.swp
-
-# Python cache / build artifacts
+# --- Python build & runtime ---
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+.eggs/
 dist/
 build/
-.eggs/
+develop-eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
 
-# Virtual environments
+# --- Environments ---
 .venv/
 venv/
 env/
 ENV/
 
-# Notebook
-.ipynb_checkpoints/
+# --- IDE & OS ---
+.idea/
+.vscode/
+.DS_Store
+*.swp
 
-# Notebook temporary outputs
-*/**/*.png
-*/**/*.jpg
-*/**/*.jpeg
-
-# Tooling cache
+# --- Tooling Cache ---
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Logs / temp
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Charm Specific ---
 *.log
 *.tmp
-
-# Project-specific folders
-# (Only ignore things that are SAFE)
 assets/*

@@ -19,7 +19,7 @@ To achieve a fully governed System Layer, Charm defines four key contracts:
 
 3.  **Interaction & Error Contract (IEC)** `[Planned]`
     * **Purpose:** Standardizes error codes, interrupt signals, and state handoff protocols.
-    * **Role:** Ensures the runtime can handle failures gracefully and manage "Human-in-the-Loop" (HITL) interactions across different frameworks.
+    * **Role:** Ensures the runtime can handle failures gracefully and manage HITL interactions across different frameworks.
 
 4.  **Workflow Composition Contract (WCC)** `[Planned]`
     * **Purpose:** Defines how multiple agents are chained or orchestrated into a larger system.

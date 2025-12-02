@@ -1,12 +1,8 @@
 # Charm – Dev Setup Guide
 
-This document helps you get a local Charm dev environment running and verify
-that the first fixture-based flow works end-to-end.
-
 1. Prerequisites
 - Python **3.10+**
 - `git`
-- Recommended: a virtual environment tool (`python -m venv`, `conda`, or similar)
 
 2. Fork & Clone the Repository
 ```bash
@@ -20,19 +16,13 @@ source .venv/bin/activate
 ``` 
 4. Install Charm with development dependencies
 ```bash
-pip install -e ".[dev]" && pre-commit install
+pip install -e ".[dev]"
 ```
 5. Run the demo
 ```bash
-python -m charm.demo.run
+python src/charm/demo/demo_mock.py  # python -m charm.demo.demo_mock
 ```
 6. Run Tests
 ```bash
 pytest
 ```
-
-Useful paths when you start contributing:
-- docs/fixtures/crewai-research-agent
-- tests/fixtures/test_fixture_smoke.py
-- docs/pipeline.md
-- docs/contracts/uac

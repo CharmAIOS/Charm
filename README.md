@@ -8,17 +8,19 @@
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 
-# Charm: The Unified System Layer for Agentic Intelligence
+# Charm: The Operating System for Agentic Intelligence
+
 > **Current Status: v0.2.0 (Developer Preview)**
 >
-> v0.2.0 focuses on the **Development Layer**, providing a lightweight Adapter SDK and the Unified Agent Contract (UAC) to turn existing agents into Universal Charm Agents.
+> We are building the **Universal Interface Protocol**.
+> v0.2.0 focuses on the **Development Layer**, providing the **Unified Agent Contract (UAC)** and **Wrapper SDK** to turn existing agents into Universal Charm Agents.
 
 **Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents. It eliminates ecosystem fragmentation by providing a standardized architecture for agents to interoperate, scale, and collaborate across diverse frameworks and platforms.
 
 ---
 
 ## Why Charm?
-Before you dive deeper, we’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective
+Before you dive deeper, we’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective.
 
 ## Getting started
 To explore Charm’s core concepts and code in more detail, check out our [documentation](https://github.com/CharmAIOS/Charm/tree/main/docs).
@@ -39,7 +41,7 @@ To try the current demo from source:
    pip install -e .
 4. Run the working demo
    ```bash 
-   python -m charm.demo.run
+   python src/charm/demo/demo_mock.py  # python -m charm.demo.demo_mock
 
 ## Contributing
 [Contributing Guidelines](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md)

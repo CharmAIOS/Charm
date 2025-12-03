@@ -3,12 +3,28 @@
 Thanks for your interest in Charm!
 
 ## Current Development Focus
+
+You can read the v0.2.0 overview to understand our current goals, and we are primarily focused on:
+
 1. Refining the UAC: Polishing the uac.v0.2.0.schema.json to ensure it can fully describe a target agent without ambiguity.
 2. Implementing the SDK Core: Build the CharmWrapper and CharmLoader classes.
 3. Developing Reference Adapters: Create robust adapters for agents from various sources.
 4. Schema Validation Logic: Implement Pydantic models to strictly validate charm.yaml files at runtime.
 
-Contributions related to this are highly welcome. If you want to help in one of these areas, comment under the relevant GitHub Issue or @ucmind in Discussions.
+Contributions related to this are highly welcome.
+
+We’d love to gather any feedback you have on our feature modules — for example:
+	•	Does the contract cover your agent’s configuration needs?
+	•	Are there specific frameworks you’d like to see adapted next?
+
+Let us know what you think.
+
+If you’re interested in contributing to the core features and architecture of Charm, we’re actively looking for new team members.
+
+Feel free to email us
+
+## What's next
+You can refer to our v1 roadmap if you want to know more about our overall development direction.
 
 ## How to Contribute
 1. Fork the repository.

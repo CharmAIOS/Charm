@@ -60,3 +60,5 @@ Charm treats the UAC as a **declarative description** of the agent.
 
 ### Details
 Unified Agent Contract (v0.2.0)
+Unified Agent Contract (v0.2.1) # Add fields related to the store
+Sample charm.yaml

@@ -1,0 +1,97 @@
+version: "0.2.1"
+
+persona:
+  name: "SaaS Project Architect"
+  description: "Analyzes project PDFs, conducts market research, and generates boilerplate code."
+
+  full_description: |
+    # SaaS Project Architect
+    A comprehensive AI crew that automates the initial phase of software development.
+    
+    ## Features
+    - **Analysis:** Extracts insights from project PDFs.
+    - **Research:** Finds open-source tools and datasets via Google & GitHub.
+    - **Coding:** Generates project structure, API clients, and tests.
+  
+  authors: ["Team Charm"]
+  tags: ["analysis", "coding", "research", "crewai"]
+  license: "MIT"
+  
+
+  assets:
+    icon: "" 
+    banner: ""
+    screenshots: []
+
+
+pricing:
+  type: "free"
+  amount: 0
+  currency: "USD"
+
+
+goals:
+  - "Analyze project documents to identify risks and opportunities"
+  - "Locate high-quality resources and tools"
+  - "Generate production-ready boilerplate code"
+
+
+interface:
+  input:
+    type: "object"
+    required: ["project_content", "project_name"]
+    properties:
+      project_name:
+        type: "string"
+        title: "Project Name"
+        description: "The name of the SaaS project."
+      project_content:
+        type: "string"
+        title: "Project Document Content"
+        description: "The full text content extracted from the PDF."
+        x-ui-widget: "textarea" # UI Hint: 生成大輸入框
+      technology_stack:
+        type: "string"
+        title: "Preferred Tech Stack"
+        description: "(Optional) Specific technologies to use."
+  
+  output:
+    type: "object"
+    description: "Execution summary and paths to generated artifacts."
+    properties:
+      status: { type: "string" }
+      summary: { type: "string" }
+
+  state:
+    format: "json"
+    schema:
+      type: "object"
+      description: "CrewAI internal memory and task state"
+
+runtime:
+  adapter:
+    type: "crewai"
+    entry_point: "src.agent:crew"
+    
+    environment_variables:
+      - "OPENAI_API_KEY"
+      - "GITHUB_TOKEN"
+      - "LINKUP_API_KEY"
+      - "EXA_API_KEY"
+
+  injections:
+    llm_client: true
+    
+    tools:
+      - "google-search"   # Assuming it replaces SerperDevTool
+      - "github-search"   # Assuming it replaces GithubSearchTool
+      - "file-writer"     # Assuming it replaces FileWriterTool
+      - "linkup-search"   # Assuming it replaces LinkupSearchTool
+      - "exa-search"      # Assuming it replaces EXASearchTool
+
+policies:
+  allow_internet_access: true
+  allow_file_system_write: true 
+  
+  max_steps: 50
+  budget_limit: 5.0

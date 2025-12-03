@@ -14,14 +14,12 @@ You can read the v0.2.0 overview to understand our current goals, and we are pri
 Contributions related to this are highly welcome.
 
 We’d love to gather any feedback you have on our feature modules — for example:
-	•	Does the contract cover your agent’s configuration needs?
-	•	Are there specific frameworks you’d like to see adapted next?
+- Does the contract cover your agent’s configuration needs?
+- Are there specific frameworks you’d like to see adapted next?
 
 Let us know what you think.
 
-If you’re interested in contributing to the core features and architecture of Charm, we’re actively looking for new team members.
-
-Feel free to email us
+If you’re interested in contributing to the core features and architecture of Charm, we’re actively looking for team members, feel free to email us!
 
 ## What's next
 You can refer to our v1 roadmap if you want to know more about our overall development direction.

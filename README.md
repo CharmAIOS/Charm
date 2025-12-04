@@ -8,7 +8,7 @@
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 
-# Charm: The Operating System for Agentic Intelligence
+# Charm: The Unified Platform for Agentic Intelligence
 
 > **Current Status: v0.2.0 (Developer Preview)**
 >

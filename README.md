@@ -15,7 +15,9 @@
 > We are building the **Universal Interface Protocol**.
 > v0.2.0 focuses on the **Development Layer**, providing the **Unified Agent Contract (UAC)** and **Wrapper SDK** to turn existing agents into Universal Charm Agents.
 
-**Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents. It eliminates ecosystem fragmentation by providing a standardized architecture for agents to interoperate, scale, and collaborate across diverse frameworks and platforms.
+**Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents.
+
+It provides a standardized architecture that enables agents to interoperate, scale, and evolve across heterogeneous ecosystems, turning them into real, commercial-ready applications.
 
 ---
 

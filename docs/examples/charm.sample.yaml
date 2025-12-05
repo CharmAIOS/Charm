@@ -81,7 +81,7 @@ runtime:
 
   injections:
     llm_client: true
-    
+    # This field should currently be empty
     tools:
       - "google-search"   # Assuming it replaces SerperDevTool
       - "github-search"   # Assuming it replaces GithubSearchTool

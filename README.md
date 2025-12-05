@@ -17,7 +17,7 @@
 
 **Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents.
 
-It provides a standardized architecture that enables agents to interoperate, scale, and evolve across heterogeneous ecosystems, turning them into real, commercial-ready applications.
+It provides a standardized architecture that enables agents to assemble, interoperate, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
 
 ---
 
@@ -46,7 +46,7 @@ To try the current demo from source:
    python src/charm/demo/demo_mock.py  # python -m charm.demo.demo_mock
 
 ## Contributing
-[Contributing Guidelines](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md)
+To learn how to contribute to Charm, please read the contribution guide [here](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).
 
 ## Contact
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)

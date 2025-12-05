@@ -10,7 +10,7 @@ In v1.0, users will be able to:
 - Interact with all agents through a unified frontend interface.
 
 ### Where We Are (v0.2.0)
-Current Status: Building the "Universal Interface"
+Current Status: Building the **Universal Interface**
 
 We introduce a standard packaging format that defines how agents are wrapped and executed on Charm (much like the `.ipa` and `.apk`)
 
@@ -24,7 +24,7 @@ Charm SDK: The wrapper that lets agents run via a standard interface.
 To reach the v1.0 launch, we have broken down our roadmap into four distinct stages:
 
 #### Phase 1: The Foundation (Current Focus)
-
+See [here](https://github.com/CharmAIOS/Charm/blob/main/docs/concepts/v0.2.0.md) for details.
 #### Phase 2: The Distribution Layer
 building the Registry—the index of the Charm ecosystem.
 
@@ -60,6 +60,6 @@ Universal Chat Interface: A chat UI that dynamically renders inputs based on the
 
 ## Beyond v1.0: Unlocking System-Level Composability
 
-Our v1 release prioritizes the Distribution Layer, delivering the first end-to-end "App Store" experience to help agents achieve immediate value realization and market reach. 
+Our v1 release prioritizes the **Distribution**, delivering the first end-to-end **Agent Store** experience to help agents achieve immediate value realization and market reach. 
 
-Looking beyond v1, we plan to expand into Ecosystem Aggregation, introducing features like CharmTools and Agent-as-a-Tool, allowing any agent to seamlessly utilize external capabilities and other agents from the ecosystem as modular building blocks.
+Looking beyond v1, we plan to expand into **Ecosystem Aggregation**, introducing features like **CharmTools** and **Agent-as-a-Tool**, allowing any agent to seamlessly utilize external capabilities and other agents from the ecosystem as modular building blocks.

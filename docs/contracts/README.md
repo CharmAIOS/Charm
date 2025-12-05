@@ -7,11 +7,11 @@ A contract in Charm is not a data model or internal struct. It is a formal inter
 Charm Contracts define neutral agent representations, execution envelopes, adapter configurations, and error semantics, ensuring that Charm can govern and orchestrate heterogeneous ecosystems.
 
 ### Contract Suite Roadmap
-To achieve a fully governed System Layer, Charm defines four key contracts:
+Charm defines four key contracts:
 
 1.  **Unified Agent Contract (UAC)** `[Active v0.2.0]`
     * **Purpose:** Defines the agent's identity, interface protocol, and runtime adapter configuration.
-    * **Role:** The "Driver Descriptor" that allows Charm to load and wrap any agent.
+    * **Role:** The **Driver Descriptor** that allows Charm to load and wrap any agent.
 
 2.  **Unified Tool Contract (UTC)** `[Planned]`
     * **Purpose:** Standardizes the definition of external tools (APIs, databases) and their authentication requirements.
@@ -30,7 +30,7 @@ To achieve a fully governed System Layer, Charm defines four key contracts:
 > **Status Note:**
 > In the current **v0.2.0 Developer Preview**, only the **UAC** is active and enforced.
 >
-> **Note on Stability:** The **UTC, IEC, and WCC** are **provisional specifications** and are subject to change based on community feedback. We welcome contributions and RFCs to help shape these standards.
+> **Note on Stability:** The **UTC, IEC, and WCC** are **provisional specifications** and are subject to change based on community feedback. We welcome everyone to help shape these standards.
 
 
 

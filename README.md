@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://charmos.io/">Homepage</a> ·
   <a href="https://github.com/CharmAIOS/Charm/tree/main/docs">Documentation</a> ·
   <a href="https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md">Contributing</a> ·
   <a href="https://discord.gg/gdakynHUEb">Discord</a>

@@ -71,7 +71,7 @@ interface:
 runtime:
   adapter:
     type: "crewai"
-    entry_point: "src.agent:crew"
+    entry_point: "crewai_research_agent:crew"
     
     environment_variables:
       - "OPENAI_API_KEY"

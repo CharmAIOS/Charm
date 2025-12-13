@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "charmos" 
+name = "charmos"
 version = "0.3.0"
 description = "The Unified System Layer for Agentic Intelligence"
 readme = "README.md"
@@ -13,22 +13,15 @@ authors = [
 ]
 
 dependencies = [
-<<<<<<< HEAD
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "httpx>=0.25.0",
+    "tomlkit>=0.12.0",
     "pydantic>=2.0.0",
     "pyyaml>=6.0",
-    "typer[all]>=0.9.0",
-    "tomlkit>=0.12.0",
+    "supabase>=2.0.0",
     "gitpython>=3.1.0",
-    "httpx>=0.24.0",
-    "rich>=14.2.0",
-=======
-    "pydantic>=2.0.0", 
-    "pyyaml>=6.0",
-    "typer[all]>=0.9.0", 
-    "tomlkit>=0.12.0", 
-    "gitpython>=3.1.0", 
-    "httpx>=0.24.0"
->>>>>>> origin/main
+    "python-dotenv>=1.0.0",
 ]
 
 [project.urls]
@@ -66,8 +59,10 @@ python_files = "test_*.py"
 addopts = "--tb=short"
 
 [project.scripts]
-<<<<<<< HEAD
 charm = "charm.cli.app:app"
-=======
-charm = "charm.cli.app:app"
->>>>>>> origin/main
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+]

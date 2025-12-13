@@ -6,10 +6,13 @@ class GitError(Exception):
     pass
 
 def get_repo_info(project_path: Path) -> Dict[str, str]:
+<<<<<<< HEAD
+=======
     """
     偵測並提取 Git 儲存庫資訊 (URL, Branch, Commit)。
     如果不是 Git Repo 或沒有 Remote，會拋出錯誤。
     """
+>>>>>>> origin/main
     try:
         repo = git.Repo(project_path, search_parent_directories=True)
     except git.exc.InvalidGitRepositoryError:

@@ -30,8 +30,30 @@ You can refer to our [v1 roadmap](https://github.com/CharmAIOS/Charm/blob/main/d
 - Why it’s needed
 - How reviewers can validate the update
 
-## Getting Started
-See [this](https://github.com/CharmAIOS/Charm/blob/main/docs/dev_setup.md) for detailed setup instructions.
+## Dev Setup
+1. Prerequisites
+- Python **3.10+**
+- `git`
+- [uv](https://github.com/astral-sh/uv)
+
+2. Fork & Clone
+```bash
+git clone https://github.com/CharmAIOS/Charm.git
+cd Charm
+```   
+3. Create virtual environment
+```bash
+uv venv
+source .venv/bin/activate
+``` 
+4. Install
+```bash
+uv pip install -e ".[dev]"
+```
+5. Run Tests
+```bash
+pytest
+```
 
 ## Issues, Bugs, and Feature Requests
 1. Report bugs or suggest features under [Issues](https://github.com/CharmAIOS/Charm/issues/new/choose).

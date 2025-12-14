@@ -38,10 +38,6 @@ cd my-agent
 uv add charmos
 # Requires Python 3.10+
 ```
-3. Use the CLI
-```bash
-uv run charm auth login
-```
 #### Standard Pip Setup
 1. Create a project folder
 ```bash

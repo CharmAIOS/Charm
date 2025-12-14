@@ -1,4 +1,4 @@
-## Charm v0.2.0: The Universal Interface
+## Charm SDK: The Universal Interface
 
 ### The Objective
 
@@ -34,13 +34,3 @@ Scope:
 Definition: The translation layer for specific sources.
 
 Purpose: Ensures that the Wrapper architecture is truly polymorphic and capable of handling different execution paradigms (e.g., task-based vs. graph-based).
-
-
-### Scope & Boundaries
-To ensure a focused release, we are setting clear boundaries for v0.2.0:
-
-In Scope:
-
-- Local Execution: Running agents on a developer's local machine via the SDK.
-- Stateless Interactions: Single-turn or ephemeral multi-turn conversations.
-- Public Interfaces: Standardizing how data enters and leaves the agent.

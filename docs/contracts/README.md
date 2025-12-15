@@ -9,7 +9,7 @@ Charm Contracts define neutral agent representations, execution envelopes, adapt
 ### Contract Suite Roadmap
 Charm defines four key contracts:
 
-1.  **Unified Agent Contract (UAC)** `[Active v0.2.0]`
+1.  **Unified Agent Contract (UAC)** `[Active v0.4.0]`
     * **Purpose:** Defines the agent's identity, interface protocol, and runtime adapter configuration.
     * **Role:** The **Driver Descriptor** that allows Charm to load and wrap any agent.
 
@@ -28,7 +28,7 @@ Charm defines four key contracts:
 ---
 
 > **Status Note:**
-> In the current **v0.2.0 Developer Preview**, only the **UAC** is active and enforced.
+> In the current **v0.4.0 Developer Preview**, only the **UAC** is active and enforced.
 >
 > **Note on Stability:** The **UTC, IEC, and WCC** are **provisional specifications** and are subject to change based on community feedback. We welcome everyone to help shape these standards.
 

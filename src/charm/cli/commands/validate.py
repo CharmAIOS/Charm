@@ -43,7 +43,7 @@ def validate_command(
         
         console.print(Panel(
             info_text,
-            title="[bold green]✔ charm.yaml is Valid (UAC v0.2.1)[/bold green]",
+            title="[bold green]✔ charm.yaml is Valid (UAC v0.4.0)[/bold green]",
             border_style="green",
             expand=False
         ))

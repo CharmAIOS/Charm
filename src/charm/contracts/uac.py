@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
+
 class StoreAssets(BaseModel):
     """Visual assets for the Storefront."""
     icon: Optional[str] = Field(None, description="URL to square icon (512x512)")
@@ -62,12 +63,13 @@ class Policies(BaseModel):
     max_steps: int = Field(20, description="Max execution steps")
     budget_limit: float = Field(0.0, description="Max USD cost per run")
 
+
 class CharmConfig(BaseModel):
-    """
-    Root model for 'charm.yaml'.
-    Strictly validates against UAC v0.2.1.
-    """
-    version: Literal["0.2.1"] = Field(..., description="Contract version")
+    version: str = Field(
+        ..., 
+        pattern=r"^0\.4", 
+        description="Contract version (Compatible with 0.4.x SDK)"
+    )
     
     persona: Persona
     pricing: Optional[Pricing] = None
@@ -78,3 +80,16 @@ class CharmConfig(BaseModel):
     policies: Optional[Policies] = None
     
     workflow: Optional[Dict[str, Any]] = None
+
+
+def is_compatible(yaml_version: str, sdk_version: str) -> bool:
+    try:
+        y_parts = yaml_version.split(".")
+        s_parts = sdk_version.split(".")
+        
+        if len(y_parts) < 2 or len(s_parts) < 2:
+            return False
+
+        return (y_parts[0] == s_parts[0]) and (y_parts[1] == s_parts[1])
+    except Exception:
+        return False

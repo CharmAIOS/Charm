@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://charm.ai/contracts/uac.v0.2.1.schema.json",
-    "title": "Unified Agent Contract (UAC) v0.2.1",
+    "$id": "https://charm.ai/contracts/uac.v0.4.0.schema.json",
+    "title": "Unified Agent Contract (UAC) v0.4.0",
     "description": "The definitive definition for Charm Agents. Combines Runtime Execution specs with Store Presentation metadata.",
     "type": "object",
     "required": ["version", "persona", "interface", "runtime"],
@@ -9,8 +9,8 @@
     "properties": {
       "version": {
         "type": "string",
-        "const": "0.2.1",
-        "description": "Contract version. Must match the SDK supported version."
+        "const": "^0\\.4(\\.\\d+)?$",
+        "description": "Compatible with Charm SDK 0.4.x"
       },
   
       "persona": {

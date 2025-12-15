@@ -4,8 +4,6 @@
 
 Goal: Establish a Universal Interface Protocol for AI Agents.
 
-In this phase, we are building the foundational kernel of Charm.
-
 Our primary objective is to establish a standardized way to describe and interface with agents, ensuring that whether an agent is built with different frameworks or written as a pure Python script, it can be wrapped, loaded, and executed through a unified entry point without modifying its original source code.
 
 ### Key Deliverables

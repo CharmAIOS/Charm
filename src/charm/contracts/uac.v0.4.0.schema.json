@@ -112,7 +112,7 @@
             "properties": {
               "type": {
                 "type": "string",
-                "enum": ["langchain", "crewai", "custom"],
+                "enum": ["langchain", "langgraph", "crewai", "custom"],
                 "description": "The specific SDK adapter to use."
               },
               "entry_point": {

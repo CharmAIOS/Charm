@@ -117,7 +117,7 @@ interface:
 # ------------------------------------------------------------------
 runtime:
   adapter:
-    type: "crewai" # Options: crewai, langchain, custom
+    type: "crewai" # Options: crewai, langchain, langgraph, custom
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?

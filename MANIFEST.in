@@ -1,0 +1,2 @@
+include src/charm/contracts/*.json
+include src/charm/templates/*.yaml

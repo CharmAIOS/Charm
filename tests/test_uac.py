@@ -7,7 +7,7 @@ class TestContracts(unittest.TestCase):
     def setUp(self):
         # Prepare a standard valid configuration for testing
         self.valid_data = {
-            "version": "0.2.1",
+            "version": "0.4.0",
             "persona": {"name": "UI Tester", "description": "Test"},
             "interface": {
                 "input": {"topic": {"type": "string", "x-ui-widget": "textarea"}},

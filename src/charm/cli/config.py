@@ -1,11 +1,7 @@
 import os
 from pathlib import Path
 import tomlkit
-<<<<<<< HEAD
 from typing import Optional
-=======
-from typing import Optional, Dict, Any
->>>>>>> origin/main
 
 CONFIG_DIR = Path.home() / ".charm"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
@@ -15,12 +11,8 @@ DEFAULT_CONFIG = {
         "api_base": "https://charm-registry.vercel.app"
     },
     "auth": {
-<<<<<<< HEAD
         "token": "",
         "email": ""
-=======
-        "token": ""
->>>>>>> origin/main
     }
 }
 
@@ -44,10 +36,7 @@ def load_config() -> tomlkit.TOMLDocument:
         return tomlkit.item(DEFAULT_CONFIG)
 
 def save_token(token: str):
-<<<<<<< HEAD
     """舊版相容：只存 token"""
-=======
->>>>>>> origin/main
     config = load_config()
     if "auth" not in config:
         config.add("auth", tomlkit.table())
@@ -57,9 +46,7 @@ def save_token(token: str):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(config))
 
-<<<<<<< HEAD
 def save_auth_data(token: str, email: str):
-    """新版：同時存 token 和 email"""
     config = load_config()
     if "auth" not in config:
         config.add("auth", tomlkit.table())
@@ -77,8 +64,3 @@ def get_token() -> Optional[str]:
 def get_email() -> Optional[str]:
     config = load_config()
     return config.get("auth", {}).get("email")
-=======
-def get_token() -> Optional[str]:
-    config = load_config()
-    return config.get("auth", {}).get("token")
->>>>>>> origin/main

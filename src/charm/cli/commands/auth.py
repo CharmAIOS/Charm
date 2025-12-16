@@ -1,18 +1,15 @@
 import typer
-<<<<<<< HEAD
 import threading
 import webbrowser
 import json
 import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from rich.console import Console
-# 注意這裡的路徑引用：回到上一層找 config
 from ..config import save_auth_data, get_email, get_token, save_token
 
 app = typer.Typer(help="Manage login and authentication")
 console = Console()
 
-# 開發時指向 localhost，上線請改 Vercel 網址
 STORE_URL = "http://localhost:3000"
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -70,7 +67,7 @@ def login():
     
     login_url = f"{STORE_URL}/cli/login?port={port}"
     
-    console.print(f"👉 Opening browser: [underline]{login_url}[/underline]")
+    console.print(f"Opening browser: [underline]{login_url}[/underline]")
     console.print("Waiting for authentication...", style="yellow")
     
     webbrowser.open(login_url)
@@ -78,15 +75,15 @@ def login():
     
     email = get_email()
     if email:
-        console.print(f"✅ [green]Successfully logged in as {email}![/green]")
+        console.print(f"[green]Successfully logged in as {email}![/green]")
     else:
-        console.print("❌ [red]Login failed.[/red]")
+        console.print("[red]Login failed.[/red]")
 
 @app.command()
 def logout():
     """Clear local credentials."""
     save_auth_data("", "")
-    console.print("✅ Logged out.")
+    console.print("Logged out.")
 
 @app.command()
 def whoami():
@@ -99,39 +96,8 @@ def whoami():
     else:
         console.print("Not logged in.")
 
-# 保留舊的手動 Token 模式 (作為 manual 子指令)
 @app.command()
 def manual(token: str = typer.Option(..., prompt=True, hide_input=True)):
     """Manually paste a token."""
     save_token(token)
-    console.print("✅ Token saved.")
-=======
-from rich.console import Console
-from ..config import save_token
-
-console = Console()
-
-def auth_command(
-    token: str = typer.Option(None, "--token", help="Directly provide token (optional)")
-):
-    """
-    Authenticate with Charm Cloud using an API token.
-    """
-    console.print("[bold blue]Charm Auth[/bold blue]")
-    console.print("Please visit [link]https://charm.ai/settings/tokens[/link] to get your API token.\n")
-
-    if not token:
-        token = typer.prompt("Paste your Charm CLI token", hide_input=True)
-
-    if not token:
-        console.print("[bold red] Error:[/bold red] No token provided.")
-        raise typer.Exit(code=1)
-
-    try:
-        save_token(token)
-        console.print(f"\n[bold green]✔ Success![/bold green] Token saved to [underline]~/.charm/config.toml[/underline]")
-        console.print("You can now use `charm push` to publish your agents.")
-    except Exception as e:
-        console.print(f"[bold red] Error saving config:[/bold red] {e}")
-        raise typer.Exit(code=1)
->>>>>>> origin/main
+    console.print("Token saved.")

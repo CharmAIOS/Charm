@@ -1,0 +1,53 @@
+version: "0.4.0"
+
+# 1. Metadata
+persona:
+  name: "My Charm Agent"
+  description: "A short description of what this agent does."
+  full_description: |
+    # My Charm Agent
+    Describe your agent's capabilities and usage here.
+  authors: ["Your Name"]
+  tags: ["agent"]
+  license: "MIT"
+
+pricing:
+  type: "free"
+
+# 2. Interface (UI Definition)
+interface:
+  input:
+    type: "object"
+    required: ["task"]
+    properties:
+      task:
+        type: "string"
+        title: "Task Input"
+        description: "What should the agent do?"
+        x-ui-widget: "textarea"
+  
+  output:
+    type: "object"
+    description: "The agent's result."
+
+# 3. Runtime Configuration
+runtime:
+  adapter:
+    type: "crewai"  # Options: crewai, langchain, custom
+    
+    # Path to your agent object (module:variable)
+    # Default assumes src/main.py has a variable named 'agent'
+    entry_point: "src.main:agent"
+    
+    # List required environment variable NAMES (do not put values here)
+    environment_variables:
+      - "OPENAI_API_KEY"
+
+  injections:
+    llm_client: true
+    tools: []
+
+# 4. Governance
+policies:
+  allow_internet_access: true
+  max_steps: 20

@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.syntax import Syntax
+from dotenv import load_dotenv 
 
 from ...core.loader import CharmLoader
 from ...core.errors import CharmError
@@ -19,7 +20,20 @@ def run_command(
 ):
     """
     Run a Charm Agent locally.
+    Supports both interactive mode and headless (JSON/Text) mode.
     """
+    
+    env_path = os.path.join(path, ".env")
+    abs_path = os.path.abspath(env_path) 
+
+    console.print(f"[bold magenta][DEBUG] Checking .env at: {abs_path}[/bold magenta]")
+
+    if os.path.exists(env_path):
+        console.print("[bold magenta][DEBUG] .env found! Loading environment variables...[/bold magenta]")
+        load_dotenv(env_path, override=True) 
+    else:
+        console.print("[bold magenta][DEBUG] .env NOT found. Skipping environment load.[/bold magenta]")
+
     payload = {}
     
     if json_input:
@@ -67,8 +81,9 @@ def run_command(
             border_style="green"
         ))
     else:
+        error_msg = result.get("message", "Unknown error")
         console.print(Panel(
-            str(result),
+            f"[bold]Error:[/bold] {error_msg}",
             title="Agent Failed",
             border_style="red"
         ))

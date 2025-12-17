@@ -36,7 +36,6 @@ def load_config() -> tomlkit.TOMLDocument:
         return tomlkit.item(DEFAULT_CONFIG)
 
 def save_token(token: str):
-    """舊版相容：只存 token"""
     config = load_config()
     if "auth" not in config:
         config.add("auth", tomlkit.table())

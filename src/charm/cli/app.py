@@ -1,8 +1,7 @@
 import typer
 import importlib.metadata
 from typing import Optional
-
-from .commands import auth, run, validate, push, init
+from .commands import auth, run, validate, push, init, config 
 
 app = typer.Typer(
     name="charm",
@@ -12,6 +11,7 @@ app = typer.Typer(
 )
 
 app.add_typer(auth.app, name="auth", help="Login, logout, and manage credentials")
+app.add_typer(config.app, name="config", help="Manage local configuration") 
 
 app.command(name="init")(init.init_command)
 app.command(name="run")(run.run_command)
@@ -38,9 +38,6 @@ def main(
         is_eager=True
     )
 ):
-    """
-    The main entry point for Charm CLI.
-    """
     pass
 
 if __name__ == "__main__":

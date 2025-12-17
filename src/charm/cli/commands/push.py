@@ -2,6 +2,9 @@ import typer
 import yaml
 import json
 import httpx
+import tarfile
+import os
+import io
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
@@ -13,6 +16,32 @@ from ..git import get_repo_info, GitError
 
 console = Console()
 
+DEFAULT_API_BASE = "https://api.charm.ai/api" 
+
+IGNORE_SET = {
+    ".env", ".env.local", "secrets.json", 
+    ".git", ".DS_Store", "__pycache__",  
+    "venv", ".venv", "dist", "build"      
+}
+
+def is_ignored(name: str) -> bool:
+    if name in IGNORE_SET: return True
+    if name.endswith(('.pyc', '.pyo', '.pyd')): return True
+    return False
+
+def create_bundle(source_dir: Path) -> bytes:
+    file_stream = io.BytesIO()
+    with tarfile.open(fileobj=file_stream, mode="w:gz") as tar:
+        for root, dirs, files in os.walk(source_dir):
+            dirs[:] = [d for d in dirs if not is_ignored(d)] 
+            for file in files:
+                if is_ignored(file): continue
+                full_path = Path(root) / file
+                arcname = full_path.relative_to(source_dir)
+                tar.add(full_path, arcname=str(arcname))
+    file_stream.seek(0)
+    return file_stream.getvalue()
+
 def push_command(
     path: str = typer.Argument(".", help="Path to the Charm project root"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview payload without sending"),
@@ -20,47 +49,38 @@ def push_command(
 ):
     """
     Register/Publish the Agent to the Charm Registry.
-    Links local metadata with your remote GitHub repository.
+    Uploads source code bundle and links metadata.
     """
     project_path = Path(path).resolve()
     
     token = get_token()
     if not token:
-        console.print("[bold red] Auth Error:[/bold red] Not authenticated.")
-        console.print("Please run [bold]charm auth[/bold] first.")
+        console.print("[bold red]Auth Error:[/bold red] Please run [bold]charm auth[/bold] first.")
         raise typer.Exit(code=1)
 
     yaml_file = project_path / "charm.yaml"
     if not yaml_file.exists():
-        console.print(f"[bold red] Error:[/bold red] charm.yaml not found in {project_path}")
+        console.print(f"[bold red]Error:[/bold red] charm.yaml not found in {project_path}")
         raise typer.Exit(code=1)
 
     try:
         with open(yaml_file, "r") as f:
-            yaml_data = yaml.safe_load(f)
-            config = CharmConfig(**yaml_data)
+            uac_payload = yaml.safe_load(f)
+            config = CharmConfig(**uac_payload)
             uac_payload = config.model_dump(mode='json', exclude_none=True)
     except Exception as e:
-        console.print(f"[bold red] Config Error:[/bold red] {e}")
+        console.print(f"[bold red]Config Error:[/bold red] {e}")
         raise typer.Exit(code=1)
 
     try:
         repo_info = get_repo_info(project_path)
-    except GitError as e:
-        console.print(f"[bold red] Git Error:[/bold red] {e}")
-        raise typer.Exit(code=1)
+    except GitError:
+        repo_info = {"url": "", "branch": "main", "commit": "unknown", "is_dirty": "False"}
 
-    if repo_info["is_dirty"] == "True":
-        console.print(Panel(
-            "[bold yellow]Warning: Local changes detected![/bold yellow]\n"
-            "You have uncommitted or untracked files.\n"
-            "The Registry will link to the last commit, which [bold]does not[/bold] include these changes.",
-            title="Git Status", border_style="yellow"
-        ))
-        if not dry_run:
-            typer.confirm("Do you want to continue?", abort=True)
+    if repo_info.get("is_dirty") == "True" and not dry_run:
+        console.print("[bold yellow]Warning:[/bold yellow] You have uncommitted changes. Uploading local files anyway.")
 
-    payload = {
+    metadata_payload = {
         "uac": uac_payload,
         "repo": {
             "url": repo_info["url"],
@@ -69,49 +89,58 @@ def push_command(
         }
     }
 
+    with console.status("[bold green]Bundling source code...[/bold green]"):
+        bundle_bytes = create_bundle(project_path)
+        bundle_size_kb = len(bundle_bytes) / 1024
+
     if dry_run:
-        console.print("\n[bold blue] Dry Run Mode - Payload Preview:[/bold blue]")
-        console.print(Syntax(json.dumps(payload, indent=2), "json", theme="monokai", word_wrap=True))
-        console.print("\n[dim]No data was sent to the server.[/dim]")
+        console.print(f"\n[bold blue]Dry Run:[/bold blue] Bundle Size: {bundle_size_kb:.2f} KB")
+        console.print(Syntax(json.dumps(metadata_payload, indent=2), "json", theme="monokai"))
         raise typer.Exit(code=0)
 
     config_data = load_config()
-    api_base = api_base_override or config_data["core"]["api_base"]
+    
+    api_base = api_base_override or config_data.get("core", {}).get("api_base") or DEFAULT_API_BASE
+    
     api_base = api_base.rstrip("/")
+    
     target_url = f"{api_base}/v1/agents"
 
     console.print(f" Pushing to [underline]{target_url}[/underline]...")
 
     try:
-        with console.status("[bold green]Uploading Metadata...[/bold green]"):
+        with console.status("[bold green]Uploading Bundle & Metadata...[/bold green]"):
+            files = {
+                "file": ("source.tar.gz", bundle_bytes, "application/gzip")
+            }
+            data = {
+                "metadata": json.dumps(metadata_payload)
+            }
+            
             response = httpx.post(
                 target_url,
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json"
-                },
-                timeout=10.0
+                files=files,
+                data=data,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=60.0
             )
 
         if response.status_code in [200, 201]:
-            data = response.json()
-            agent_url = data.get("url", "https://charm.ai/store")
-            
+            resp_data = response.json()
+            agent_url = resp_data.get("url", "N/A")
             console.print(Panel(
                 f"[bold]Agent:[/bold] {config.persona.name}\n"
                 f"[bold]Version:[/bold] {config.version}\n"
-                f"[bold]ID:[/bold] {data.get('agent_id', 'N/A')}\n\n"
+                f"[bold]Size:[/bold] {bundle_size_kb:.2f} KB\n\n"
                 f"🔗 [link={agent_url}]{agent_url}[/link]",
                 title="[bold green]✔ Successfully Published[/bold green]",
                 border_style="green"
             ))
         else:
-            console.print(f"[bold red] Server Error ({response.status_code}):[/bold red]")
+            console.print(f"[bold red]Server Error ({response.status_code}):[/bold red]")
             console.print(response.text)
             raise typer.Exit(code=1)
 
-    except httpx.RequestError as e:
-        console.print(f"[bold red] Connection Error:[/bold red] Could not connect to Registry.")
-        console.print(f"Details: {e}")
+    except Exception as e:
+        console.print(f"[bold red]Connection Error:[/bold red] {e}")
         raise typer.Exit(code=1)

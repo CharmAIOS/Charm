@@ -36,14 +36,15 @@ def validate_command(
         
         info_text = (
             f"[bold]Name:[/bold] {config.persona.name}\n"
-            f"[bold]Version:[/bold] {config.version}\n"
+            f"[bold]Agent Version:[/bold] {config.persona.version}\n"  
+            f"[bold]UAC Spec:[/bold] {config.version}\n"             
             f"[bold]Adapter:[/bold] {config.runtime.adapter.type}\n"
             f"[bold]Entry Point:[/bold] {config.runtime.adapter.entry_point}"
         )
         
         console.print(Panel(
             info_text,
-            title="[bold green]✔ charm.yaml is Valid (UAC v0.4.0)[/bold green]",
+            title="[bold green]✔ charm.yaml is Valid (UAC v0.4.1)[/bold green]",
             border_style="green",
             expand=False
         ))
@@ -51,7 +52,7 @@ def validate_command(
     except ValidationError as e:
         console.print("[bold red]✖ Validation Failed:[/bold red]")
         for err in e.errors():
-            field = " -> ".join(str(x) for x in err['loc'])
+            loc = " -> ".join(str(x) for x in err['loc'])
             msg = err['msg']
-            console.print(f"  - [bold yellow]{field}[/bold yellow]: {msg}")
+            console.print(f"  - [bold yellow]{loc}[/bold yellow]: {msg}")
         raise typer.Exit(code=1)

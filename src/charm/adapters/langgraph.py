@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 import inspect
 from .base import BaseAdapter
+from ..core.logger import logger
 
 class CharmLangGraphAdapter(BaseAdapter):
     """Adapter for LangGraph CompiledGraphs."""

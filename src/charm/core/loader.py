@@ -1,8 +1,13 @@
 import os
 import yaml
 from ..contracts.uac import CharmConfig
+
+# 🔥 Import Adapters
 from ..adapters.crewai import CharmCrewAIAdapter
 from ..adapters.langchain import CharmLangChainAdapter
+from ..adapters.langgraph import CharmLangGraphAdapter 
+from ..adapters.custom import CharmCustomAdapter  # ✅ 新增：引入 Custom Adapter
+
 from .wrapper import CharmWrapper
 from .errors import CharmConfigError, CharmValidationError
 from .utils import dynamic_import
@@ -29,15 +34,22 @@ class CharmLoader:
         except Exception as e:
             raise CharmValidationError(f"Invalid charm.yaml: {e}")
         
+        # 動態載入用戶的 Agent 實例 (Python Object/Function)
         agent_instance = dynamic_import(config.runtime.adapter.entry_point, project_path)
 
         adapter_type = config.runtime.adapter.type
         logger.debug(f"Detected adapter: {adapter_type}")
 
+        # 🔥 完整支援所有 Adapter 類型
         if adapter_type == "crewai":
             adapter = CharmCrewAIAdapter(agent_instance)
         elif adapter_type == "langchain":
             adapter = CharmLangChainAdapter(agent_instance)
+        elif adapter_type == "langgraph":
+            adapter = CharmLangGraphAdapter(agent_instance)
+        elif adapter_type == "custom":
+             # ✅ 修正：直接實例化 Custom Adapter
+             adapter = CharmCustomAdapter(agent_instance)
         else:
             raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")
 

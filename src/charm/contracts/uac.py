@@ -11,6 +11,7 @@ class StoreAssets(BaseModel):
 class Persona(BaseModel):
     """Identity and metadata for Store display and Search."""
     name: str = Field(..., description="The public name of the agent shown in the store")
+    version: str = Field("0.1.0", pattern=r"^\d+\.\d+\.\d+$", description="Semantic version (e.g. 1.0.0)")
     description: str = Field(..., description="Short tagline for card view (max 100 chars)")
     full_description: Optional[str] = Field(None, description="Long markdown description for the detail page")
     authors: List[str] = Field(default_factory=list)
@@ -37,7 +38,7 @@ class InterfaceConfig(BaseModel):
 
 class RuntimeAdapter(BaseModel):
     """Instructs the Loader how to bootstrap this agent."""
-    type: Literal["langchain", "crewai", "llamaindex", "custom"] = Field(..., description="The specific SDK adapter to use")
+    type: Literal["langchain", "crewai", "langgraph", "custom"] = Field(..., description="The specific SDK adapter to use")
     entry_point: str = Field(..., description="Python import path e.g. 'src.agent:my_crew'")
     environment_variables: List[str] = Field(default_factory=list, description="Required env vars to be injected")
 

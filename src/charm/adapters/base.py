@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Generator
 
 class BaseAdapter(ABC):
     
@@ -11,10 +11,12 @@ class BaseAdapter(ABC):
     def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
-    @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
-        pass
+    def stream(self, inputs: Dict[str, Any]) -> Generator[Any, None, None]:
+        result = self.invoke(inputs)
+        yield result
 
-    @abstractmethod
+    def get_state(self) -> Dict[str, Any]:
+        return {}
+
     def set_tools(self, tools: List[Any]) -> None:
         pass

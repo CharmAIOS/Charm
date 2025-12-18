@@ -58,7 +58,7 @@ def login():
     """
     Login via browser (Vercel style).
     """
-    console.print("[bold blue]🔮 Charm CLI Login[/bold blue]")
+    console.print("[bold blue]Charm CLI Login[/bold blue]")
     
     port = find_free_port()
     server = HTTPServer(('127.0.0.1', port), OAuthCallbackHandler)

@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://charm.ai/contracts/uac.v0.4.1.schema.json",
+  "title": "Unified Agent Contract (UAC) v0.4.1",
+  "description": "The definitive definition for Charm Agents. Combines Runtime Execution specs with Store Presentation metadata.",
+  "type": "object",
+  "required": ["version", "persona", "interface", "runtime"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "^0\\.4(\\.\\d+)?$",
+      "description": "Compatible with Charm SDK 0.4.x"
+    },
+
+    "persona": {
+      "type": "object",
+      "description": "Identity and metadata for Store display and Search.",
+      "required": ["name", "description"],
+      "properties": {
+        "name": { 
+          "type": "string", 
+          "title": "Display Name",
+          "description": "The public name of the agent shown in the store." 
+        },
+        "version": { 
+          "type": "string", 
+          "pattern": "^\\d+\\.\\d+\\.\\d+$", 
+          "description": "The semantic version of this Agent (e.g. 1.0.0).",
+          "default": "0.1.0"
+        },
+        "description": { 
+          "type": "string", 
+          "description": "Short tagline for card view (max 100 chars)." 
+        },
+        "full_description": { 
+          "type": "string", 
+          "description": "Long markdown description for the detail page." 
+        },
+        "authors": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "license": { 
+          "type": "string", 
+          "description": "Usage license (e.g. 'Proprietary', 'MIT', 'Free-for-personal').",
+          "default": "Free" 
+        },
+        "assets": {
+          "type": "object",
+          "description": "Visual assets for the Storefront.",
+          "properties": {
+            "icon": { "type": "string", "format": "uri", "description": "URL to square icon (512x512)" },
+            "banner": { "type": "string", "format": "uri", "description": "URL to wide banner image" },
+            "screenshots": { "type": "array", "items": { "type": "string", "format": "uri" } }
+          }
+        }
+      }
+    },
+
+    "pricing": {
+      "type": "object",
+      "description": "Commercial model for the Charm Store.",
+      "properties": {
+        "type": { 
+          "type": "string", 
+          "enum": ["free", "usage_based", "subscription", "one_time"],
+          "default": "free"
+        },
+        "amount": { "type": "number", "description": "Price value in the specified currency." },
+        "currency": { "type": "string", "default": "USD" }
+      }
+    },
+
+    "goals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Semantic goals. Used by the Store for search indexing and by other agents for planning."
+    },
+
+    "interface": {
+      "type": "object",
+      "description": "Defines Inputs, Outputs, and State structure. Supports UI hints for auto-generated forms.",
+      "required": ["input", "output"],
+      "properties": {
+        "input": {
+          "type": "object",
+          "description": "JSON Schema for input parameters. Defines the form fields shown to the user.",
+          "properties": {
+            "type": { "type": "string", "enum": ["object"] },
+            "required": { "type": "array", "items": { "type": "string" } },
+            "properties": {
+              "type": "object",
+              "description": "Map of parameter names to their definitions.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": { 
+                    "type": "string", 
+                    "enum": ["string", "number", "integer", "boolean", "array", "object"] 
+                  },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "default": {},
+                  "enum": { "type": "array" },
+                  "x-ui-widget": {
+                    "type": "string",
+                    "enum": ["textarea", "password", "color", "file", "files"],
+                    "description": "UI Rendering Hint. Use 'file' to enable file upload and auto-injection."
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "output": {
+          "type": "object",
+          "description": "JSON Schema for output format.",
+          "additionalProperties": true
+        },
+        "state": {
+          "type": "object",
+          "description": "Schema of the persistent state. Required for Runtime to perform snapshot/resume.",
+          "properties": {
+            "format": { 
+              "type": "string", 
+              "enum": ["json", "binary", "pydantic_model"],
+              "default": "json"
+            },
+            "schema": { "type": "object", "description": "Structure of the state object" }
+          }
+        }
+      }
+    },
+
+    "runtime": {
+      "type": "object",
+      "description": "Configuration for the Charm Runtime Adapter and Dependency Injection.",
+      "required": ["adapter"],
+      "properties": {
+        "adapter": {
+          "type": "object",
+          "description": "Instructs the Loader how to bootstrap this agent.",
+          "required": ["type", "entry_point"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["langchain", "langgraph", "crewai", "custom"],
+              "description": "The specific SDK adapter to use."
+            },
+            "entry_point": {
+              "type": "string",
+              "description": "Python import path to the agent instance (e.g., 'src.agent:my_crew')."
+            },
+            "environment_variables": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of required environment variables (e.g., OPENAI_API_KEY) that Runtime must inject."
+            }
+          }
+        },
+        "injections": {
+          "type": "object",
+          "description": "Resources the agent expects the Runtime to inject.",
+          "properties": {
+            "llm_client": { 
+              "type": "boolean", 
+              "description": "If true, Runtime injects a configured LLM client."
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of standard Charm Tools (IDs) to be injected."
+            },
+            "memory_store": {
+              "type": "boolean",
+              "description": "If true, Runtime injects a connection to the Charm Vector Store."
+            }
+          }
+        }
+      }
+    },
+
+    "policies": {
+      "type": "object",
+      "description": "Governance and safety rules enforced by the Runtime.",
+      "properties": {
+        "allow_internet_access": { "type": "boolean", "default": true },
+        "human_in_the_loop": {
+          "type": "object",
+          "description": "Configuration for human oversight.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "triggers": { 
+              "type": "array", 
+              "items": { "type": "string" },
+              "description": "Keywords or tool names that trigger a pause for approval."
+            }
+          }
+        },
+        "max_steps": { "type": "integer", "default": 20 },
+        "budget_limit": { "type": "number", "description": "Max USD cost per run" }
+      }
+    },
+
+    "workflow": {
+      "type": "object",
+      "description": "(Optional) Descriptive graph for observability. Not used for execution in Wrapper mode.",
+      "properties": {
+        "nodes": { "type": "array", "items": { "type": "object" } },
+        "edges": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

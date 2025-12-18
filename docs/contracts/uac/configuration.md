@@ -33,7 +33,7 @@ By configuring your editor, you get auto-completion and error checking. This is 
 ```JSON
 {
   "yaml.schemas": {
-    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.0.schema.json": "charm.yaml"
+    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.1.schema.json": "charm.yaml"
   }
 }
 ```
@@ -46,13 +46,17 @@ This is a fully annotated example to understand specific capabilities or customi
 # Charm Agent Manifest (Annotated Reference)
 # ==================================================================
 
-version: "0.4.0"  # Must match your installed SDK version.
+version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
 
 # ------------------------------------------------------------------
 # 1. Identity & Store Metadata
 # ------------------------------------------------------------------
 persona:
   name: "Research Assistant"       # Display Name (Max 50 chars)
+  
+  # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
+  version: "0.1.0"                 
+  
   description: "Deep research on any topic."  # Tagline (Card view, Max 100 chars)
   
   # Full description supports Markdown. Used for the Info Page.
@@ -93,14 +97,21 @@ interface:
         title: "Research Topic"
         default: "AI Agents"
       
-      # Example 2: Large Text Area (Note the x-ui-widget)
+      # Example 2: Large Text Area
       details:
         type: "string"
         title: "Extra Details"
         description: "Paste any background info here."
-        x-ui-widget: "textarea"  # HINT: Renders a multi-line text box
+        x-ui-widget: "textarea" 
       
-      # Example 3: Number Input with constraints
+      # Example 3: File Upload (Auto-Injection)
+      # The Runner will download the file and inject the filename into this variable.
+      document:
+        type: "string"
+        title: "Upload Document"
+        x-ui-widget: "file" 
+
+      # Example 4: Number Input
       depth:
         type: "integer"
         title: "Search Depth"
@@ -121,10 +132,14 @@ runtime:
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?
-    # Format: <python_module_path>:<variable_name>
-    # Example: src/main.py contains `my_crew = Crew(...)`
+    # Format: <python_module_path>:<variable_or_function_name>
     # --------------------------------------------------------------
-    entry_point: "src.main:my_crew"
+    # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
+    # entry_point: "src.main:my_crew"
+    
+    # [Case B] For Custom (Pure Python): Point to a function or class instance.
+    # It must accept a dictionary and return a dictionary (or string).
+    entry_point: "src.my_script:run_pipeline"
     
     # --------------------------------------------------------------
     # SECURE ENV VARS: List keys your agent needs.
@@ -150,11 +165,12 @@ policies:
 |Section|Field|Type|Description|
 |--------|-----------|--------------------------|-------------------------|
 | Persona   | name | String|Public display name of the agent.  |
+|  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
 |  |  description  | String |Short tagline for search results and cards. |
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
-|  |  x-ui-widget | UI Hint. Values: textarea, password, color.|
-|Runtime|	adapter.type|	Enum	|crewai, langchain, custom.|
-| |entry_point|	String|	Python import path (path.to.file:obj).|
+|  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
+|Runtime|	adapter.type|	Enum	|crewai, langchain,langgraph, custom.|
+| |entry_point|	String|	Python path (module:obj). For custom, can be a function or object with invoke().|
 | |environment_variables	|List	|Names of required env vars (e.g., OPENAI_API_KEY).|
 |Policies|	max_steps	|Integer	|Maximum execution steps to prevent infinite loops.|

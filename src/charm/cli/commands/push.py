@@ -128,9 +128,12 @@ def push_command(
         if response.status_code in [200, 201]:
             resp_data = response.json()
             agent_url = resp_data.get("url", "N/A")
+            
+            agent_version = getattr(config.persona, "version", "0.1.0")
+
             console.print(Panel(
                 f"[bold]Agent:[/bold] {config.persona.name}\n"
-                f"[bold]Version:[/bold] {config.version}\n"
+                f"[bold]Version:[/bold] {agent_version}\n" 
                 f"[bold]Size:[/bold] {bundle_size_kb:.2f} KB\n\n"
                 f"🔗 [link={agent_url}]{agent_url}[/link]",
                 title="[bold green]✔ Successfully Published[/bold green]",

@@ -27,11 +27,9 @@ class CharmLangGraphAdapter(BaseAdapter):
         result = None
 
         try:
-            # 1. 嘗試同步執行 (Sync)
             result = self.agent.invoke(inputs, config=config)
 
         except Exception as e:
-            # 2. 檢測 Async 需求
             error_str = str(e).lower()
             if "no synchronous function" in error_str or "async" in error_str:
                 logger.info("[Charm] Detected Async Graph. Switching to ainvoke...")
@@ -42,12 +40,10 @@ class CharmLangGraphAdapter(BaseAdapter):
             else:
                 return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
 
-        # 3. 輸出處理
         try:
             output_str = str(result)
 
             if isinstance(result, dict):
-                # LangGraph 通常回傳 State Dict
                 if "messages" in result:
                     messages = result["messages"]
                     if isinstance(messages, list) and len(messages) > 0:

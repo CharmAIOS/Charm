@@ -8,7 +8,6 @@ class CharmCrewAIAdapter(BaseAdapter):
     """Adapter for CrewAI Framework."""
 
     def _ensure_instantiated(self):
-        # 處理 Entry Point 是一個函式的情況 (Factory Pattern)
         if callable(self.agent) and not hasattr(self.agent, "kickoff"):
             try:
                 print(f"[Charm] Entry point is a callable ({type(self.agent).__name__}), instantiating Crew object...")
@@ -16,7 +15,6 @@ class CharmCrewAIAdapter(BaseAdapter):
                 sig = inspect.signature(self.agent)
                 params = sig.parameters
                 
-                # 自動判斷是否需要傳入參數
                 if len(params) > 0:
                     self.agent = self.agent(self._pending_inputs)
                 else:
@@ -29,7 +27,6 @@ class CharmCrewAIAdapter(BaseAdapter):
         self._pending_inputs = inputs
         self._ensure_instantiated()
 
-        # 檢查是否為有效的 Crew 物件
         if not hasattr(self.agent, "kickoff"):
              return {
                  "status": "error", 
@@ -37,34 +34,28 @@ class CharmCrewAIAdapter(BaseAdapter):
                  "message": f"Entry point did not resolve to a CrewAI object. Got {type(self.agent).__name__} instead."
              }
 
-        # 正規化 Input：CrewAI 習慣用 'topic'
         native_input = inputs
         if "input" in inputs and "topic" not in inputs:
             native_input = {"topic": inputs["input"], **inputs}
 
         result = None
         try:
-            # 1. 優先嘗試同步執行 (標準 CrewAI)
             result = self.agent.kickoff(inputs=native_input)
         
         except Exception as e:
-            # 2. 如果失敗，檢查是否是因為使用了 Async Tools
-            # CrewAI 的 Async 方法通常叫 kickoff_async (舊) 或 akickoff (新)
             error_msg = str(e).lower()
             if "await" in error_msg or "async" in error_msg or "coroutine" in error_msg:
                 logger.info("[Charm] Detected Async Crew requirements. Switching to async execution...")
                 
-                if hasattr(self.agent, "akickoff"): # 新版 CrewAI
+                if hasattr(self.agent, "akickoff"): 
                     result = self._execute_async_safely(self.agent.akickoff(inputs=native_input))
-                elif hasattr(self.agent, "kickoff_async"): # 舊版 CrewAI
+                elif hasattr(self.agent, "kickoff_async"): #
                     result = self._execute_async_safely(self.agent.kickoff_async(inputs=native_input))
                 else:
                     return {"status": "error", "message": f"Async required but no async method found: {e}"}
             else:
-                # 真的報錯了 (非 Async 問題)
                 return {"status": "error", "message": str(e)}
 
-        # 3. 處理輸出結果
         try:
             output_str = ""
             if hasattr(result, "raw"):

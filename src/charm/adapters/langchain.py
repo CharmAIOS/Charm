@@ -27,10 +27,8 @@ class CharmLangChainAdapter(BaseAdapter):
         result = None
         
         try:
-            # 1. 嘗試同步 invoke
             result = self.agent.invoke(native_input)
         except Exception as e:
-            # 2. 如果失敗，嘗試非同步 ainvoke
             if hasattr(self.agent, "ainvoke"):
                 logger.info("[Charm] Sync invoke failed, attempting Async ainvoke...")
                 try:
@@ -40,16 +38,13 @@ class CharmLangChainAdapter(BaseAdapter):
             else:
                 return {"status": "error", "message": str(e)}
 
-        # 3. 輸出標準化處理
         try:
             output_str = str(result)
             
             if isinstance(result, dict):
-                # 優先順序：output > text > result
                 for key in ["output", "text", "result", "generation"]:
                     if key in result:
                         val = result[key]
-                        # 處理 LangChain 的 Generation 物件
                         if hasattr(val, "text"): 
                             output_str = val.text
                         else:
@@ -59,7 +54,6 @@ class CharmLangChainAdapter(BaseAdapter):
             elif isinstance(result, str):
                 output_str = result
             
-            # 處理 AIMessage 物件
             elif hasattr(result, "content"):
                 output_str = str(result.content)
                 

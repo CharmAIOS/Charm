@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 import inspect
+import asyncio 
 from .base import BaseAdapter
 from ..core.logger import logger
 
@@ -10,13 +11,11 @@ class CharmLangGraphAdapter(BaseAdapter):
         if callable(self.agent) and not hasattr(self.agent, "invoke"):
             try:
                 print(f"[Charm] Instantiating LangGraph from factory...")
-                
                 sig = inspect.signature(self.agent)
                 if len(sig.parameters) > 0:
                     self.agent = self.agent(self._pending_inputs)
                 else:
                     self.agent = self.agent()
-
             except Exception as e:
                 print(f"[Charm] Warning: Failed to instantiate factory: {e}")
 
@@ -25,13 +24,30 @@ class CharmLangGraphAdapter(BaseAdapter):
         self._ensure_instantiated()
 
         config = {"configurable": {"thread_id": "charm_default_thread"}}
-        
+        result = None
+
         try:
+            # 1. 嘗試同步執行 (Sync)
             result = self.agent.invoke(inputs, config=config)
 
+        except Exception as e:
+            # 2. 檢測 Async 需求
+            error_str = str(e).lower()
+            if "no synchronous function" in error_str or "async" in error_str:
+                logger.info("[Charm] Detected Async Graph. Switching to ainvoke...")
+                try:
+                    result = self._execute_async_safely(self.agent.ainvoke(inputs, config=config))
+                except Exception as async_e:
+                    return {"status": "error", "message": f"Async Graph Execution Failed: {str(async_e)}"}
+            else:
+                return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
+
+        # 3. 輸出處理
+        try:
             output_str = str(result)
 
             if isinstance(result, dict):
+                # LangGraph 通常回傳 State Dict
                 if "messages" in result:
                     messages = result["messages"]
                     if isinstance(messages, list) and len(messages) > 0:
@@ -45,10 +61,11 @@ class CharmLangGraphAdapter(BaseAdapter):
                     output_str = str(result["generation"])
                 elif "result" in result:
                     output_str = str(result["result"])
-
+            
             return {"status": "success", "output": output_str}
+            
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {"status": "error", "message": f"Output Processing Error: {str(e)}"}
 
     def get_state(self) -> Dict[str, Any]:
         return {}

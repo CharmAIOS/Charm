@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 import inspect
+import asyncio
 from .base import BaseAdapter
 from ..core.logger import logger
 
@@ -10,13 +11,11 @@ class CharmLangChainAdapter(BaseAdapter):
         if callable(self.agent) and not hasattr(self.agent, "invoke"):
             try:
                 print(f"[Charm] Instantiating LangChain agent from factory...")
-                
                 sig = inspect.signature(self.agent)
                 if len(sig.parameters) > 0:
                     self.agent = self.agent(self._pending_inputs)
                 else:
-                    self.agent = self.agent()
-                    
+                    self.agent = self.agent()     
             except Exception as e:
                 print(f"[Charm] Warning: Failed to instantiate factory: {e}")
 
@@ -25,24 +24,48 @@ class CharmLangChainAdapter(BaseAdapter):
         self._ensure_instantiated()
         
         native_input = inputs
+        result = None
         
         try:
+            # 1. 嘗試同步 invoke
             result = self.agent.invoke(native_input)
+        except Exception as e:
+            # 2. 如果失敗，嘗試非同步 ainvoke
+            if hasattr(self.agent, "ainvoke"):
+                logger.info("[Charm] Sync invoke failed, attempting Async ainvoke...")
+                try:
+                    result = self._execute_async_safely(self.agent.ainvoke(native_input))
+                except Exception as async_e:
+                    return {"status": "error", "message": f"Async execution also failed: {async_e}"}
+            else:
+                return {"status": "error", "message": str(e)}
 
+        # 3. 輸出標準化處理
+        try:
             output_str = str(result)
             
             if isinstance(result, dict):
-                for key in ["output", "text", "result"]:
+                # 優先順序：output > text > result
+                for key in ["output", "text", "result", "generation"]:
                     if key in result:
-                        output_str = str(result[key])
+                        val = result[key]
+                        # 處理 LangChain 的 Generation 物件
+                        if hasattr(val, "text"): 
+                            output_str = val.text
+                        else:
+                            output_str = str(val)
                         break
             
             elif isinstance(result, str):
                 output_str = result
+            
+            # 處理 AIMessage 物件
+            elif hasattr(result, "content"):
+                output_str = str(result.content)
                 
             return {"status": "success", "output": output_str}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {"status": "error", "message": f"Output parsing error: {str(e)}"}
 
     def get_state(self) -> Dict[str, Any]:
         return {}

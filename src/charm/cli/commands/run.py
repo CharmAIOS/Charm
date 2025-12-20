@@ -30,7 +30,7 @@ def run_command(
 
     if os.path.exists(env_path):
         console.print("[bold magenta][DEBUG] .env found! Loading environment variables...[/bold magenta]")
-        load_dotenv(env_path, override=True) 
+        load_dotenv(env_path, override=False) 
     else:
         console.print("[bold magenta][DEBUG] .env NOT found. Skipping environment load.[/bold magenta]")
 
@@ -77,7 +77,7 @@ def run_command(
         
         console.print(Panel(
             Markdown(output_content),
-            title=f"✨ Output ({wrapper.config.runtime.adapter.type})",
+            title=f"Output ({wrapper.config.runtime.adapter.type})",
             border_style="green"
         ))
     else:

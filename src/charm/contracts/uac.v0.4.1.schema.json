@@ -89,7 +89,7 @@
             "required": { "type": "array", "items": { "type": "string" } },
             "properties": {
               "type": "object",
-              "description": "Map of parameter names to their definitions.",
+              "description": "Map of parameter names. IMPORTANT: The key names defined here MUST match exactly the keys your Agent expects in its input dictionary (e.g., inputs={'project_text': ...}).",
               "additionalProperties": {
                 "type": "object",
                 "properties": {

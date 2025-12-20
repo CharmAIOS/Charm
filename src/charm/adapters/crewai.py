@@ -8,20 +8,12 @@ class CharmCrewAIAdapter(BaseAdapter):
     """Adapter for CrewAI Framework."""
 
     def _ensure_instantiated(self):
-        if callable(self.agent) and not hasattr(self.agent, "kickoff"):
-            try:
-                print(f"[Charm] Entry point is a callable ({type(self.agent).__name__}), instantiating Crew object...")
-                
-                sig = inspect.signature(self.agent)
-                params = sig.parameters
-                
-                if len(params) > 0:
-                    self.agent = self.agent(self._pending_inputs)
-                else:
-                    self.agent = self.agent()
+        self._smart_instantiate()
 
-            except Exception as e:
-                print(f"[Charm] Warning: Failed to instantiate factory function: {e}")
+        if not hasattr(self.agent, "kickoff"):
+            if hasattr(self.agent, "crew") and hasattr(self.agent.crew, "kickoff"):
+                print("[Charm] Detected Crew Wrapper. Switching to inner '.crew' attribute.")
+                self.agent = self.agent.crew
 
     def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         self._pending_inputs = inputs

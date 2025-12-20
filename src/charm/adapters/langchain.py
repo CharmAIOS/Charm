@@ -8,16 +8,16 @@ class CharmLangChainAdapter(BaseAdapter):
     """Adapter for standard LangChain Chains/Agents."""
 
     def _ensure_instantiated(self):
-        if callable(self.agent) and not hasattr(self.agent, "invoke"):
-            try:
-                print(f"[Charm] Instantiating LangChain agent from factory...")
-                sig = inspect.signature(self.agent)
-                if len(sig.parameters) > 0:
-                    self.agent = self.agent(self._pending_inputs)
-                else:
-                    self.agent = self.agent()     
-            except Exception as e:
-                print(f"[Charm] Warning: Failed to instantiate factory: {e}")
+        self._smart_instantiate()
+
+        if not hasattr(self.agent, "invoke"):
+            for attr in ["chain", "agent", "runnable", "pipeline"]:
+                if hasattr(self.agent, attr):
+                    candidate = getattr(self.agent, attr)
+                    if hasattr(candidate, "invoke"):
+                        print(f"[Charm] Detected LangChain Wrapper. Switching to inner '.{attr}' attribute.")
+                        self.agent = candidate
+                        break
 
     def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         self._pending_inputs = inputs

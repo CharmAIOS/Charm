@@ -7,7 +7,8 @@ class CharmCustomAdapter(BaseAdapter):
 
     def __init__(self, agent_instance: Any):
         super().__init__(agent_instance)
-        self.execution_method = self._discover_execution_method(agent_instance)
+        self._smart_instantiate()
+        self.execution_method = self._discover_execution_method(self.agent)
         logger.debug(f"Custom Adapter bound to: {self.execution_method.__name__}")
 
     def _discover_execution_method(self, instance: Any):

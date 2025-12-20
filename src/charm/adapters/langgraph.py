@@ -8,16 +8,15 @@ class CharmLangGraphAdapter(BaseAdapter):
     """Adapter for LangGraph CompiledGraphs."""
 
     def _ensure_instantiated(self):
-        if callable(self.agent) and not hasattr(self.agent, "invoke"):
-            try:
-                print(f"[Charm] Instantiating LangGraph from factory...")
-                sig = inspect.signature(self.agent)
-                if len(sig.parameters) > 0:
-                    self.agent = self.agent(self._pending_inputs)
-                else:
-                    self.agent = self.agent()
-            except Exception as e:
-                print(f"[Charm] Warning: Failed to instantiate factory: {e}")
+        self._smart_instantiate()
+
+        if not hasattr(self.agent, "invoke"):
+            if hasattr(self.agent, "app") and hasattr(self.agent.app, "invoke"):
+                print("[Charm] Detected Wrapper Class. Switching to inner '.app' attribute.")
+                self.agent = self.agent.app
+            elif hasattr(self.agent, "graph") and hasattr(self.agent.graph, "invoke"):
+                print("[Charm] Detected Wrapper Class. Switching to inner '.graph' attribute.")
+                self.agent = self.agent.graph
 
     def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         self._pending_inputs = inputs

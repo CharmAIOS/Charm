@@ -40,3 +40,27 @@ class BaseAdapter(ABC):
             return self._execute_async_safely(result)
             
         return result
+
+    def _smart_instantiate(self):
+        if not callable(self.agent):
+            return
+
+        if (hasattr(self.agent, "invoke") or 
+            hasattr(self.agent, "kickoff") or 
+            hasattr(self.agent, "run")):
+            return
+
+        try:
+            print(f"[Charm] Auto-instantiating {type(self.agent).__name__}...")
+            sig = inspect.signature(self.agent)
+            
+            if len(sig.parameters) == 0:
+                self.agent = self.agent()
+            else:
+                try:
+                    self.agent = self.agent(self._pending_inputs)
+                except TypeError:
+                    self.agent = self.agent()
+                    
+        except Exception as e:
+            print(f"[Charm] Warning: Auto-instantiation failed: {e}")

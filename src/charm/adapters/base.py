@@ -10,11 +10,11 @@ class BaseAdapter(ABC):
         self._pending_inputs: Dict[str, Any] = {}
 
     @abstractmethod
-    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         pass
 
-    def stream(self, inputs: Dict[str, Any]) -> Generator[Any, None, None]:
-        result = self.invoke(inputs)
+    def stream(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Generator[Any, None, None]:
+        result = self.invoke(inputs, callbacks=callbacks)
         yield result
 
     def get_state(self) -> Dict[str, Any]:

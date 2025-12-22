@@ -9,13 +9,34 @@ class CharmCrewAIAdapter(BaseAdapter):
 
     def _ensure_instantiated(self):
         self._smart_instantiate()
-
         if not hasattr(self.agent, "kickoff"):
             if hasattr(self.agent, "crew") and hasattr(self.agent.crew, "kickoff"):
                 print("[Charm] Detected Crew Wrapper. Switching to inner '.crew' attribute.")
                 self.agent = self.agent.crew
 
-    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def _inject_callbacks(self, callbacks: List[Any]):
+        if not callbacks: return
+        if hasattr(self.agent, "agents"):
+            for agent in self.agent.agents:
+                if hasattr(agent, "callbacks"):
+                    if agent.callbacks is None: agent.callbacks = []
+                    agent.callbacks.extend(callbacks)
+                if hasattr(agent, "llm"):
+                    if hasattr(agent.llm, "callbacks"):
+                        if agent.llm.callbacks is None: agent.llm.callbacks = []
+                        agent.llm.callbacks.extend(callbacks)
+
+    def _format_history_as_context(self, history: List[Dict[str, str]]) -> str:
+        if not history: return ""
+        text = "\n\n--- Conversation History ---\n"
+        for msg in history:
+            role = msg.get("role", "unknown").upper()
+            content = msg.get("content", "")
+            text += f"{role}: {content}\n"
+        text += "--- End of History ---\n\n"
+        return text
+
+    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         self._pending_inputs = inputs
         self._ensure_instantiated()
 
@@ -26,9 +47,25 @@ class CharmCrewAIAdapter(BaseAdapter):
                  "message": f"Entry point did not resolve to a CrewAI object. Got {type(self.agent).__name__} instead."
              }
 
-        native_input = inputs
-        if "input" in inputs and "topic" not in inputs:
-            native_input = {"topic": inputs["input"], **inputs}
+        if callbacks:
+            self._inject_callbacks(callbacks)
+
+        native_input = inputs.copy()
+        
+        history_data = native_input.pop("__charm_history__", None)
+        if history_data:
+            history_str = self._format_history_as_context(history_data)
+            
+            
+            if "topic" in native_input:
+                native_input["topic"] += history_str
+            elif "input" in native_input:
+                native_input["input"] += history_str
+            else:
+                native_input["conversation_history"] = history_str
+
+        if "input" in native_input and "topic" not in native_input:
+            native_input = {"topic": native_input["input"], **native_input}
 
         result = None
         try:
@@ -38,10 +75,9 @@ class CharmCrewAIAdapter(BaseAdapter):
             error_msg = str(e).lower()
             if "await" in error_msg or "async" in error_msg or "coroutine" in error_msg:
                 logger.info("[Charm] Detected Async Crew requirements. Switching to async execution...")
-                
                 if hasattr(self.agent, "akickoff"): 
                     result = self._execute_async_safely(self.agent.akickoff(inputs=native_input))
-                elif hasattr(self.agent, "kickoff_async"): #
+                elif hasattr(self.agent, "kickoff_async"): 
                     result = self._execute_async_safely(self.agent.kickoff_async(inputs=native_input))
                 else:
                     return {"status": "error", "message": f"Async required but no async method found: {e}"}
@@ -50,28 +86,8 @@ class CharmCrewAIAdapter(BaseAdapter):
 
         try:
             output_str = ""
-            if hasattr(result, "raw"):
-                output_str = result.raw
-            else:
-                output_str = str(result)
-
+            if hasattr(result, "raw"): output_str = result.raw
+            else: output_str = str(result)
             return {"status": "success", "output": output_str}
         except Exception as e:
              return {"status": "error", "message": f"Output parsing error: {e}"}
-
-    def get_state(self) -> Dict[str, Any]:
-        self._ensure_instantiated()
-        if hasattr(self.agent, "agents"):
-            return {
-                "agents": [a.role for a in self.agent.agents],
-                "tasks_count": len(self.agent.tasks)
-            }
-        return {}
-
-    def set_tools(self, tools: List[Any]) -> None:
-        self._ensure_instantiated()
-        if hasattr(self.agent, "agents"):
-            for agent in self.agent.agents:
-                if not hasattr(agent, "tools"):
-                    agent.tools = []
-                agent.tools.extend(tools)

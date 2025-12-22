@@ -3,24 +3,35 @@ from typing import Any, Dict, List, Optional, Generator
 from ..adapters.base import BaseAdapter
 from .errors import CharmExecutionError
 from .logger import logger
-from .io import CharmEmitter, StdoutInterceptor  # [New]
+from .io import CharmEmitter, StdoutInterceptor
+from .callbacks import CharmCallbackHandler
+from .memory import load_memory_snapshot 
 
 class CharmWrapper:
     def __init__(self, adapter: BaseAdapter, config: Optional[Any] = None):
         self.adapter = adapter
         self.config = config
 
+    def _inject_memory(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        history = load_memory_snapshot()
+        if history:
+            new_inputs = inputs.copy()
+            new_inputs["__charm_history__"] = history
+            return new_inputs
+        return inputs
+
     def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         CharmEmitter.emit_status("Initializing Agent Runtime...")
         
-        # [New] 替換 stdout，開始攔截所有 print 為 thinking
+        inputs_with_memory = self._inject_memory(inputs)
+
         original_stdout = sys.stdout
         sys.stdout = StdoutInterceptor()
+        charm_callback = CharmCallbackHandler()
         
         try:
-            result = self.adapter.invoke(inputs)
+            result = self.adapter.invoke(inputs_with_memory, callbacks=[charm_callback])
             
-            # 執行結束，將結果作為 Final Event 發送
             if result.get("status") == "success":
                 CharmEmitter.emit_final(result.get("output", ""))
                 return result
@@ -32,29 +43,28 @@ class CharmWrapper:
         except Exception as e:
             CharmEmitter.emit_error(str(e))
             return {
-                "status": "error",
+                "status": "error", 
                 "error_type": "CharmExecutionError",
                 "message": str(e)
             }
         finally:
-            # [New] 還原 stdout，確保後續系統操作正常
             sys.stdout = original_stdout
 
     def stream(self, inputs: Dict[str, Any]) -> Generator[Any, None, None]:
-        # Stream 模式同樣需要攔截
         CharmEmitter.emit_status("Streaming Agent Runtime...")
+        
+        inputs_with_memory = self._inject_memory(inputs)
+
         original_stdout = sys.stdout
         sys.stdout = StdoutInterceptor()
+        charm_callback = CharmCallbackHandler()
 
         try:
             if hasattr(self.adapter, "stream"):
-                for chunk in self.adapter.stream(inputs):
-                    # 這裡假設 adapter stream 回傳的是中間結果
-                    # 實際應用中可能需要根據 chunk 類型決定是 thinking 還是 final
-                    # 簡單起見，這裡暫不處理 adapter 內部的流，而是依賴 StdoutInterceptor 抓 log
+                for chunk in self.adapter.stream(inputs_with_memory, callbacks=[charm_callback]):
                     yield chunk
             else:
-                yield self.invoke(inputs)
+                yield self.invoke(inputs_with_memory)
                 
         except Exception as e:
             CharmEmitter.emit_error(str(e))

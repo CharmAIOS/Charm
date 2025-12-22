@@ -4,6 +4,11 @@ import asyncio
 from .base import BaseAdapter
 from ..core.logger import logger
 
+try:
+    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+except ImportError:
+    from langchain.schema import HumanMessage, AIMessage, SystemMessage
+
 class CharmLangGraphAdapter(BaseAdapter):
     """Adapter for LangGraph CompiledGraphs."""
 
@@ -18,22 +23,49 @@ class CharmLangGraphAdapter(BaseAdapter):
                 print("[Charm] Detected Wrapper Class. Switching to inner '.graph' attribute.")
                 self.agent = self.agent.graph
 
-    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_history_to_messages(self, history: List[Dict[str, str]]) -> List[Any]:
+        lc_messages = []
+        for msg in history:
+            role = msg.get("role")
+            content = msg.get("content", "")
+            if role == "user":
+                lc_messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                lc_messages.append(AIMessage(content=content))
+            elif role == "system":
+                lc_messages.append(SystemMessage(content=content))
+        return lc_messages
+
+    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         self._pending_inputs = inputs
         self._ensure_instantiated()
 
         config = {"configurable": {"thread_id": "charm_default_thread"}}
+        if callbacks:
+            config["callbacks"] = callbacks
+
+        native_input = inputs.copy()
+        history_data = native_input.pop("__charm_history__", None)
+        
+        if history_data:
+            lc_history = self._convert_history_to_messages(history_data)
+            
+            if "messages" in native_input and isinstance(native_input["messages"], list):
+                native_input["messages"] = lc_history + native_input["messages"]
+            else:
+                native_input["messages"] = lc_history
+
         result = None
 
         try:
-            result = self.agent.invoke(inputs, config=config)
+            result = self.agent.invoke(native_input, config=config)
 
         except Exception as e:
             error_str = str(e).lower()
             if "no synchronous function" in error_str or "async" in error_str:
                 logger.info("[Charm] Detected Async Graph. Switching to ainvoke...")
                 try:
-                    result = self._execute_async_safely(self.agent.ainvoke(inputs, config=config))
+                    result = self._execute_async_safely(self.agent.ainvoke(native_input, config=config))
                 except Exception as async_e:
                     return {"status": "error", "message": f"Async Graph Execution Failed: {str(async_e)}"}
             else:

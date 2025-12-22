@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, Generator, Union
+from typing import Any, Dict, Generator, Union, List 
 from .base import BaseAdapter
 from ..core.logger import logger
 
@@ -24,10 +24,16 @@ class CharmCustomAdapter(BaseAdapter):
                 "It must be a function, or a class with 'invoke()' or 'run()' methods."
             )
 
-    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         logger.info("Executing Custom Agent...")
         try:
-            result = self._smart_invoke(self.execution_method, inputs)
+            sig = inspect.signature(self.execution_method)
+            kwargs = {}
+            if "callbacks" in sig.parameters:
+                kwargs["callbacks"] = callbacks
+            
+            
+            result = self._smart_invoke(self.execution_method, inputs, **kwargs)
             
             if isinstance(result, dict):
                 return result
@@ -40,14 +46,19 @@ class CharmCustomAdapter(BaseAdapter):
             logger.error(f"Custom Agent crashed: {e}")
             raise e 
 
-    def stream(self, inputs: Dict[str, Any]) -> Generator[Any, None, None]:
+    def stream(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Generator[Any, None, None]:
         if hasattr(self.agent, "stream") and callable(self.agent.stream):
-            yield from self.agent.stream(inputs)
+            sig = inspect.signature(self.agent.stream)
+            kwargs = {}
+            if "callbacks" in sig.parameters:
+                kwargs["callbacks"] = callbacks
+
+            yield from self.agent.stream(inputs, **kwargs)
             return
 
         if inspect.isgeneratorfunction(self.execution_method):
             yield from self.execution_method(inputs)
             return
             
-        result = self.invoke(inputs)
+        result = self.invoke(inputs, callbacks=callbacks)
         yield result

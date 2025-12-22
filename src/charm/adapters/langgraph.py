@@ -45,15 +45,24 @@ class CharmLangGraphAdapter(BaseAdapter):
             config["callbacks"] = callbacks
 
         native_input = inputs.copy()
+        
         history_data = native_input.pop("__charm_history__", None)
+        lc_messages = []
         
         if history_data:
-            lc_history = self._convert_history_to_messages(history_data)
-            
-            if "messages" in native_input and isinstance(native_input["messages"], list):
-                native_input["messages"] = lc_history + native_input["messages"]
-            else:
-                native_input["messages"] = lc_history
+            lc_messages.extend(self._convert_history_to_messages(history_data))
+
+        user_input_content = native_input.get("input") or native_input.get("task") or native_input.get("topic")
+
+        if user_input_content and str(user_input_content).strip():
+             lc_messages.append(HumanMessage(content=str(user_input_content)))
+
+        if "messages" in native_input and isinstance(native_input["messages"], list):
+            native_input["messages"] = lc_messages + native_input["messages"]
+        else:
+            native_input["messages"] = lc_messages
+
+        if "input" in native_input: del native_input["input"]
 
         result = None
 

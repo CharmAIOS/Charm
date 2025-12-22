@@ -7,7 +7,7 @@ from ..core.logger import logger
 try:
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 except ImportError:
-    from langchain.schema import HumanMessage, AIMessage, SystemMessage
+    from langchain.schema import HumanMessage, AIMessage, SystemMessage # type: ignore
 
 class CharmLangChainAdapter(BaseAdapter):
     """Adapter for standard LangChain Chains/Agents."""
@@ -27,7 +27,7 @@ class CharmLangChainAdapter(BaseAdapter):
         lc_messages = []
         for msg in history:
             role = msg.get("role")
-            content = msg.get("content", "")
+            content = msg.get("content") or ""
             if role == "user":
                 lc_messages.append(HumanMessage(content=content))
             elif role == "assistant":
@@ -43,14 +43,16 @@ class CharmLangChainAdapter(BaseAdapter):
         native_input = inputs.copy()
         
         history_data = native_input.pop("__charm_history__", None)
+        lc_history = []
         if history_data:
             lc_history = self._convert_history_to_messages(history_data)
-            
-            if "chat_history" not in native_input:
-                native_input["chat_history"] = lc_history
-            
-            if "messages" in native_input and isinstance(native_input["messages"], list):
-                native_input["messages"] = lc_history + native_input["messages"]
+
+        if "chat_history" not in native_input:
+            native_input["chat_history"] = lc_history
+        
+        if "messages" in native_input and isinstance(native_input["messages"], list):
+            native_input["messages"] = lc_history + native_input["messages"]
+
 
         config = {}
         if callbacks:

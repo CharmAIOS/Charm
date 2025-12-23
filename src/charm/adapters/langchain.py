@@ -27,7 +27,11 @@ class CharmLangChainAdapter(BaseAdapter):
         lc_messages = []
         for msg in history:
             role = msg.get("role")
-            content = msg.get("content") or ""
+            content = str(msg.get("content") or "").strip()
+            
+            if not content: 
+                continue
+
             if role == "user":
                 lc_messages.append(HumanMessage(content=content))
             elif role == "assistant":
@@ -53,10 +57,17 @@ class CharmLangChainAdapter(BaseAdapter):
         if "messages" in native_input and isinstance(native_input["messages"], list):
             native_input["messages"] = lc_history + native_input["messages"]
 
-
         config = {}
         if callbacks:
             config["callbacks"] = callbacks
+
+        if "input" in native_input:
+            if native_input["input"] is None:
+                native_input["input"] = ""
+            
+            if not native_input["input"] and not lc_history:
+                 logger.info("[Charm] Auto-injecting kickoff for LangChain.")
+                 native_input["input"] = "Hello, please start."
 
         result = None
         try:

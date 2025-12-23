@@ -27,49 +27,28 @@ class CharmWrapper:
 
         original_stdout = sys.stdout
         sys.stdout = StdoutInterceptor()
-        charm_callback = CharmCallbackHandler()
+        
+        stream_state = {"has_streamed": False}
+        charm_callback = CharmCallbackHandler(shared_state=stream_state)
         
         try:
             result = self.adapter.invoke(inputs_with_memory, callbacks=[charm_callback])
             
             if result.get("status") == "success":
-                CharmEmitter.emit_final(result.get("output", ""))
+                if not stream_state.get("has_streamed", False):
+                    CharmEmitter.emit_final(result.get("output", ""))
                 return result
             else:
                 error_msg = result.get("message", "Unknown error")
                 CharmEmitter.emit_error(error_msg)
+                sys.exit(0) 
                 return result
                 
         except Exception as e:
             CharmEmitter.emit_error(str(e))
+            sys.exit(0)
             return {
                 "status": "error", 
-                "error_type": "CharmExecutionError",
-                "message": str(e)
-            }
-        finally:
-            sys.stdout = original_stdout
-
-    def stream(self, inputs: Dict[str, Any]) -> Generator[Any, None, None]:
-        CharmEmitter.emit_status("Streaming Agent Runtime...")
-        
-        inputs_with_memory = self._inject_memory(inputs)
-
-        original_stdout = sys.stdout
-        sys.stdout = StdoutInterceptor()
-        charm_callback = CharmCallbackHandler()
-
-        try:
-            if hasattr(self.adapter, "stream"):
-                for chunk in self.adapter.stream(inputs_with_memory, callbacks=[charm_callback]):
-                    yield chunk
-            else:
-                yield self.invoke(inputs_with_memory)
-                
-        except Exception as e:
-            CharmEmitter.emit_error(str(e))
-            yield {
-                "status": "error",
                 "error_type": "CharmExecutionError",
                 "message": str(e)
             }

@@ -31,7 +31,9 @@ class CharmCrewAIAdapter(BaseAdapter):
         text = "\n\n--- Conversation History ---\n"
         for msg in history:
             role = msg.get("role", "unknown").upper()
-            content = msg.get("content", "")
+            content = str(msg.get("content", "")).strip()
+            if not content: continue
+            
             text += f"{role}: {content}\n"
         text += "--- End of History ---\n\n"
         return text

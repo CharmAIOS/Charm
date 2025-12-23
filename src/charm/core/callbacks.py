@@ -3,9 +3,17 @@ from langchain_core.callbacks import BaseCallbackHandler
 from .io import CharmEmitter
 
 class CharmCallbackHandler(BaseCallbackHandler):
-    
-    def __init__(self):
+    ignore_llm: bool = False
+    ignore_chain: bool = False
+    ignore_agent: bool = False
+    ignore_retriever: bool = False
+    always_verbose: bool = True
+
+    def __init__(self, shared_state: Dict[str, Any] = None):
         self.current_tool = None
+        self.shared_state = shared_state if shared_state is not None else {}
+        
+        print("[Charm] 🟢 Loaded Local SDK Fix v4 (Shared State + Attrs)")
 
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         tool_name = serialized.get("name", "Unknown Tool")
@@ -14,7 +22,8 @@ class CharmCallbackHandler(BaseCallbackHandler):
         CharmEmitter.emit_thinking(msg)
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
-        msg = f"Tool Output: {str(output)[:500]}...\n" 
+        out_str = str(output)
+        msg = f"Tool Output: {out_str[:500]}...\n" 
         CharmEmitter.emit_thinking(msg)
         self.current_tool = None
 
@@ -26,11 +35,15 @@ class CharmCallbackHandler(BaseCallbackHandler):
         pass
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
-        CharmEmitter.emit_delta(token)
+        if token:
+            self.shared_state["has_streamed"] = True
+            CharmEmitter.emit_delta(token)
 
     def on_agent_action(self, action: Any, **kwargs: Any) -> Any:
         tool = getattr(action, "tool", "Unknown")
         inp = getattr(action, "tool_input", "")
+        if isinstance(inp, dict): inp = str(inp)
+        
         if not self.current_tool:
              CharmEmitter.emit_thinking(f"Thought: I need to use {tool} with {inp}\n")
 

@@ -27,7 +27,13 @@ class CharmLangGraphAdapter(BaseAdapter):
         lc_messages = []
         for msg in history:
             role = msg.get("role")
-            content = msg.get("content", "")
+            # [FIX] 強制轉字串並去除前後空白
+            content = str(msg.get("content", "")).strip()
+            
+            # [FIX] Google Gemini 不接受空內容的訊息，若為空則直接跳過
+            if not content:
+                continue
+
             if role == "user":
                 lc_messages.append(HumanMessage(content=content))
             elif role == "assistant":
@@ -53,9 +59,18 @@ class CharmLangGraphAdapter(BaseAdapter):
             lc_messages.extend(self._convert_history_to_messages(history_data))
 
         user_input_content = native_input.get("input") or native_input.get("task") or native_input.get("topic")
+        has_user_input = user_input_content and str(user_input_content).strip()
 
-        if user_input_content and str(user_input_content).strip():
+        if has_user_input:
+             # 正常情況：有輸入，加入 HumanMessage
              lc_messages.append(HumanMessage(content=str(user_input_content)))
+        
+        elif not history_data and not has_user_input:
+             # [FIX] 自動觸發 (Auto-Kickoff)：沒歷史也沒輸入
+             # 這是針對 WREN 這類需要「初始化」但不需要用戶輸入的 Agent
+             # 注入一個通用指令讓圖開始轉動
+             logger.info("[Charm] Auto-injecting kickoff message for fresh session.")
+             lc_messages.append(HumanMessage(content="Hello, please start."))
 
         if "messages" in native_input and isinstance(native_input["messages"], list):
             native_input["messages"] = lc_messages + native_input["messages"]

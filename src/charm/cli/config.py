@@ -3,6 +3,7 @@ from pathlib import Path
 import tomlkit
 from typing import Optional
 
+# Define the global config directory (usually ~/.charm/).
 CONFIG_DIR = Path.home() / ".charm"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
@@ -17,6 +18,7 @@ DEFAULT_CONFIG = {
 }
 
 def _ensure_config_exists():
+    """Creates the config file with defaults if it doesn't exist."""
     if not CONFIG_DIR.exists():
         CONFIG_DIR.mkdir(parents=True)
     
@@ -28,6 +30,7 @@ def _ensure_config_exists():
             f.write(tomlkit.dumps(doc))
 
 def load_config() -> tomlkit.TOMLDocument:
+    """Parses the TOML config file."""
     _ensure_config_exists()
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -36,6 +39,7 @@ def load_config() -> tomlkit.TOMLDocument:
         return tomlkit.item(DEFAULT_CONFIG)
 
 def save_token(token: str):
+    """Retrieve the stored auth token."""
     config = load_config()
     if "auth" not in config:
         config.add("auth", tomlkit.table())
@@ -46,6 +50,9 @@ def save_token(token: str):
         f.write(tomlkit.dumps(config))
 
 def save_auth_data(token: str, email: str):
+    """
+    Persists the authentication token and email to disk.
+    """
     config = load_config()
     if "auth" not in config:
         config.add("auth", tomlkit.table())

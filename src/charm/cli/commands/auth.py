@@ -56,7 +56,7 @@ def find_free_port():
 @app.command()
 def login():
     """
-    Login via browser (Vercel style).
+    Login via browser.
     """
     console.print("[bold blue]Charm CLI Login[/bold blue]")
     

@@ -25,13 +25,15 @@ def init_command(
     project_path.mkdir(parents=True)
     
     try:
+        # Load the default template from the package resources.
         template_source = files("charm.templates").joinpath("charm.default.yaml")
-        
         content = template_source.read_text(encoding="utf-8")
         
+        # Write charm.yaml
         target_file = project_path / "charm.yaml"
         target_file.write_text(content, encoding="utf-8")
         
+        # Create src/main.py placeholder
         (project_path / "src").mkdir()
         (project_path / "src" / "main.py").write_text("# Your agent code here\n", encoding="utf-8")
 
@@ -42,5 +44,5 @@ def init_command(
 
     except Exception as e:
         console.print(f"[bold red]Error loading template:[/bold red] {e}")
-        shutil.rmtree(project_path)
+        shutil.rmtree(project_path) # Cleanup on failure 
         raise typer.Exit(1)

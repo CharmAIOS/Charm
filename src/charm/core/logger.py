@@ -2,6 +2,9 @@ import logging
 import sys
 
 def setup_logger(name: str = "charm", level: str = "INFO") -> logging.Logger:
+    """
+    Configures a standard logger that writes to stdout.
+    """
     logger = logging.getLogger(name)
     
     if not logger.handlers:

@@ -10,6 +10,7 @@ def dynamic_import(entry_point: str, project_path: str) -> Any:
     
     module_name, obj_name = entry_point.split(":")
     
+    # Ensure project path is in sys.path so imports work
     abs_path = os.path.abspath(project_path)
     
     if abs_path not in sys.path:

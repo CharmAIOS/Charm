@@ -9,10 +9,13 @@ class CharmError(Exception):
         return super().__str__()
 
 class CharmValidationError(CharmError):
+    """Raised when uac/yaml validation fails."""
     pass
 
 class CharmConfigError(CharmError):
+    """Raised when configuration or imports are missing."""
     pass
 
 class CharmExecutionError(CharmError):
+    """Raised when the agent crashes during runtime."""
     pass

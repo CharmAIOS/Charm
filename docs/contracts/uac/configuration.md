@@ -3,32 +3,30 @@
 ### Getting Started
 Depending on your project status, choose the path that fits you best.
 
-Path A: used init
-If you want a standardized setup:
-
+Path A: Start a new project
 ```bash
 charm init my-agent
 cd my-agent
 ```
-Path B: created the file manually
+Path B: Create the file manually
 
-1. Create a file named charm.yaml in your project root.
-
+1. Create a file named charm.yaml in your project root
 > The charm.yaml file must always be at the root level of your project
-
 ```plaintext
 
 my-agent/             <-- Project Root
 ├── charm.yaml        <-- The Manifest
-├── pyproject.toml / requirements.txt    <-- dependencies
+├── pyproject.toml / requirements.txt    <-- Dependencies
 └── src/
     └── main.py       <-- Your Agent Logic
 ```
-2. Copy the Annotated Reference below into it.
+2. Copy the Annotated Reference below for use in your configuration
 
-3. Update the entry_point field to point to your existing agent object.
+3. Update the field with your existing agent project
+
 ### IDE Setup
 By configuring your editor, you get auto-completion and error checking. This is crucial for avoiding typos.
+
 1. Create .vscode/settings.json in your project root.
 ```JSON
 {
@@ -52,7 +50,7 @@ version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
 # 1. Identity & Store Metadata
 # ------------------------------------------------------------------
 persona:
-  name: "Research Assistant"       # Display Name (Max 50 chars)
+  name: "Research Assistant"       # Display Project Name (Max 50 chars)
   
   # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
   version: "0.1.0"                 
@@ -66,7 +64,7 @@ persona:
   # Describe usage, available capabilities, and expected deliverables.
     
   authors: ["Brand, Company, or Individual Name"]
-  tags: ["research", "productivity"]
+  tags: ["research", "productivity"] 
   license: "MIT"
   
   # Assets for the Storefront
@@ -145,7 +143,7 @@ runtime:
       - "OPENAI_API_KEY"
       - "SERPER_API_KEY"
 
-  # (Advanced) Dependency Injection from Charm System
+  # (Advanced) Dependency Injection from Charm System (The associated logic is not yet implemented, and the field is kept as a placeholder).
   injections:
     llm_client: true  # Inject standard LLM client?
     tools: []         # Inject other agents as tools?

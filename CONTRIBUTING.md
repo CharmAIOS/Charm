@@ -2,14 +2,7 @@
 
 Thanks for your interest in Charm!
 
-You can read the [v0.2.0 overview](https://github.com/CharmAIOS/Charm/blob/main/docs/concepts/v0.2.0.md) to understand our current goals, and we are primarily focused on:
-
-1. Refining the UAC: Polishing the uac to ensure it can fully describe a target agent without ambiguity.
-2. Implementing the SDK Core: Build the CharmWrapper and CharmLoader classes.
-3. Developing Reference Adapters: Create robust adapters for agents from various sources.
-4. Schema Validation Logic: Implement Pydantic models to strictly validate charm.yaml files at runtime.
-
-Contributions related to this are highly welcome. We’d love to gather any feedback you have on our feature modules — for example:
+Contributions are highly welcome. We’d love to gather any feedback you have on our feature modules, for example:
 - Does the contract cover your agent’s configuration needs?
 - Are there specific frameworks you’d like to see adapted next?
 

@@ -68,6 +68,4 @@ Charm treats the UAC as a **declarative description** of the agent:
 | **LangChain** | Specifies `adapter.type = "langchain"`. Runtime wraps the Chain/Graph and maps the state schema. |
 | **Custom Code** | Specifies `adapter.type = "custom"`. Runtime loads the specified python class entry point. |
 
-### Details
-- [Unified Agent Contract (v0.4.0)](https://github.com/CharmAIOS/Charm/blob/main/src/charm/contracts/uac.v0.2.1.schema.json) (Add fields related to the store)
-- Sample charm.yaml
+- [Unified Agent Contract (v0.4.1)](https://github.com/CharmAIOS/Charm/blob/main/src/charm/contracts/uac.v0.2.1.schema.json)

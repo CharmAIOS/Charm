@@ -11,7 +11,7 @@
 
 # Charm: The Unified Platform for Agentic Intelligence
 
-> **Current Status: v0.4.0 (Developer Preview)**
+> **Current Status: v0.4.10 (Developer Preview)**
 
 **Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents.
 
@@ -28,22 +28,13 @@ To explore Charm’s core concepts and code in more detail, check out our [docum
 Charm is available on PyPI. We recommend using [uv](https://github.com/astral-sh/uv) for the best experience.
 
 #### Modern Setup
-1. Initialize a new project
-```bash
-uv init my-agent
-cd my-agent
-```
-2. Add Charm as a dependency
+Add Charm as a dependency
 ```bash
 uv add charmos
 # Requires Python 3.10+
 ```
 #### Standard Pip Setup
-1. Create a project folder
-```bash
-mkdir my-agent && cd my-agent
-```
-2. Create venv
+1. Create venv
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -57,7 +48,7 @@ To learn how to contribute to Charm, please read the contribution guide [here](h
 
 ## Contact
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)
-- Join the Charm team: [Chat with us](mailto:uc@charmos.io)
+- Join us: [Chat with founder](mailto:uc@charmos.io)
 
 ## Changelog
 Check our [updates](https://charmos.io/changelog)

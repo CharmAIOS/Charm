@@ -1,6 +1,6 @@
 ## Charm Store: The App Store for AI Agents
 
-Charm Store helps turn agent-based applications into real, commercial-ready products. Developers can ignore infrastructure, frontend work, and payments, and focus purely on agent logic. With standardized publishing, built-in application services, and isolated runtimes, your code can become a complete product in minutes.
+Charm Store helps turn agent-based applications into real, commercial-ready products. Developers can ignore infrastructure and focus purely on agent logic. With standardized publishing, built-in application services and isolated runtimes, your code can become a complete product in minutes.
 
 ### Zero-Ops Publishing
 > If you’re using uv, please prefix all commands with uv run.
@@ -10,31 +10,35 @@ Sign in to the Charm platform and link your account.
 charm auth login
 ```
 2. Preparing your UAC manifest
+
 Refer to this document for guidance on how to author a charm.yaml.
 
 3. Local Validation
 
-A: Static Analysis
+- Static Analysis
+
 Use Pydantic to validate that the YAML fields conform to the UAC schema.
 ```bash
 charm validate .
 ```
-B: Local Execution
+- Local Execution
 
 Simulate the Cloud Runner locally to ensure your agent accepts inputs correctly.
 
 **Option 1: Simple Text Input**
+
 Use this if your agent accepts a single string (e.g., a prompt or a topic).
 ```bash
 charm run . --input "YOUR_INPUT_TEXT"
 ```
 **Option 2: JSON Payload**
+
 Use this if your agent requires multiple parameters (as defined in interface.input).
 ```bash
 charm run . --json '{"field_name": "value", "option_key": 123}'
 ```
-- field_name: Must match the property names defined in your charm.yaml.
-- value: The actual data you want to pass to the agent.
+> field_name: Must match the property names defined in your charm.yaml.
+> value: The actual data you want to pass to the agent.
 
 4. Publishing
 ```bash
@@ -57,5 +61,6 @@ Guardrails & Oversight: Built-in enforcement of resource quotas and execution ti
 Charm generates a contract-driven UI from the manifest and instantly produces a web chat interface without requiring any frontend code, making it accessible to non-technical users.
 
 ## Agent as a tool
+TBD
 
 

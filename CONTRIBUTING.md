@@ -10,9 +10,6 @@ Let us know what you think.
 
 If you’re interested in contributing to the core features and architecture of Charm, we’re actively looking for team members, feel free to [email us](mailto:uc@charmos.io) to chat.
 
-## What's next
-You can refer to our [v1 roadmap](https://github.com/CharmAIOS/Charm/blob/main/docs/concepts/roadmap-to-v1.md) if you want to know more about our overall development direction.
-
 ## How to Contribute
 1. Fork the repository.
 2. Create a new branch for your feature or fix.

@@ -16,7 +16,7 @@ persona:
   tags: ["agent"]
   license: "MIT"
   
-  # [Optional] Storefront Assets
+  # Storefront Assets
   # assets:
   #   icon: "https://.../icon.png"
   #   banner: "https://.../banner.jpg"

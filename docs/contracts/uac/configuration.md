@@ -20,7 +20,7 @@ Path B: created the file manually
 
 my-agent/             <-- Project Root
 ├── charm.yaml        <-- The Manifest
-├── pyproject.toml    <-- dependencies
+├── pyproject.toml / requirements.txt    <-- dependencies
 └── src/
     └── main.py       <-- Your Agent Logic
 ```
@@ -62,12 +62,8 @@ persona:
   # Full description supports Markdown. Used for the Info Page.
   full_description: |
     # Research Assistant
-    This agent uses advanced search tools to aggregate information.
-    
-    ## Capabilities
-    - Web Search
-    - Summarization
-    - Market Analysis
+    ...
+  # Describe usage, available capabilities, and expected deliverables.
     
   authors: ["Brand, Company, or Individual Name"]
   tags: ["research", "productivity"]
@@ -79,7 +75,7 @@ persona:
     banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
 pricing:
-  type: "free"  # Options: free, usage_based, one_time
+  type: "free"  # Options: free, usage_based, one_time, subscription. At this stage, please fill in free.
 
 # ------------------------------------------------------------------
 # 2. Interface (UI Generation)
@@ -152,7 +148,7 @@ runtime:
   # (Advanced) Dependency Injection from Charm System
   injections:
     llm_client: true  # Inject standard LLM client?
-    tools: []         # Inject other agents as tools (by Slug)
+    tools: []         # Inject other agents as tools?
 
 # ------------------------------------------------------------------
 # 4. Governance (Policies)

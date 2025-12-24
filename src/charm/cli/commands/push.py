@@ -77,7 +77,6 @@ def push_command(
     try:
         repo_info = get_repo_info(project_path)
     except GitError:
-        # [Robustness] 即使沒有 Git 資訊，也允許上傳 (Store API 已做對應處理)
         repo_info = {"url": "", "branch": "main", "commit": "unknown", "is_dirty": "False"}
 
     if repo_info.get("is_dirty") == "True" and not dry_run:
@@ -103,12 +102,10 @@ def push_command(
 
     config_data = load_config()
     
-    # 優先順序: CLI 參數 > Config 檔案 > 預設值 (localhost:3000/api)
     api_base = api_base_override or config_data.get("core", {}).get("api_base") or DEFAULT_API_BASE
     
     api_base = api_base.rstrip("/")
     
-    # [Target] 對應 Next.js 路由: app/api/v1/agents/route.ts
     target_url = f"{api_base}/v1/agents"
 
     console.print(f" Pushing to [underline]{target_url}[/underline]...")
@@ -146,7 +143,6 @@ def push_command(
             ))
         else:
             console.print(f"[bold red]Server Error ({response.status_code}):[/bold red]")
-            # 嘗試解析並顯示 JSON 錯誤訊息
             try:
                 err_msg = response.json().get("error", response.text)
                 console.print(f"[red]{err_msg}[/red]")

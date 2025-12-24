@@ -22,6 +22,7 @@ def run_command(
     Run a Charm Agent locally.
     Supports both interactive mode and headless (JSON/Text) mode.
     """
+    console.print(f"[DEBUG CHECK] json_input received: {bool(json_input)}")
     
     env_path = os.path.join(path, ".env")
     abs_path = os.path.abspath(env_path) 
@@ -70,20 +71,23 @@ def run_command(
         console.print(f"[bold red] Execution Error:[/bold red] {e}")
         raise typer.Exit(code=2)
 
-    console.print("\n")
-    
-    if result.get("status") == "success":
-        output_content = result.get("output", "")
+    if not json_input: 
+        console.print("\n") 
         
-        console.print(Panel(
-            Markdown(output_content),
-            title=f"Output ({wrapper.config.runtime.adapter.type})",
-            border_style="green"
-        ))
+        if result.get("status") == "success":
+            output_content = result.get("output", "")
+            
+            console.print(Panel(
+                Markdown(output_content),
+                title=f"Output ({wrapper.config.runtime.adapter.type})",
+                border_style="green"
+            ))
+        else:
+            error_msg = result.get("message", "Unknown error")
+            console.print(Panel(
+                f"[bold]Error:[/bold] {error_msg}",
+                title="Agent Failed",
+                border_style="red"
+            ))
     else:
-        error_msg = result.get("message", "Unknown error")
-        console.print(Panel(
-            f"[bold]Error:[/bold] {error_msg}",
-            title="Agent Failed",
-            border_style="red"
-        ))
+        console.print("[DEBUG CHECK] Silent Mode Active. Panel suppressed.")

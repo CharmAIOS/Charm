@@ -11,7 +11,7 @@ charm auth login
 ```
 2. Preparing your UAC manifest
 
-Refer to this document for guidance on how to author a charm.yaml.
+Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
 
 3. Local Validation
 

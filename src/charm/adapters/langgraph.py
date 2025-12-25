@@ -50,30 +50,20 @@ class CharmLangGraphAdapter(BaseAdapter):
             config["callbacks"] = callbacks
 
         native_input = inputs.copy()
-        
         history_data = native_input.pop("__charm_history__", None)
-        lc_messages = []
         
-        if history_data:
-            lc_messages.extend(self._convert_history_to_messages(history_data))
+        if history_data and "messages" in native_input:
+             lc_messages = self._convert_history_to_messages(history_data)
+             if isinstance(native_input["messages"], list):
+                native_input["messages"] = lc_messages + native_input["messages"]
+             else:
+                native_input["messages"] = lc_messages
 
-        user_input_content = native_input.get("input") or native_input.get("task") or native_input.get("topic")
-        has_user_input = user_input_content and str(user_input_content).strip()
+        if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
+             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
+             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
+             del native_input["input"]
 
-        if has_user_input:
-             lc_messages.append(HumanMessage(content=str(user_input_content)))
-        
-        elif not history_data and not has_user_input:
-             logger.info("[Charm] Auto-injecting kickoff message for fresh session.")
-             lc_messages.append(HumanMessage(content="Hello, please start."))
-
-        if "messages" in native_input and isinstance(native_input["messages"], list):
-            native_input["messages"] = lc_messages + native_input["messages"]
-        else:
-            native_input["messages"] = lc_messages
-
-        # [Important] Do NOT delete input key
-        # if "input" in native_input: del native_input["input"]
 
         result = None
 
@@ -102,11 +92,8 @@ class CharmLangGraphAdapter(BaseAdapter):
                         content = getattr(last_msg, "content", "")
                         additional_kwargs = getattr(last_msg, "additional_kwargs", {})
                         
-                        # 1. Standard Content
                         if content and str(content).strip():
                             output_str = str(content)
-                        
-                        # 2. Standard Tool Calls (New LangChain)
                         elif hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
                             tools_desc = []
                             for tool in last_msg.tool_calls:
@@ -114,15 +101,11 @@ class CharmLangGraphAdapter(BaseAdapter):
                                 t_args = json.dumps(tool.get("args", {}))
                                 tools_desc.append(f"🛠️ Call: {t_name}({t_args})")
                             output_str = "\n".join(tools_desc)
-
-                        # 3. Legacy/Gemini Function Calls (Hidden in additional_kwargs)
                         elif "function_call" in additional_kwargs:
                             fc = additional_kwargs["function_call"]
                             t_name = fc.get("name", "unknown_tool")
                             t_args = fc.get("arguments", "{}")
                             output_str = f"🛠️ Call (Legacy): {t_name}({t_args})"
-                            
-                        # 4. Gemini Metadata / Safety Filters
                         elif hasattr(last_msg, "response_metadata"):
                             meta = last_msg.response_metadata
                             if "prompt_feedback" in meta:
@@ -130,17 +113,17 @@ class CharmLangGraphAdapter(BaseAdapter):
                             elif "finish_reason" in meta:
                                 output_str = f"⚠️ Stop Reason: {meta['finish_reason']}"
                             else:
-                                # Last Resort: Dump the raw message for debugging
                                 output_str = f"(Empty Content. Raw Message: {str(last_msg)})"
-                        
                         else:
                             output_str = f"(Unknown Message Format: {str(last_msg)})"
-                        # --- [FIX END] ---
                 
                 elif "generation" in result:
                     output_str = str(result["generation"])
                 elif "result" in result:
                     output_str = str(result["result"])
+                else:
+                    # Try to find meaningful string values in the dict
+                    output_str = json.dumps(result, ensure_ascii=False, default=str)
             
             else:
                 output_str = str(result)

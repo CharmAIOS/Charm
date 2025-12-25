@@ -64,10 +64,7 @@ class CharmLangChainAdapter(BaseAdapter):
         if "input" in native_input:
             if native_input["input"] is None:
                 native_input["input"] = ""
-            
-            if not native_input["input"] and not lc_history:
-                 logger.info("[Charm] Auto-injecting kickoff for LangChain.")
-                 native_input["input"] = "Hello, please start."
+
 
         result = None
         try:

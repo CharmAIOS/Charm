@@ -57,18 +57,13 @@ class CharmCrewAIAdapter(BaseAdapter):
         history_data = native_input.pop("__charm_history__", None)
         if history_data:
             history_str = self._format_history_as_context(history_data)
-            
-            if "topic" in native_input:
+            if "topic" in native_input and isinstance(native_input["topic"], str):
                 native_input["topic"] += history_str
-            elif "input" in native_input:
+            elif "input" in native_input and isinstance(native_input["input"], str):
                 native_input["input"] += history_str
-            else:
-                native_input["context"] = history_str
-                if not native_input: 
-                    native_input["topic"] = history_str
 
-        if "input" in native_input and "topic" not in native_input:
-            native_input = {"topic": native_input["input"], **native_input}
+        if isinstance(native_input, str):
+             native_input = {"topic": native_input}
 
         result = None
         try:

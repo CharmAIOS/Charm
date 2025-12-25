@@ -21,10 +21,17 @@ class CharmWrapper:
         """
         Loads conversation history from disk and injects it into inputs.
         """
+        # [Defensive] Handle None or non-dict inputs gracefully
+        if inputs is None:
+            inputs = {}
+        if not isinstance(inputs, dict):
+            # If input is a raw string (rare legacy case), wrap it to avoid crash
+            logger.warning(f"[Charm] Input is not a dict: {type(inputs)}. Wrapping in 'input'.")
+            inputs = {"input": inputs}
+
         history = load_memory_snapshot()
         if history:
             new_inputs = inputs.copy()
-            # The key '__charm_history__' is a reserved protocol key used by Adapters.
             new_inputs["__charm_history__"] = history
             return new_inputs
         return inputs
@@ -37,6 +44,10 @@ class CharmWrapper:
         
         # 1. Prepare Inputs (Memory Injection)
         inputs_with_memory = self._inject_memory(inputs)
+
+        # [Observability] Log the keys being passed to the adapter (helps debugging contract mismatches)
+        debug_keys = [k for k in inputs_with_memory.keys() if k != "__charm_history__"]
+        logger.debug(f"[Charm] Invoking Adapter with keys: {debug_keys}")
 
         # 2. Hijack Stdout (To capture print() as events)
         original_stdout = sys.stdout
@@ -72,7 +83,7 @@ class CharmWrapper:
                 "message": str(e)
             }
         finally:
-            # 5. Restore Stdout (Crucial for cleanup)
+            # 5. Restore Stdout
             sys.stdout = original_stdout
 
     def get_state(self) -> Dict[str, Any]:

@@ -1,8 +1,7 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 from charm.parsers.crewai_parser import CrewAIParser
-
 
 FIXTURE = Path("docs/fixtures/crewai-research-agent/agents.py")
 GOLDEN = Path("docs/fixtures/crewai-research-agent/uac.sample.json")
@@ -45,7 +44,10 @@ def test_crewai_parser_normalizes_to_schema():
             "persona": agent.get("persona", {"name": "unnamed"}),
             "goals": agent.get("goals", []),
             # schema expects capabilities as strings; map from parser capabilities if present
-            "capabilities": [c.get("name") if isinstance(c, dict) else str(c) for c in agent.get("capabilities", [])],
+            "capabilities": [
+                c.get("name") if isinstance(c, dict) else str(c)
+                for c in agent.get("capabilities", [])
+            ],
         }
 
         # validate will raise if not matching

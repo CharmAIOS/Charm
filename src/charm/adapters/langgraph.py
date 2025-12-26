@@ -1,21 +1,21 @@
-from typing import Any, Dict, List
-import inspect
-import asyncio 
+import base64
 import json
-import base64 
-from .base import BaseAdapter
+from typing import Any, Dict, List, Optional
+
 from ..core.logger import logger
+from .base import BaseAdapter
 
 # Import MemorySaver for state checkpointing
 try:
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
-    MemorySaver = None
+    MemorySaver = None  # type: ignore
 
 try:
-    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 except ImportError:
-    from langchain.schema import HumanMessage, AIMessage, SystemMessage, BaseMessage # type: ignore
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage  # type: ignore
+
 
 class CharmLangGraphAdapter(BaseAdapter):
     """Adapter for LangGraph CompiledGraphs."""
@@ -24,7 +24,7 @@ class CharmLangGraphAdapter(BaseAdapter):
         self._smart_instantiate()
 
         # Initialize in-memory checkpointer for state management
-        self.checkpointer = MemorySaver() if MemorySaver else None
+        self.checkpointer = MemorySaver() if MemorySaver is not None else None
 
         if not hasattr(self.agent, "invoke"):
             if hasattr(self.agent, "app") and hasattr(self.agent.app, "invoke"):
@@ -33,18 +33,17 @@ class CharmLangGraphAdapter(BaseAdapter):
             elif hasattr(self.agent, "graph") and hasattr(self.agent.graph, "invoke"):
                 print("[Charm] Detected Wrapper Class. Switching to inner '.graph' attribute.")
                 self.agent = self.agent.graph
-        
+
         # Re-compile the graph with the checkpointer to enable time-travel/state restoration
         if hasattr(self.agent, "checkpointer") and self.agent.checkpointer is None:
-
-             pass
+            pass
 
     def _convert_history_to_messages(self, history: List[Dict[str, str]]) -> List[Any]:
-        lc_messages = []
+        lc_messages: List[Any] = []
         for msg in history:
             role = msg.get("role")
             content = str(msg.get("content", "")).strip()
-            
+
             if not content:
                 continue
 
@@ -56,63 +55,62 @@ class CharmLangGraphAdapter(BaseAdapter):
                 lc_messages.append(SystemMessage(content=content))
         return lc_messages
 
-    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
+    def invoke(
+        self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
+    ) -> Dict[str, Any]:
         self._pending_inputs = inputs
-        
+
         try:
             self._ensure_instantiated()
         except Exception as e:
-             return {
+            return {
                 "status": "error",
                 "error_type": "InstantiationError",
-                "message": f"Failed to instantiate LangGraph agent: {str(e)}"
+                "message": f"Failed to instantiate LangGraph agent: {str(e)}",
             }
 
         # CompiledStateGraph
         if not hasattr(self.agent, "invoke"):
-             return {
+            return {
                 "status": "error",
                 "error_type": "ContractViolation",
                 "message": (
                     f"Entry point resolved to type '{type(self.agent).__name__}', "
                     "but 'langgraph' adapter expects a CompiledGraph object (missing 'invoke' method).\n"
                     "Did you forget to call `.compile()` on your graph?"
-                )
+                ),
             }
 
-        # [Use a fixed thread ID for the stateless run (state is hydrated manually)
-        config = {"configurable": {"thread_id": "charm_session"}}
+        # Use a fixed thread ID for the stateless run (state is hydrated manually)
+        config: Dict[str, Any] = {"configurable": {"thread_id": "charm_session"}}
         if callbacks:
             config["callbacks"] = callbacks
 
         native_input = inputs.copy()
-        
+
         # State Restoration
-        # If the runner/client sent back a saved state snapshot, hydrate the graph.
         raw_state = native_input.pop("__charm_state__", None)
         if raw_state and hasattr(self.agent, "update_state"):
             try:
                 logger.debug("[Charm] Hydrating LangGraph state from snapshot...")
-                saved_state = json.loads(base64.b64decode(raw_state).decode('utf-8'))
-                # We update the state of the graph using the provided values
+                saved_state = json.loads(base64.b64decode(raw_state).decode("utf-8"))
                 self.agent.update_state(config, saved_state)
             except Exception as e:
                 logger.warning(f"[Charm] Failed to restore state: {e}")
 
         history_data = native_input.pop("__charm_history__", None)
-        
+
         if history_data and "messages" in native_input:
-             lc_messages = self._convert_history_to_messages(history_data)
-             if isinstance(native_input["messages"], list):
+            lc_messages = self._convert_history_to_messages(history_data)
+            if isinstance(native_input["messages"], list):
                 native_input["messages"] = lc_messages + native_input["messages"]
-             else:
+            else:
                 native_input["messages"] = lc_messages
 
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
-             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
-             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
-             del native_input["input"]
-
+            logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
+            native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
+            del native_input["input"]
 
         result = None
 
@@ -123,22 +121,27 @@ class CharmLangGraphAdapter(BaseAdapter):
             if "no synchronous function" in error_str or "async" in error_str:
                 logger.info("[Charm] Detected Async Graph. Switching to ainvoke...")
                 try:
-                    result = self._execute_async_safely(self.agent.ainvoke(native_input, config=config))
+                    result = self._execute_async_safely(
+                        self.agent.ainvoke(native_input, config=config)
+                    )
                 except Exception as async_e:
-                    return {"status": "error", "message": f"Async Graph Execution Failed: {str(async_e)}"}
+                    return {
+                        "status": "error",
+                        "message": f"Async Graph Execution Failed: {str(async_e)}",
+                    }
             else:
                 return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
 
         # State Snapshot
-        # Extract the final state, serialize it, and pass it back to the wrapper.
         charm_state_payload = ""
         if hasattr(self.agent, "get_state"):
             try:
                 snapshot = self.agent.get_state(config)
-                # We only save the 'values' (keys), not the entire checkpoint metadata
                 if snapshot and hasattr(snapshot, "values"):
                     state_json = json.dumps(snapshot.values, default=str)
-                    charm_state_payload = base64.b64encode(state_json.encode('utf-8')).decode('utf-8')
+                    charm_state_payload = base64.b64encode(state_json.encode("utf-8")).decode(
+                        "utf-8"
+                    )
             except Exception as e:
                 logger.warning(f"[Charm] Failed to snapshot state: {e}")
 
@@ -150,10 +153,10 @@ class CharmLangGraphAdapter(BaseAdapter):
                     messages = result["messages"]
                     if isinstance(messages, list) and len(messages) > 0:
                         last_msg = messages[-1]
-                        
+
                         content = getattr(last_msg, "content", "")
                         additional_kwargs = getattr(last_msg, "additional_kwargs", {})
-                        
+
                         if content and str(content).strip():
                             output_str = str(content)
                         elif hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
@@ -178,7 +181,7 @@ class CharmLangGraphAdapter(BaseAdapter):
                                 output_str = f"(Empty Content. Raw Message: {str(last_msg)})"
                         else:
                             output_str = f"(Unknown Message Format: {str(last_msg)})"
-                
+
                 elif "generation" in result:
                     output_str = str(result["generation"])
                 elif "result" in result:
@@ -186,19 +189,19 @@ class CharmLangGraphAdapter(BaseAdapter):
                 else:
                     # Try to find meaningful string values in the dict
                     output_str = json.dumps(result, ensure_ascii=False, default=str)
-            
+
             else:
                 output_str = str(result)
-            
+
             if not output_str or not output_str.strip():
                 output_str = f"(Agent returned empty content. Result Type: {type(result)})"
 
             return {
-                "status": "success", 
+                "status": "success",
                 "output": output_str,
-                "charm_state": charm_state_payload # Return state for wrapper to broadcast
+                "charm_state": charm_state_payload,  # Return state for wrapper to broadcast
             }
-            
+
         except Exception as e:
             return {"status": "error", "message": f"Output Processing Error: {str(e)}"}
 

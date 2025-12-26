@@ -1,7 +1,9 @@
-import os
 import json
-from typing import List, Dict, Any
+import os
+from typing import Dict, List
+
 from .logger import logger
+
 
 def load_memory_snapshot() -> List[Dict[str, str]]:
     """
@@ -9,7 +11,7 @@ def load_memory_snapshot() -> List[Dict[str, str]]:
     """
     # Environment variable injected by the Cloud Runner
     memory_path = os.getenv("CHARM_MEMORY_FILE")
-    
+
     if not memory_path:
         logger.debug("No memory file environment variable set.")
         return []

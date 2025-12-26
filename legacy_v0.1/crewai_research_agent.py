@@ -1,8 +1,15 @@
 import os
-import PyPDF2
 from pathlib import Path
-from crewai import Agent, Task, Crew, Process
-from crewai_tools import FileWriterTool, SerperDevTool,GithubSearchTool,LinkupSearchTool,EXASearchTool
+
+import PyPDF2
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import (
+    EXASearchTool,
+    FileWriterTool,
+    GithubSearchTool,
+    LinkupSearchTool,
+    SerperDevTool,
+)
 from dotenv import load_dotenv
 
 _ = load_dotenv()
@@ -29,37 +36,37 @@ file_writer = FileWriterTool()
 serper_tool = SerperDevTool()
 github_search_tool = GithubSearchTool(
     gh_token=os.getenv("GITHUB_TOKEN"),
-	content_types=['code', 'issue'], # Options: code, repo, pr, issue
-	max_results=500  # Limit to 500 results to control token usage
+    content_types=["code", "issue"],  # Options: code, repo, pr, issue
+    max_results=500,  # Limit to 500 results to control token usage
 )
 linkup_tool = LinkupSearchTool(api_key=os.getenv("LINKUP_API_KEY"))
 exascience_tool = EXASearchTool(api_key=os.getenv("EXA_API_KEY"))
-
 
 
 # Function to read PDF content
 def read_pdf_content(pdf_path: str) -> str:
     """Read and extract text content from PDF"""
     try:
-        with open(pdf_path, 'rb') as file:
+        with open(pdf_path, "rb") as file:
             pdf_reader = PyPDF2.PdfReader(file)
             text_content = ""
-            
+
             for page_num in range(len(pdf_reader.pages)):
                 page = pdf_reader.pages[page_num]
                 text_content += page.extract_text() + "\n"
-            
+
             return text_content
     except Exception as e:
         return f"Error reading PDF: {str(e)}"
 
+
 # Read the PDF content first
-pdf_content = read_pdf_content('my saas project (1).pdf')
+pdf_content = read_pdf_content("my saas project (1).pdf")
 
 # Define the Project Analysis Agent
 project_analyst = Agent(
-    role='Project Analyst',
-    goal='Analyze project documents to identify risks, strengths, and opportunities.',
+    role="Project Analyst",
+    goal="Analyze project documents to identify risks, strengths, and opportunities.",
     backstory=(
         "You are a skilled project analyst who can read project documents and "
         "extract meaningful insights, risks, and opportunities. "
@@ -70,32 +77,31 @@ project_analyst = Agent(
     verbose=True,
     memory=True,
     llm=llm_config,
-    allow_code_execution=False
-    
+    allow_code_execution=False,
 )
 
 # Define the Resource Search Agent
 resource_search_agent = Agent(
-    role='Resource Search Specialist',
-    goal='Efficiently locate and curate the most relevant, high-quality resources from multiple platforms to accelerate development and research.',
+    role="Resource Search Specialist",
+    goal="Efficiently locate and curate the most relevant, high-quality resources from multiple platforms to accelerate development and research.",
     backstory=(
         "A specialized research librarian with deep knowledge of developer communities, "
         "academic databases, and open-source ecosystems. Expert at evaluating resource quality, "
         "licensing compatibility, and relevance scoring."
     ),
     allow_code_execution=False,
-    tools=[file_writer, serper_tool,github_search_tool,linkup_tool],
+    tools=[file_writer, serper_tool, github_search_tool, linkup_tool],
     verbose=True,
     memory=True,
-    llm=llm_config
+    llm=llm_config,
 )
 
 # Define the Coding Agent with code execution capabilities
 # This agent can write, execute, and debug Python code using the built-in CodeInterpreterTool
 # The allow_code_execution=True parameter enables the agent to run code and handle errors
 coding_agent = Agent(
-    role='Senior Full-Stack Developer & Code Architect',
-    goal='Generate production-ready, modular code that accelerates development while maintaining best practices and extensibility.',
+    role="Senior Full-Stack Developer & Code Architect",
+    goal="Generate production-ready, modular code that accelerates development while maintaining best practices and extensibility.",
     backstory=(
         "A senior full-stack developer and architect with expertise across multiple programming languages, "
         "frameworks, and design patterns. Specializes in rapid prototyping while maintaining code quality and scalability. "
@@ -107,7 +113,7 @@ coding_agent = Agent(
     verbose=True,
     memory=True,
     allow_code_execution=False,  # Enable code execution capability
-    llm=llm_config
+    llm=llm_config,
 )
 
 # Define the task for analyzing the PDF
@@ -118,7 +124,7 @@ analysis_task = Task(
         f"Project Document Content:\n{pdf_content}..."
     ),
     expected_output="A structured Markdown analysis report of the project.",
-    agent=project_analyst
+    agent=project_analyst,
 )
 
 # Define the Project Context Analysis task with web research
@@ -161,7 +167,7 @@ project_context_task = Task(
         "- WEB RESEARCH: Market analysis of similar platforms, competitors, and opportunities\n\n"
         "Use FileWriterTool to save this with real data extracted from the PDF content and web research."
     ),
-    agent=project_analyst
+    agent=project_analyst,
 )
 
 # Define the Objective Clarification task with market research
@@ -192,7 +198,7 @@ objective_task = Task(
         "- WEB RESEARCH: Market validation insights and industry benchmarks\n\n"
         "Use FileWriterTool to save this with real data, not placeholders."
     ),
-    agent=project_analyst
+    agent=project_analyst,
 )
 
 # Define the Technical Feasibility Assessment task with technology research
@@ -223,7 +229,7 @@ technical_task = Task(
         "- WEB RESEARCH: Latest AI/ML technologies, API limitations, and technical challenges\n\n"
         "Use FileWriterTool to save this with real data, not placeholders."
     ),
-    agent=project_analyst
+    agent=project_analyst,
 )
 
 # Define the Resource Requirements Planning task with market insights
@@ -256,7 +262,7 @@ resource_task = Task(
         "- WEB RESEARCH: Current market costs, developer rates, and infrastructure pricing\n\n"
         "Use FileWriterTool to save this with real data, not placeholders."
     ),
-    agent=project_analyst
+    agent=project_analyst,
 )
 
 # Define Resource Search Tasks (Second Agent)
@@ -284,7 +290,7 @@ multi_platform_discovery_task = Task(
         "- Categorized by platform (GitHub, Kaggle, ArXiv, StackOverflow, Documentation)\n\n"
         "Use FileWriterTool to save this with real search results. Ensure you have at least 10 resources total."
     ),
-    agent=resource_search_agent
+    agent=resource_search_agent,
 )
 
 # Task 2: Code repository analysis and filtering
@@ -312,7 +318,7 @@ code_repository_analysis_task = Task(
         "- Star count, last updated, and language information\n\n"
         "Use FileWriterTool to save this with real repository analysis. Ensure you have at least 10 repositories."
     ),
-    agent=resource_search_agent
+    agent=resource_search_agent,
 )
 
 # Task 3: Dataset discovery and validation
@@ -341,7 +347,7 @@ dataset_discovery_task = Task(
         "- Source platform and last updated information\n\n"
         "Use FileWriterTool to save this with real dataset findings. Ensure you have at least 10 datasets."
     ),
-    agent=resource_search_agent
+    agent=resource_search_agent,
 )
 
 # Task 4: Academic paper and documentation retrieval
@@ -370,7 +376,7 @@ academic_paper_task = Task(
         "- Publication date and author information\n\n"
         "Use FileWriterTool to save this with real academic research findings. Ensure you have at least 10 resources."
     ),
-    agent=resource_search_agent
+    agent=resource_search_agent,
 )
 
 # Task 5: Real-time resource monitoring
@@ -400,7 +406,7 @@ realtime_monitoring_task = Task(
         "- Publication/update dates\n\n"
         "Use FileWriterTool to save this with real-time findings. Ensure you have at least 10 resources."
     ),
-    agent=resource_search_agent
+    agent=resource_search_agent,
 )
 
 # Define Coding Agent Tasks (Third Agent)
@@ -431,7 +437,7 @@ architecture_design_task = Task(
         "- Python script for creating project structure\n\n"
         "Use FileWriterTool to save this with detailed architectural guidance."
     ),
-    agent=coding_agent
+    agent=coding_agent,
 )
 
 # Task 2: Starter Template Generation
@@ -462,7 +468,7 @@ starter_template_task = Task(
         "- Comprehensive setup instructions\n\n"
         "Use FileWriterTool to save setup instructions and generate all code files."
     ),
-    agent=coding_agent
+    agent=coding_agent,
 )
 
 # Task 3: Custom Function and Component Creation
@@ -493,7 +499,7 @@ custom_components_task = Task(
         "- Usage examples and integration guidelines\n\n"
         "Use FileWriterTool to save documentation and generate all code files."
     ),
-    agent=coding_agent
+    agent=coding_agent,
 )
 
 # Task 4: API Integration Code Generation
@@ -524,7 +530,7 @@ api_integration_task = Task(
         "- Security best practices implementation\n\n"
         "Use FileWriterTool to save documentation and generate all code files."
     ),
-    agent=coding_agent
+    agent=coding_agent,
 )
 
 # Task 5: Testing and Validation Code Creation
@@ -555,7 +561,7 @@ testing_validation_task = Task(
         "- Coverage reporting setup\n\n"
         "Use FileWriterTool to save documentation and generate all test files."
     ),
-    agent=coding_agent
+    agent=coding_agent,
 )
 
 # Build the Crew with both agents and all tasks
@@ -563,9 +569,9 @@ crew = Crew(
     agents=[project_analyst, resource_search_agent, coding_agent],
     tasks=[
         # First agent tasks (project analysis)
-        project_context_task, 
-        objective_task, 
-        technical_task, 
+        project_context_task,
+        objective_task,
+        technical_task,
         resource_task,
         # Second agent tasks (resource search)
         multi_platform_discovery_task,
@@ -578,9 +584,9 @@ crew = Crew(
         starter_template_task,
         custom_components_task,
         api_integration_task,
-        testing_validation_task
+        testing_validation_task,
     ],
-    process=Process.sequential
+    process=Process.sequential,
 )
 
 # Run the analysis
@@ -589,9 +595,9 @@ print(f"Project analysis files will be saved to: {output_folder}")
 print(f"Resource discovery files will be saved to: {resource_folder}")
 print(f"Generated code and documentation will be saved to: {code_folder}")
 result = crew.kickoff()
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("ANALYSIS, RESOURCE DISCOVERY, AND CODE GENERATION COMPLETE!")
-print("="*50)
+print("=" * 50)
 print(f"Project analysis files saved to: {output_folder}")
 print(f"Resource discovery files saved to: {resource_folder}")
 print(f"Generated code and documentation saved to: {code_folder}")

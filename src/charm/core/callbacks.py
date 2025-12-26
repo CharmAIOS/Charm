@@ -1,22 +1,26 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
 from langchain_core.callbacks import BaseCallbackHandler
+
 from .io import CharmEmitter
+
 
 class CharmCallbackHandler(BaseCallbackHandler):
     """
     Custom LangChain Callback to capture execution events and stream them via CharmEmitter.
     """
+
     ignore_llm: bool = False
     ignore_chain: bool = False
     ignore_agent: bool = False
     ignore_retriever: bool = False
     always_verbose: bool = True
 
-    def __init__(self, shared_state: Dict[str, Any] = None):
+    def __init__(self, shared_state: Optional[Dict[str, Any]] = None):
         self.current_tool = None
         # Shared state allows the wrapper to know if tokens were streamed.
         self.shared_state = shared_state if shared_state is not None else {}
-        
+
         print("[Charm] 🟢 Loaded Local SDK Fix (Shared State + Attrs)")
 
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
@@ -29,7 +33,7 @@ class CharmCallbackHandler(BaseCallbackHandler):
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Triggered when a tool finishes."""
         out_str = str(output)
-        msg = f"Tool Output: {out_str[:500]}...\n" # Truncate long outputs / 截斷過長的輸出
+        msg = f"Tool Output: {out_str[:500]}...\n"  # Truncate long outputs / 截斷過長的輸出
         CharmEmitter.emit_thinking(msg)
         self.current_tool = None
 
@@ -50,10 +54,11 @@ class CharmCallbackHandler(BaseCallbackHandler):
         """Capture the agent's thought process."""
         tool = getattr(action, "tool", "Unknown")
         inp = getattr(action, "tool_input", "")
-        if isinstance(inp, dict): inp = str(inp)
-        
+        if isinstance(inp, dict):
+            inp = str(inp)
+
         if not self.current_tool:
-             CharmEmitter.emit_thinking(f"Thought: I need to use {tool} with {inp}\n")
+            CharmEmitter.emit_thinking(f"Thought: I need to use {tool} with {inp}\n")
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         pass

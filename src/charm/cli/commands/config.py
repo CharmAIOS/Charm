@@ -1,11 +1,15 @@
-import typer
+from typing import cast
+
 import tomlkit
+import typer
 from rich.console import Console
-from rich.table import Table
-from ...cli.config import load_config, CONFIG_FILE
+from tomlkit.items import Table
+
+from ...cli.config import CONFIG_FILE, load_config
 
 app = typer.Typer(help="Manage local configuration.")
 console = Console()
+
 
 @app.command("set")
 def set_config(key: str, value: str):
@@ -15,12 +19,16 @@ def set_config(key: str, value: str):
         raise typer.Exit(code=1)
     section, subkey = key.split(".", 1)
     config = load_config()
-    if section not in config: config.add(section, tomlkit.table())
-    config[section][subkey] = value
-    
+    if section not in config:
+        config.add(section, tomlkit.table())
+
+    section_table = cast(Table, config[section])
+    section_table[subkey] = value
+
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         f.write(tomlkit.dumps(config))
     console.print(f"[green]✔ set {key} = {value}[/green]")
+
 
 @app.command("list")
 def list_config():

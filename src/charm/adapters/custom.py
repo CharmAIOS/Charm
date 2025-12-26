@@ -1,10 +1,11 @@
 import inspect
-from typing import Any, Dict, Generator, Union, List 
-from .base import BaseAdapter
+from typing import Any, Dict, Generator, List, Optional
+
 from ..core.logger import logger
+from .base import BaseAdapter
+
 
 class CharmCustomAdapter(BaseAdapter):
-
     def __init__(self, agent_instance: Any):
         super().__init__(agent_instance)
         self._smart_instantiate()
@@ -24,27 +25,29 @@ class CharmCustomAdapter(BaseAdapter):
                 "It must be a function, or a class with 'invoke()' or 'run()' methods."
             )
 
-    def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
+    def invoke(
+        self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
+    ) -> Dict[str, Any]:
         logger.info("Executing Custom Agent...")
         try:
             # Smart Argument Binding & Contract Validation
             sig = inspect.signature(self.execution_method)
-            kwargs = {}
-            
+            kwargs: Dict[str, Any] = {}
+
             missing_args = []
-            
+
             for name, param in sig.parameters.items():
                 if name == "inputs":
                     kwargs["inputs"] = inputs
                 elif name == "callbacks":
                     kwargs["callbacks"] = callbacks
-                
+
                 elif name in inputs:
                     kwargs[name] = inputs[name]
-                
+
                 elif param.default != inspect.Parameter.empty:
                     continue
-                
+
                 elif param.kind == inspect.Parameter.VAR_KEYWORD:
                     continue
 
@@ -59,40 +62,41 @@ class CharmCustomAdapter(BaseAdapter):
                     f"Suggested Fix: Update signature to 'def {self.execution_method.__name__}(inputs, callbacks=None):'"
                 )
                 logger.error(error_msg)
-                return {
-                    "status": "error",
-                    "error_type": "ContractViolation",
-                    "message": error_msg
-                }
+                return {"status": "error", "error_type": "ContractViolation", "message": error_msg}
 
             result = self._smart_invoke(self.execution_method, **kwargs)
-            
+
             if isinstance(result, dict):
                 return result
             elif isinstance(result, str):
                 return {"output": result}
             else:
                 return {"output": str(result), "raw_type": type(result).__name__}
-                
+
         except Exception as e:
             logger.error(f"Custom Agent crashed: {e}")
             return {
                 "status": "error",
                 "error_type": "RuntimeError",
-                "message": f"Agent Execution Failed: {str(e)}"
+                "message": f"Agent Execution Failed: {str(e)}",
             }
 
-    def stream(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Generator[Any, None, None]:
+    def stream(
+        self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
+    ) -> Generator[Any, None, None]:
         if hasattr(self.agent, "stream") and callable(self.agent.stream):
             sig = inspect.signature(self.agent.stream)
-            kwargs = {}
+            kwargs: Dict[str, Any] = {}
             if "callbacks" in sig.parameters:
                 kwargs["callbacks"] = callbacks
             if "inputs" in sig.parameters:
                 kwargs["inputs"] = inputs
             else:
                 # Fallback
-                kwargs = {"inputs": inputs} if len(sig.parameters) == 1 else inputs
+                if len(sig.parameters) == 1:
+                    kwargs = {"inputs": inputs}
+                else:
+                    kwargs = inputs
 
             yield from self.agent.stream(**kwargs)
             return
@@ -103,3 +107,6 @@ class CharmCustomAdapter(BaseAdapter):
 
         result = self.invoke(inputs, callbacks=callbacks)
         yield result
+
+    def set_tools(self, tools: List[Any]) -> None:
+        pass

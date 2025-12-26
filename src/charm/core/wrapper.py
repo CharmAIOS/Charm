@@ -1,19 +1,19 @@
 import sys
-from typing import Any, Dict, List, Optional, Generator
+from typing import Any, Dict, List, Optional
+
 from ..adapters.base import BaseAdapter
-from .errors import CharmExecutionError
-from .logger import logger
-from .io import CharmEmitter, StdoutInterceptor
 from .callbacks import CharmCallbackHandler
-from .memory import load_memory_snapshot 
+from .io import CharmEmitter, StdoutInterceptor
+from .logger import logger
+from .memory import load_memory_snapshot
+
 
 class CharmWrapper:
     """
     The runtime container that orchestrates the execution lifecycle.
     """
-    
+
     def __init__(self, adapter: BaseAdapter, config: Optional[Any] = None):
-        # The adapter wraps the specific framework (CrewAI, LangChain, etc.)
         self.adapter = adapter
         self.config = config
 
@@ -40,7 +40,7 @@ class CharmWrapper:
         Main execution entry point. Handles I/O interception, memory, and error handling.
         """
         CharmEmitter.emit_status("Initializing Agent Runtime...")
-        
+
         # Memory Injection
         inputs_with_memory = self._inject_memory(inputs)
 
@@ -51,19 +51,19 @@ class CharmWrapper:
         # Hijack Stdout (To capture print() as events)
         original_stdout = sys.stdout
         sys.stdout = StdoutInterceptor()
-        
+
         # Track streaming state to avoid double-printing final output
         stream_state = {"has_streamed": False}
         charm_callback = CharmCallbackHandler(shared_state=stream_state)
-        
+
         try:
             # 3. Execute via Adapter
             result = self.adapter.invoke(inputs_with_memory, callbacks=[charm_callback])
-            
+
             # State Broadcasting
             if "charm_state" in result and result["charm_state"]:
                 CharmEmitter._write("state_update", {"content": result["charm_state"]})
-                # del result["charm_state"] 
+                # del result["charm_state"]
 
             if result.get("status") == "success":
                 # Emit final result only if it wasn't already streamed token-by-token
@@ -74,18 +74,14 @@ class CharmWrapper:
                 # Handle logical errors from the agent
                 error_msg = result.get("message", "Unknown error")
                 CharmEmitter.emit_error(error_msg)
-                sys.exit(0) # Exit gracefully for the runner
+                sys.exit(0)  # Exit gracefully for the runner
                 return result
-                
+
         except Exception as e:
             # 4. Global Error Handler (Crash protection)
             CharmEmitter.emit_error(str(e))
             sys.exit(0)
-            return {
-                "status": "error", 
-                "error_type": "CharmExecutionError",
-                "message": str(e)
-            }
+            return {"status": "error", "error_type": "CharmExecutionError", "message": str(e)}
         finally:
             # 5. Restore Stdout
             sys.stdout = original_stdout

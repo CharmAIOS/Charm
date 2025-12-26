@@ -1,5 +1,5 @@
-from pathlib import Path
 import importlib.util
+from pathlib import Path
 
 # Path: fixtures/crewai-research-agent/agents.py
 FIXTURE_AGENT_PATH = Path("docs/fixtures/crewai-research-agent/agents.py")

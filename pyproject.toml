@@ -76,5 +76,6 @@ dev = [
 ]
 
 [tool.setuptools.package-data]
+"charm" = ["py.typed"]
 "charm.contracts" = ["*.json"]
 "charm.templates" = ["*.yaml"]

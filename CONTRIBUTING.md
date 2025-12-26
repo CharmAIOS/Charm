@@ -38,9 +38,13 @@ source .venv/bin/activate
 ``` 
 4. Install
 ```bash
-uv pip install -e ".[dev]"
+uv pip install -e ".[runner,dev]"
 ```
-5. Run Tests
+5. Build Base Image (Required for Runner tests)
+```bash
+docker build -f Dockerfile.base -t charm-runner-base:latest .
+```
+6. Run Tests
 ```bash
 pytest
 ```

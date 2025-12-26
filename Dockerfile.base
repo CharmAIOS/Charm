@@ -1,0 +1,40 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y \
+    git curl tar \
+    build-essential \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libcairo2-dev \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libxml2-dev \
+    libxslt-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+WORKDIR /app
+
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN uv venv $VIRTUAL_ENV
+
+RUN uv pip install \
+    "charmos>=0.4.9" \
+    "crewai[tools]>=0.28.0" \
+    "langchain>=0.1.0" \
+    "langgraph>=0.0.26" \
+    "openai>=1.10.0" \
+    "google-generativeai" \
+    "langchain-google-genai" \
+    "pydantic>=2.0.0" \
+    pandas numpy requests python-dotenv
+
+ENV UV_CACHE_DIR=/root/.cache/uv
+
+CMD ["echo", "Charm Fat Runtime Ready"]

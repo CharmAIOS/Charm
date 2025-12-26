@@ -1,19 +1,19 @@
-import typer
-import yaml
+import ast
+import importlib.util
+import inspect
 import os
 import sys
-import ast
-import inspect
-import importlib.util
 from pathlib import Path
+
+import typer
+import yaml  # type: ignore
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
-from pydantic import ValidationError
 
 from ...contracts.uac import CharmConfig
 
 console = Console()
+
 
 def _check_absolute_paths(project_path: Path) -> list:
     """
@@ -22,29 +22,34 @@ def _check_absolute_paths(project_path: Path) -> list:
     """
     warnings = []
     ignored_dirs = {".venv", "venv", ".git", "__pycache__", "node_modules", "dist", "build"}
-    
+
     for root, dirs, files in os.walk(project_path):
         dirs[:] = [d for d in dirs if d not in ignored_dirs]
-        
+
         for file in files:
             if file.endswith(".py"):
                 file_path = Path(root) / file
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
                         tree = ast.parse(f.read())
-                    
+
                     for node in ast.walk(tree):
                         if isinstance(node, ast.Constant) and isinstance(node.value, str):
                             val = node.value
                             is_unix_abs = val.startswith("/") and len(val) > 1 and "/" in val[1:]
-                            is_win_abs = (len(val) > 2 and val[1] == ":" and val[2] in ["\\", "/"])
-                            
-                            if (is_unix_abs or is_win_abs) and not val.startswith(("http", "https", "application/", "text/")):
+                            is_win_abs = len(val) > 2 and val[1] == ":" and val[2] in ["\\", "/"]
+
+                            if (is_unix_abs or is_win_abs) and not val.startswith(
+                                ("http", "https", "application/", "text/")
+                            ):
                                 rel_path = file_path.relative_to(project_path)
-                                warnings.append(f"{rel_path}:{node.lineno} -> Suspicious absolute path: '{val}'")
+                                warnings.append(
+                                    f"{rel_path}:{node.lineno} -> Suspicious absolute path: '{val}'"
+                                )
                 except Exception:
-                    pass 
+                    pass
     return warnings
+
 
 def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> list:
     """
@@ -55,15 +60,15 @@ def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> li
         return ["Entry point format invalid. Expected 'module:function'"]
 
     module_name, func_name = entry_point_str.split(":")
-    
+
     original_sys_path = sys.path[:]
     sys.path.insert(0, str(project_path))
-    
+
     try:
         module_file = project_path / Path(module_name.replace(".", "/") + ".py")
         if not module_file.exists():
             module_file = project_path / Path(module_name.replace(".", "/") + "/__init__.py")
-            
+
         if not module_file.exists():
             return [f"Could not find module file for '{module_name}'"]
 
@@ -71,36 +76,39 @@ def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> li
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            
+
             if not hasattr(module, func_name):
                 return [f"Function/Object '{func_name}' not found in module '{module_name}'"]
-            
+
             obj = getattr(module, func_name)
-            
+
             if callable(obj):
                 try:
                     sig = inspect.signature(obj)
                     valid_params = {"inputs", "callbacks"}
-                    
+
                     for name, param in sig.parameters.items():
-                        if name not in valid_params and param.default == inspect.Parameter.empty and param.kind != inspect.Parameter.VAR_KEYWORD:
+                        if (
+                            name not in valid_params
+                            and param.default == inspect.Parameter.empty
+                            and param.kind != inspect.Parameter.VAR_KEYWORD
+                        ):
                             errors.append(
                                 f"Entry point '{func_name}' has an unsupported required argument: '{name}'.\n"
-                                f"   Only 'inputs' and 'callbacks' are provided by Charm Runtime."
+                                f"    Only 'inputs' and 'callbacks' are provided by Charm Runtime."
                             )
                 except ValueError:
                     pass
-                    
+
     except Exception as e:
         errors.append(f"Could not statically analyze entry point (Import Error): {e}")
     finally:
         sys.path = original_sys_path
-        
+
     return errors
 
-def validate_command(
-    path: str = typer.Argument(".", help="Path to the Charm project root")
-):
+
+def validate_command(path: str = typer.Argument(".", help="Path to the Charm project root")):
     """
     Validate the charm.yaml configuration and check code integrity.
     """
@@ -119,14 +127,16 @@ def validate_command(
         config = CharmConfig(**data)
     except Exception as e:
         console.print(f"[bold red]✖ Configuration Error:[/bold red] {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
-    console.print(Panel(
-        f"[bold]Agent:[/bold] {config.persona.name} (v{config.persona.version})\n"
-        f"[bold]Adapter:[/bold] {config.runtime.adapter.type}",
-        title="[bold green]✔ Schema Valid[/bold green]",
-        border_style="green"
-    ))
+    console.print(
+        Panel(
+            f"[bold]Agent:[/bold] {config.persona.name} (v{config.persona.version})\n"
+            f"[bold]Adapter:[/bold] {config.runtime.adapter.type}",
+            title="[bold green]✔ Schema Valid[/bold green]",
+            border_style="green",
+        )
+    )
 
     # Code Static Analysis (Linting)
     console.print("\n[bold]Running Code Analysis...[/bold]")
@@ -146,9 +156,11 @@ def validate_command(
     # Absolute Paths
     path_warnings = _check_absolute_paths(project_path)
     if path_warnings:
-        console.print("\n[bold yellow]⚠ Portability Warnings (Absolute Paths Detected):[/bold yellow]")
+        console.print(
+            "\n[bold yellow]⚠ Portability Warnings (Absolute Paths Detected):[/bold yellow]"
+        )
         console.print("  [dim]Absolute paths will break when running in the cloud.[/dim]")
-        for w in path_warnings[:5]: 
+        for w in path_warnings[:5]:
             console.print(f"  - {w}")
         if len(path_warnings) > 5:
             console.print(f"  - ... and {len(path_warnings) - 5} more.")
@@ -158,5 +170,5 @@ def validate_command(
     if issues_found:
         console.print("\n[bold red]Validation Failed due to code issues.[/bold red]")
         raise typer.Exit(code=1)
-    
+
     console.print("\n[bold green]✨ Project is ready to push![/bold green]")

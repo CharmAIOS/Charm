@@ -13,17 +13,17 @@ charm auth login
 
 Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
 
-3. Local Validation
+3. Local Validation & Development
 
-- Static Analysis
+Step A: Static Analysis
 
 Use Pydantic to validate that the YAML fields conform to the UAC schema.
 ```bash
 charm validate .
 ```
-- Local Execution
+Step B: Local Execution
 
-Simulate the Cloud Runner locally to ensure your agent accepts inputs correctly.
+Run your agent using your local Python environment. This is best for rapid logic iteration and debugging.
 
 **Option 1: Simple Text Input**
 
@@ -39,6 +39,15 @@ charm run . --json '{"field_name": "value", "option_key": 123}'
 ```
 > field_name: Must match the property names defined in your charm.yaml.
 > value: The actual data you want to pass to the agent.
+
+Step C: Sandbox Simulation
+
+Run your agent inside the Charm Docker Sandbox. This guarantees compatibility with the cloud runtime.
+
+```bash
+charm run . --input "YOUR_INPUT_TEXT" --docker
+```
+> Prerequisite: Ensure you have installed the runner extras (pip install "charmos[runner]") and Docker is running.
 
 4. Publishing
 ```bash

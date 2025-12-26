@@ -27,22 +27,23 @@ To explore Charm’s core concepts and code in more detail, check out our [docum
 ### Installation
 Charm is available on PyPI. We recommend using [uv](https://github.com/astral-sh/uv) for the best experience.
 
-#### Modern Setup
-Add Charm as a dependency
+#### Standard Setup (For Agent Development)
+If you only want to build and define agents
+
 ```bash
 uv add charmos
-# Requires Python 3.10+
-```
-#### Standard Pip Setup
-1. Create venv
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-2. Install
-```bash
+# or
 pip install charmos
 ```
+#### Advanced Setup (For Local Cloud Runner)
+If you want to simulate the isolated cloud environment locally (requires Docker)
+
+```bash
+uv add charmos[runner]
+# or
+pip install charmos[runner]
+```
+> **Note:** To use the docker simulation mode, you must have Docker Desktop or Docker Engine running on your machine.
 ## Contributing
 To learn how to contribute to Charm, please read the contribution guide [here](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).
 

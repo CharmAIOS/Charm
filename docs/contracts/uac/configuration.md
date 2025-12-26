@@ -1,17 +1,22 @@
-## Configuration Guide: The UAC Manifest
+# Configuration Guide: The UAC Manifest
 
-### Getting Started
+## Getting Started
+
 Depending on your project status, choose the path that fits you best.
 
 Path A: Start a new project
+
 ```bash
 charm init my-agent
 cd my-agent
 ```
+
 Path B: Create the file manually
 
 1. Create a file named charm.yaml in your project root
+
 > The charm.yaml file must always be at the root level of your project
+
 ```plaintext
 
 my-agent/             <-- Project Root
@@ -20,14 +25,17 @@ my-agent/             <-- Project Root
 └── src/
     └── main.py       <-- Your Agent Logic
 ```
-2. Copy the Annotated Reference below for use in your configuration
 
-3. Update the field with your existing agent project
+1. Copy the Annotated Reference below for use in your configuration
+
+2. Update the field with your existing agent project
 
 ### IDE Setup
+
 By configuring your editor, you get auto-completion and error checking. This is crucial for avoiding typos.
 
 1. Create .vscode/settings.json in your project root.
+
 ```JSON
 {
   "yaml.schemas": {
@@ -35,7 +43,9 @@ By configuring your editor, you get auto-completion and error checking. This is 
   }
 }
 ```
+
 ### Annotated Reference
+
 This is a fully annotated example to understand specific capabilities or customization options.
 
 ```YAML
@@ -155,8 +165,10 @@ policies:
   allow_internet_access: true
   max_steps: 20
   ```
+
 ### Field Reference Table
-|Section|Field|Type|Description|
+
+**|Section|Field|Type|Description|
 |--------|-----------|--------------------------|-------------------------|
 | Persona   | name | String|Public display name of the agent.  |
 |  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
@@ -164,7 +176,7 @@ policies:
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
-|Runtime|	adapter.type|	Enum	|crewai, langchain,langgraph, custom.|
-| |entry_point|	String|	Python path (module:obj). For custom, can be a function or object with invoke().|
-| |environment_variables	|List	|Names of required env vars (e.g., OPENAI_API_KEY).|
-|Policies|	max_steps	|Integer	|Maximum execution steps to prevent infinite loops.|
+|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom.|
+| |entry_point| String| Python path (module:obj). For custom, can be a function or object with invoke().|
+| |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
+|Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|**

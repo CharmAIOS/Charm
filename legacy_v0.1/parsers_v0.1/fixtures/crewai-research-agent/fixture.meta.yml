@@ -1,9 +1,0 @@
-name: crewai-research-agent
-lane: crewai→langgraph
-issue: 1
-stability: frozen
-purpose: Golden fixture for Agent Adapter validation
-owner: core-team
-notes:
-  - Used to test adapter parsing, config extraction, and runtime mapping.
-  - Do not mutate; create a new fixture if schema changes.

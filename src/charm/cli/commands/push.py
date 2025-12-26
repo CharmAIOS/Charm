@@ -17,8 +17,6 @@ from ..git import GitError, get_repo_info
 
 console = Console()
 
-# [Update] 指向 Next.js Store API (本地開發預設值)
-# 若上線後，請將此處改為 https://your-store-domain.com/api
 DEFAULT_API_BASE = "http://localhost:3000/api"
 
 # Files to exclude from the bundle for security and size.

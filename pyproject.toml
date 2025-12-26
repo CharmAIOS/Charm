@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "charmos"
-version = "0.4.11"  # 建議版號 +1，標記架構變動
+version = "0.4.11"
 description = "The Unified System Layer for Agentic Intelligence"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,7 +33,6 @@ Homepage = "https://charmos.io"
 Repository = "https://github.com/CharmAIOS/Charm"
 
 [project.optional-dependencies]
-
 runner = [
     "docker>=7.0.0",
 ]

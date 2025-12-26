@@ -141,7 +141,6 @@ def run_command(
         # Read file robustly using dotenv_values
         try:
             raw_env = dotenv_values(env_path)
-            # Fix Mypy Error: Filter out None values to ensure Dict[str, str]
             loaded_env_vars = {k: v for k, v in raw_env.items() if v is not None}
         except Exception:
             pass
@@ -186,11 +185,9 @@ def run_command(
 
     except CharmError as e:
         console.print(f"[bold red] Load Error:[/bold red] {e}")
-        # 【修正重點】這裡加了 from e
         raise typer.Exit(code=1) from e
     except Exception as e:
         console.print(f"[bold red] Unexpected Error:[/bold red] {e}")
-        # 【修正重點】這裡加了 from e (就是這一行解決了你的 B904 錯誤)
         raise typer.Exit(code=1) from e
 
     try:
@@ -199,7 +196,6 @@ def run_command(
 
     except Exception as e:
         console.print(f"[bold red] Execution Error:[/bold red] {e}")
-        # 【修正重點】這裡加了 from e
         raise typer.Exit(code=2) from e
 
     if not json_input:
@@ -221,5 +217,5 @@ def run_command(
                 Panel(f"[bold]Error:[/bold] {error_msg}", title="Agent Failed", border_style="red")
             )
     else:
-        # For JSON input (headless), we might want just the raw JSON output
+        # For JSON input, we might want just the raw JSON output
         console.print("[DEBUG CHECK] Silent Mode Active. Panel suppressed.")

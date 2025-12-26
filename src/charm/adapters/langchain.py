@@ -42,7 +42,25 @@ class CharmLangChainAdapter(BaseAdapter):
 
     def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         self._pending_inputs = inputs
-        self._ensure_instantiated()
+        
+        try:
+            self._ensure_instantiated()
+        except Exception as e:
+             return {
+                "status": "error",
+                "error_type": "InstantiationError",
+                "message": f"Failed to instantiate LangChain agent: {str(e)}"
+            }
+
+        if not hasattr(self.agent, "invoke"):
+            return {
+                "status": "error",
+                "error_type": "ContractViolation",
+                "message": (
+                    f"Entry point resolved to type '{type(self.agent).__name__}', "
+                    "but 'langchain' adapter expects a Runnable/Chain object (missing 'invoke' method)."
+                )
+            }
         
         native_input = inputs.copy()
         

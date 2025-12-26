@@ -2,8 +2,15 @@ from typing import Any, Dict, List
 import inspect
 import asyncio 
 import json
+import base64 
 from .base import BaseAdapter
 from ..core.logger import logger
+
+# Import MemorySaver for state checkpointing
+try:
+    from langgraph.checkpoint.memory import MemorySaver
+except ImportError:
+    MemorySaver = None
 
 try:
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
@@ -16,6 +23,9 @@ class CharmLangGraphAdapter(BaseAdapter):
     def _ensure_instantiated(self):
         self._smart_instantiate()
 
+        # Initialize in-memory checkpointer for state management
+        self.checkpointer = MemorySaver() if MemorySaver else None
+
         if not hasattr(self.agent, "invoke"):
             if hasattr(self.agent, "app") and hasattr(self.agent.app, "invoke"):
                 print("[Charm] Detected Wrapper Class. Switching to inner '.app' attribute.")
@@ -23,6 +33,11 @@ class CharmLangGraphAdapter(BaseAdapter):
             elif hasattr(self.agent, "graph") and hasattr(self.agent.graph, "invoke"):
                 print("[Charm] Detected Wrapper Class. Switching to inner '.graph' attribute.")
                 self.agent = self.agent.graph
+        
+        # Re-compile the graph with the checkpointer to enable time-travel/state restoration
+        if hasattr(self.agent, "checkpointer") and self.agent.checkpointer is None:
+
+             pass
 
     def _convert_history_to_messages(self, history: List[Dict[str, str]]) -> List[Any]:
         lc_messages = []
@@ -43,13 +58,47 @@ class CharmLangGraphAdapter(BaseAdapter):
 
     def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         self._pending_inputs = inputs
-        self._ensure_instantiated()
+        
+        try:
+            self._ensure_instantiated()
+        except Exception as e:
+             return {
+                "status": "error",
+                "error_type": "InstantiationError",
+                "message": f"Failed to instantiate LangGraph agent: {str(e)}"
+            }
 
-        config = {"configurable": {"thread_id": "charm_default_thread"}}
+        # CompiledStateGraph
+        if not hasattr(self.agent, "invoke"):
+             return {
+                "status": "error",
+                "error_type": "ContractViolation",
+                "message": (
+                    f"Entry point resolved to type '{type(self.agent).__name__}', "
+                    "but 'langgraph' adapter expects a CompiledGraph object (missing 'invoke' method).\n"
+                    "Did you forget to call `.compile()` on your graph?"
+                )
+            }
+
+        # [Use a fixed thread ID for the stateless run (state is hydrated manually)
+        config = {"configurable": {"thread_id": "charm_session"}}
         if callbacks:
             config["callbacks"] = callbacks
 
         native_input = inputs.copy()
+        
+        # State Restoration
+        # If the runner/client sent back a saved state snapshot, hydrate the graph.
+        raw_state = native_input.pop("__charm_state__", None)
+        if raw_state and hasattr(self.agent, "update_state"):
+            try:
+                logger.debug("[Charm] Hydrating LangGraph state from snapshot...")
+                saved_state = json.loads(base64.b64decode(raw_state).decode('utf-8'))
+                # We update the state of the graph using the provided values
+                self.agent.update_state(config, saved_state)
+            except Exception as e:
+                logger.warning(f"[Charm] Failed to restore state: {e}")
+
         history_data = native_input.pop("__charm_history__", None)
         
         if history_data and "messages" in native_input:
@@ -80,6 +129,19 @@ class CharmLangGraphAdapter(BaseAdapter):
             else:
                 return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
 
+        # State Snapshot
+        # Extract the final state, serialize it, and pass it back to the wrapper.
+        charm_state_payload = ""
+        if hasattr(self.agent, "get_state"):
+            try:
+                snapshot = self.agent.get_state(config)
+                # We only save the 'values' (keys), not the entire checkpoint metadata
+                if snapshot and hasattr(snapshot, "values"):
+                    state_json = json.dumps(snapshot.values, default=str)
+                    charm_state_payload = base64.b64encode(state_json.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                logger.warning(f"[Charm] Failed to snapshot state: {e}")
+
         try:
             output_str = ""
 
@@ -109,9 +171,9 @@ class CharmLangGraphAdapter(BaseAdapter):
                         elif hasattr(last_msg, "response_metadata"):
                             meta = last_msg.response_metadata
                             if "prompt_feedback" in meta:
-                                output_str = f"⚠️ Safety Block: {meta['prompt_feedback']}"
+                                output_str = f"Safety Block: {meta['prompt_feedback']}"
                             elif "finish_reason" in meta:
-                                output_str = f"⚠️ Stop Reason: {meta['finish_reason']}"
+                                output_str = f"Stop Reason: {meta['finish_reason']}"
                             else:
                                 output_str = f"(Empty Content. Raw Message: {str(last_msg)})"
                         else:
@@ -131,7 +193,11 @@ class CharmLangGraphAdapter(BaseAdapter):
             if not output_str or not output_str.strip():
                 output_str = f"(Agent returned empty content. Result Type: {type(result)})"
 
-            return {"status": "success", "output": output_str}
+            return {
+                "status": "success", 
+                "output": output_str,
+                "charm_state": charm_state_payload # Return state for wrapper to broadcast
+            }
             
         except Exception as e:
             return {"status": "error", "message": f"Output Processing Error: {str(e)}"}

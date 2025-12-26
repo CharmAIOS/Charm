@@ -40,27 +40,64 @@ class CharmCrewAIAdapter(BaseAdapter):
 
     def invoke(self, inputs: Dict[str, Any], callbacks: List[Any] = None) -> Dict[str, Any]:
         self._pending_inputs = inputs
-        self._ensure_instantiated()
+        
+        try:
+            self._ensure_instantiated()
+        except Exception as e:
+             return {
+                "status": "error",
+                "error_type": "InstantiationError",
+                "message": f"Failed to instantiate CrewAI agent: {str(e)}"
+            }
 
         if not hasattr(self.agent, "kickoff"):
-             return {
-                 "status": "error", 
-                 "error_type": "CharmExecutionError",
-                 "message": f"Entry point did not resolve to a CrewAI object. Got {type(self.agent).__name__} instead."
-             }
+            return {
+                "status": "error",
+                "error_type": "ContractViolation",
+                "message": (
+                    f"Entry point resolved to type '{type(self.agent).__name__}', "
+                    "but 'crewai' adapter expects a Crew object (missing 'kickoff' method).\n"
+                    "Did you select the wrong adapter type in charm.yaml?"
+                )
+            }
 
         if callbacks:
             self._inject_callbacks(callbacks)
 
         native_input = inputs.copy()
         
+        _ = native_input.pop("__charm_state__", None)
+
         history_data = native_input.pop("__charm_history__", None)
+        
+        # Advanced Context Injection for CrewAI
         if history_data:
+            # Append to input string
             history_str = self._format_history_as_context(history_data)
             if "topic" in native_input and isinstance(native_input["topic"], str):
                 native_input["topic"] += history_str
             elif "input" in native_input and isinstance(native_input["input"], str):
                 native_input["input"] += history_str
+
+            # Inject structured context into the first Task
+            if hasattr(self.agent, "tasks") and self.agent.tasks:
+                context_summary = "\n\n### Context from Previous Turns:\n"
+                # We limit to last 6 messages to prevent token overflow
+                for msg in history_data[-6:]: 
+                    role = msg.get("role", "user").upper()
+                    content = msg.get("content", "")
+                    context_summary += f"- **{role}**: {content}\n"
+                
+                context_summary += "\nBased on the above context, continue with the current task goal.\n"
+
+                try:
+                    first_task = self.agent.tasks[0]
+                    # Check if we haven't already injected it (in case of re-runs in same process)
+                    if "### Context" not in first_task.description:
+                        first_task.description = context_summary + first_task.description
+                        logger.debug("[Charm] Injected history context into CrewAI Task #1")
+                except Exception as e:
+                    logger.warning(f"[Charm] Failed to inject context into task: {e}")
 
         if isinstance(native_input, str):
              native_input = {"topic": native_input}
@@ -86,6 +123,11 @@ class CharmCrewAIAdapter(BaseAdapter):
             output_str = ""
             if hasattr(result, "raw"): output_str = result.raw
             else: output_str = str(result)
-            return {"status": "success", "output": output_str}
+            
+            return {
+                "status": "success", 
+                "output": output_str,
+                "charm_state": "" 
+            }
         except Exception as e:
              return {"status": "error", "message": f"Output parsing error: {e}"}

@@ -17,7 +17,7 @@ from ..git import GitError, get_repo_info
 
 console = Console()
 
-DEFAULT_API_BASE = "http://localhost:3000/api"
+DEFAULT_API_BASE = "https://store.charmos.io/api"
 
 # Files to exclude from the bundle for security and size.
 IGNORE_SET = {

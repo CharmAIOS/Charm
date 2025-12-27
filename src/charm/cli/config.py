@@ -9,7 +9,7 @@ CONFIG_DIR = Path.home() / ".charm"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 DEFAULT_CONFIG = {
-    "core": {"api_base": "https://charm-registry.vercel.app"},
+    "core": {"api_base": "https://store.charmos.io/api"},
     "auth": {"token": "", "email": ""},
 }
 

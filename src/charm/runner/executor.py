@@ -6,6 +6,7 @@ import mimetypes
 import os
 import shlex
 import shutil
+import tempfile
 import time
 from collections import deque
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -20,8 +21,9 @@ from .protocol import EVENT_PREFIX, sse_pack
 from .utils import clean_log_fallback, is_duplicate_log
 
 # Configuration Constants
-HOST_CACHE_DIR = "/tmp/charm_uv_cache"
-HOST_ARTIFACTS_ROOT = "/tmp/charm_artifacts_buffer"
+TEMP_DIR = tempfile.gettempdir()
+HOST_CACHE_DIR = os.path.join(TEMP_DIR, "charm_uv_cache")
+HOST_ARTIFACTS_ROOT = os.path.join(TEMP_DIR, "charm_artifacts_buffer")
 LIMIT_TIMEOUT = 600
 LIMIT_CPU = 1000000000  # 1.0 CPU
 LIMIT_MEM = "1024m"
@@ -260,7 +262,7 @@ class CharmDockerExecutor:
             if local_sdk_path:
                 volumes_config[local_sdk_path] = {"bind": "/mnt/local_sdk", "mode": "rw"}
 
-            # [New] Mount user's code if in local mode
+            # Mount user's code if in local mode
             if use_local_mount and local_source_path:
                 # Use 'ro' (Read-Only) to prevent the agent from accidentally deleting user's source files
                 volumes_config[local_source_path] = {
@@ -269,8 +271,17 @@ class CharmDockerExecutor:
                 }
 
             # Start Container
+            IMAGE_NAME = "ucdream/runner-base:latest"
+
+            try:
+                logger.info(f"Checking for Runner Image: {IMAGE_NAME}...")
+                self.client.images.pull(IMAGE_NAME)
+            except Exception as e:
+                logger.warning(f"Failed to pull image (using local cache if available): {e}")
+
+            # Start Container
             container = self.client.containers.run(
-                "charm-runner-base:latest",
+                IMAGE_NAME,
                 command=full_command,
                 environment={**env_vars, "PYTHONUNBUFFERED": "1"},
                 detach=True,

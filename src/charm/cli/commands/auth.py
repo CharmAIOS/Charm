@@ -12,7 +12,7 @@ from ..config import get_email, get_token, save_auth_data, save_token
 app = typer.Typer(help="Manage login and authentication")
 console = Console()
 
-STORE_URL = "http://localhost:3000"
+STORE_URL = "https://store.charmos.io"
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):

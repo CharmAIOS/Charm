@@ -168,7 +168,7 @@ policies:
 
 ### Field Reference Table
 
-**|Section|Field|Type|Description|
+|Section|Field|Type|Description|
 |--------|-----------|--------------------------|-------------------------|
 | Persona   | name | String|Public display name of the agent.  |
 |  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
@@ -179,4 +179,4 @@ policies:
 |Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom.|
 | |entry_point| String| Python path (module:obj). For custom, can be a function or object with invoke().|
 | |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
-|Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|**
+|Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|

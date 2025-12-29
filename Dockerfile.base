@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y \
     libpangocairo-1.0-0 \
     libxml2-dev \
     libxslt-dev \
+    ffmpeg \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
@@ -33,6 +36,12 @@ RUN uv pip install \
     "google-generativeai" \
     "langchain-google-genai" \
     "pydantic>=2.0.0" \
+    "pandas>=2.0.0" \
+    "numpy>=1.24.0" \
+    "scipy>=1.10.0" \
+    "requests" \
+    "beautifulsoup4" \
+    "tiktoken"
     pandas numpy requests python-dotenv
 
 ENV UV_CACHE_DIR=/root/.cache/uv

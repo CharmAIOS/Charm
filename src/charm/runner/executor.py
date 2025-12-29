@@ -26,7 +26,7 @@ HOST_CACHE_DIR = os.path.join(TEMP_DIR, "charm_uv_cache")
 HOST_ARTIFACTS_ROOT = os.path.join(TEMP_DIR, "charm_artifacts_buffer")
 LIMIT_TIMEOUT = 600
 LIMIT_CPU = 1000000000  # 1.0 CPU
-LIMIT_MEM = "1024m"
+LIMIT_MEM = "2048m"
 
 logger = logging.getLogger("charm.runner")
 

@@ -24,8 +24,6 @@ Before you dive deeper, we’d like you to take a moment to read this [blog post
 
 ## Getting started
 
-To explore Charm’s core concepts and code in more detail, check out our [documentation](https://github.com/CharmAIOS/Charm/tree/main/docs).
-
 ### Installation
 
 Charm is available on PyPI. We recommend using [uv](https://github.com/astral-sh/uv) for the best experience.
@@ -52,6 +50,10 @@ pip install charmos[runner]
 
 > **Note:** To use the docker simulation mode, you must have Docker Desktop or Docker Engine running on your machine.
 >
+### Register your agent
+
+Read our simple [tutorial](https://github.com/CharmAIOS/Charm/blob/main/docs/concepts/charm-store.md) to learn how to register your agent on the Charm Store.
+
 ## Contributing
 
 To know how to contribute to Charm, please read our [contribution guide](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).

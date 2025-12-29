@@ -31,33 +31,33 @@ If you’re interested in contributing to the core features and architecture of 
 - `git`
 - [uv](https://github.com/astral-sh/uv)
 
-1. Fork & Clone
+2. Fork & Clone
 
 ```bash
 git clone https://github.com/CharmAIOS/Charm.git
 cd Charm
 ```
 
-1. Create virtual environment
+3. Create virtual environment
 
 ```bash
 uv venv
 source .venv/bin/activate
 ```
 
-1. Install
+4. Install
 
 ```bash
 uv pip install -e ".[runner,dev]"
 ```
 
-1. Build Base Image (Required for Runner tests)
+5. Build Base Image (Required for Runner tests)
 
 ```bash
 docker build -f Dockerfile.base -t charm-runner-base:latest .
 ```
 
-1. Run Tests
+6. Run Tests
 
 ```bash
 pytest

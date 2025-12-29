@@ -15,9 +15,10 @@ Sign in to the Charm platform and link your account.
 charm auth login
 ```
 
-1. Preparing your UAC manifest
+2. Preparing your UAC manifest
 
 Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
+
 3. Local Validation & Development
 
 Step A: Static Analysis
@@ -61,7 +62,7 @@ charm run . --input "YOUR_INPUT_TEXT" --docker
 
 > Prerequisite: Ensure you have installed the runner extras (pip install "charmos[runner]") and Docker is running.
 
-1. Publishing
+4. Publishing
 
 ```bash
 charm push

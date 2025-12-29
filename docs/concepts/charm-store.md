@@ -80,7 +80,7 @@ The Charm SDK transforms your agent into a unified capability component, allowin
 Charm provides agents with an out-of-the-box Secure Runtime.
 It uses isolated sandbox execution to dynamically injects state, memory, and execution dependencies at runtime. Each agent runs in a dedicated, controlled environment with support for pausing and resuming long-running tasks, effectively preventing malicious behavior and resource contention.
 
-All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, “use-once” model, sensitive credentials are never written to disk or persisted, ensuring security guarantees by default.
+All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, use-once model, sensitive credentials are never written to disk or persisted, ensuring security guarantees by default.
 
 ### The Storefront
 

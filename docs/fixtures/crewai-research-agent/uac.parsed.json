@@ -1,0 +1,65 @@
+{
+  "version": "0.1.0",
+  "persona": {
+    "name": "Project Analyst",
+    "description": "Project Analyst"
+  },
+  "goals": [
+    "Analyze project documents to identify risks and opportunities"
+  ],
+  "capabilities": [
+    "file_writing",
+    "web_search"
+  ],
+  "tools": [
+    "crewai_tools.FileWriterTool",
+    "crewai_tools.SerperDevTool"
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "project_analyst",
+        "kind": "opaque",
+        "label": "Project Analyst",
+        "ref": "agent.project_analyst",
+        "x-original": {
+          "framework": "CrewAI",
+          "type": "Agent",
+          "args": {
+            "role": "Project Analyst",
+            "goal": "Analyze project documents to identify risks and opportunities",
+            "tools": ["FileWriterTool", "SerperDevTool"],
+            "verbose": true
+          }
+        }
+      },
+      {
+        "id": "analysis_task",
+        "kind": "opaque",
+        "label": "Analysis Task",
+        "ref": "task.analysis_task",
+        "x-original": {
+          "framework": "CrewAI",
+          "type": "Task",
+          "args": {
+            "description": "Analyze the given project PDF and extract key findings.",
+            "expected_output": "Markdown report with risks, strengths, and opportunities.",
+            "agent": "project_analyst"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "project_analyst",
+        "to": "analysis_task"
+      }
+    ],
+    "entry": "project_analyst",
+    "exits": ["analysis_task"]
+  },
+  "x-source": {
+    "framework": "CrewAI",
+    "origin_file": "agents.py"
+  }
+}

@@ -50,6 +50,7 @@ charm run . --json '{"field_name": "value", "option_key": 123}'
 ```
 
 > field_name: Must match the property names defined in your charm.yaml.
+> 
 > value: The actual data you want to pass to the agent.
 
 Step C: Sandbox Simulation (Best to have)

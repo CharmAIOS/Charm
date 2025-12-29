@@ -29,6 +29,6 @@ Charm defines four key contracts:
 ---
 
 > **Status Note:**
-> In the current **v0.4.10 Developer Preview**, only the **UAC** is active and enforced.
+> In the current **v0.4.12 Developer Preview**, only the **UAC** is active and enforced.
 >
 > **Note on Stability:** The **UTC, IEC, and WCC** are **provisional specifications** and are subject to change based on community feedback. We welcome everyone to help shape these standards.

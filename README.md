@@ -4,14 +4,13 @@
 
 <p align="center">
   <a href="https://charmos.io/">Homepage</a> ·
-  <a href="https://github.com/CharmAIOS/Charm/tree/main/docs">Documentation</a> ·
-  <a href="https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md">Contributing</a> ·
+  <a href="https://store.charmos.io/">Store</a> ·
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 
 # Charm: The Unified Platform for Agentic Intelligence
 
-> **Current Status: v0.4.10 (Developer Preview)**
+> **Current Status: v0.4.12 (Developer Preview)**
 
 **Charm** is a **Unified System Layer** that governs the development, execution, and distribution of AI agents.
 
@@ -43,7 +42,7 @@ pip install charmos
 
 #### Advanced Setup (For Local Cloud Runner)
 
-If you want to simulate the isolated cloud environment locally (requires Docker)
+If you want to simulate the isolated cloud environment locally
 
 ```bash
 uv add charmos[runner]
@@ -55,12 +54,12 @@ pip install charmos[runner]
 >
 ## Contributing
 
-To learn how to contribute to Charm, please read the contribution guide [here](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).
+To know how to contribute to Charm, please read our [contribution guide](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).
 
 ## Contact
 
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)
-- Join us: [Chat with founder](mailto:uc@charmos.io)
+- Join us: [Chat with us](mailto:uc@charmos.io)
 
 ## Changelog
 

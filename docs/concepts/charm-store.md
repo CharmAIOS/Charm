@@ -3,7 +3,9 @@
 Charm Store helps turn agent-based applications into real, commercial-ready products. Developers can ignore infrastructure and focus purely on agent logic. With standardized publishing, built-in application services and isolated runtimes, your code can become a complete product in minutes.
 
 ## Zero-Ops Publishing
->
+
+Register your agent on the Charm Store.
+
 > If you’re using uv, please prefix all commands with uv run.
 
 1. Authentication
@@ -16,8 +18,7 @@ charm auth login
 1. Preparing your UAC manifest
 
 Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
-
-1. Local Validation & Development
+3. Local Validation & Development
 
 Step A: Static Analysis
 
@@ -50,7 +51,7 @@ charm run . --json '{"field_name": "value", "option_key": 123}'
 > field_name: Must match the property names defined in your charm.yaml.
 > value: The actual data you want to pass to the agent.
 
-Step C: Sandbox Simulation
+Step C: Sandbox Simulation (Best to have)
 
 Run your agent inside the Charm Docker Sandbox. This guarantees compatibility with the cloud runtime.
 
@@ -66,24 +67,19 @@ charm run . --input "YOUR_INPUT_TEXT" --docker
 charm push
 ```
 
-## Secure Sandbox & Runtime Governance
+## What does Charm do?
 
-Automatically provides an enterprise-grade execution environment for every agent execution.
+### Agent Encapsulation
 
-Ephemeral Isolation: Each task runs inside an isolated, stateless Micro-VM.
-The execution environment is destroyed immediately after the task completes, ensuring absolute runtime privacy and isolation.
+The Charm SDK transforms your agent into a unified capability component, allowing it to be consistently described, executed, and invoked.
 
-Secure Secret Injection: Supports BYOK via encrypted channels. Your code only reads environment variables, while Charm securely manages and injects sensitive credentials at runtime.
-Secrets are never written to disk.
+### Secure Sandbox & Runtime Governance
 
-Dynamic Environment Management: Automatically builds and locks the dependency graph based on the UAC manifest. This eliminates environment inconsistencies and enables true “write once, run anywhere.”
+Charm provides agents with an out-of-the-box Secure Runtime.
+It uses isolated sandbox execution to dynamically injects state, memory, and execution dependencies at runtime. Each agent runs in a dedicated, controlled environment with support for pausing and resuming long-running tasks, effectively preventing malicious behavior and resource contention.
 
-Guardrails & Oversight: Built-in enforcement of resource quotas and execution timeouts. Ensures production-grade stability and reliability for agent-based services.
+All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, “use-once” model, sensitive credentials are never written to disk or persisted, ensuring security guarantees by default.
 
-## The Storefront
+### The Storefront
 
-Charm generates a contract-driven UI from the manifest and instantly produces a web chat interface without requiring any frontend code, making it accessible to non-technical users.
-
-## Agent as a tool
-
-TBD
+Generates a contract-driven UI from the manifest, instantly creating a web chat interface and securely handling user keys through encryption.

@@ -41,8 +41,10 @@ RUN uv pip install \
     "scipy>=1.10.0" \
     "requests" \
     "beautifulsoup4" \
-    "tiktoken"
-    pandas numpy requests python-dotenv
+    "tiktoken" \
+    "pandas" \
+    "numpy" \
+    "python-dotenv"         
 
 ENV UV_CACHE_DIR=/root/.cache/uv
 

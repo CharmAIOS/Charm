@@ -33,7 +33,7 @@ Since the Charm Store is currently in the MVP stage, please make sure to review 
 ### Checklist
 
 Before publishing, make sure:
-- My agent uses Python 3.12
+- My agent is compatible with Python 3.12
 - I am not using a local browser (Chrome / Selenium / Playwright)
 - I am not loading local LLMs or large embedding models into memory
 - All Python dependencies are listed in requirements.txt or pyproject.toml

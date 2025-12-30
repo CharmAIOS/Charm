@@ -13,7 +13,6 @@ console = Console()
 
 @app.command("set")
 def set_config(key: str, value: str):
-    """Set a config value. Usage: charm config set core.api_base http://localhost:3000/api"""
     if "." not in key:
         console.print("[bold red]Error:[/bold red] Key must be 'section.key'")
         raise typer.Exit(code=1)
@@ -32,7 +31,6 @@ def set_config(key: str, value: str):
 
 @app.command("list")
 def list_config():
-    """List current config."""
     config = load_config()
     console.print(f"[bold]Config:[/bold] {CONFIG_FILE}")
     console.print(config)

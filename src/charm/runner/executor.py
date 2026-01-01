@@ -31,6 +31,26 @@ LIMIT_MEM = "2048m"
 logger = logging.getLogger("charm.runner")
 
 
+class LogRedactor:
+    """
+    Responsible for replacing sensitive environment variables in logs with [KEY_NAME_REDACTED].
+    """
+
+    def __init__(self, env_vars: Dict[str, str]):
+        self.patterns = {}
+        for k, v in env_vars.items():
+            if v and len(str(v)) > 5:
+                self.patterns[v] = f"[{k}_REDACTED]"
+
+    def clean(self, text: str) -> str:
+        if not text:
+            return text
+        for secret, replacement in self.patterns.items():
+            if secret in text:
+                text = text.replace(secret, replacement)
+        return text
+
+
 class CharmDockerExecutor:
     """
     Manages the execution of Charm Agents within isolated Docker containers.
@@ -199,7 +219,7 @@ class CharmDockerExecutor:
         file_urls: Dict[str, str],
         history: List[Dict[str, str]],
         state_snapshot: str = "",
-        local_source_path: Optional[str] = None,  # [New Argument]
+        local_source_path: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
         """
         Orchestrates the Docker execution flow.
@@ -237,6 +257,9 @@ class CharmDockerExecutor:
         # Determine Source Code Strategy
         use_local_mount = bool(local_source_path)
 
+        # Initialize Redactor for this run
+        redactor = LogRedactor(env_vars)
+
         # Generate Execution Script (Dynamic based on mode)
         script_content = self._generate_bash_script(
             bundle_url=bundle_url,
@@ -271,7 +294,7 @@ class CharmDockerExecutor:
                 }
 
             # Start Container
-            IMAGE_NAME = "ucdream/runner-base:latest"
+            IMAGE_NAME = "ucmind/runner-base:latest"
 
             try:
                 logger.info(f"Checking for Runner Image: {IMAGE_NAME}...")
@@ -321,16 +344,19 @@ class CharmDockerExecutor:
 
                         while "\n" in buffer:
                             line, buffer = buffer.split("\n", 1)
-                            debug_file.write(line + "\n")
 
-                            clean = line.strip()
-                            if not clean:
+                            clean_line = line.strip()
+                            safe_line = redactor.clean(clean_line)
+
+                            debug_file.write(safe_line + "\n")
+
+                            if not safe_line:
                                 continue
 
                             # 1. Handle Structured Events from SDK
-                            if EVENT_PREFIX in clean:
+                            if EVENT_PREFIX in safe_line:
                                 try:
-                                    json_part = clean.split(EVENT_PREFIX)[1]
+                                    json_part = safe_line.split(EVENT_PREFIX)[1]
                                     payload = json.loads(json_part)
                                     content_str = str(payload.get("content", ""))
                                     if content_str:
@@ -342,14 +368,14 @@ class CharmDockerExecutor:
                                     pass
                                 continue
 
-                            # 2. Filter Duplicates & Noise
-                            if is_duplicate_log(clean, sent_event_contents):
+                            # 2. Filter Duplicates & Noise (Using safe_line)
+                            if is_duplicate_log(safe_line, sent_event_contents):
                                 continue
-                            if "asyncio.get_event_loop" in clean:
+                            if "asyncio.get_event_loop" in safe_line:
                                 continue
 
-                            # 3. Emit Standard Logs as 'thinking'
-                            processed = clean_log_fallback(clean)
+                            # 3. Emit Standard Logs as 'thinking' (Using safe_line)
+                            processed = clean_log_fallback(safe_line)
                             if processed:
                                 yield sse_pack("thinking", processed + "\n")
                                 recent_logs.append(processed)
@@ -358,8 +384,9 @@ class CharmDockerExecutor:
 
                     # Flush buffer
                     if buffer.strip():
-                        debug_file.write(buffer + "\n")
-                        processed = clean_log_fallback(buffer.strip())
+                        safe_buffer = redactor.clean(buffer.strip())
+                        debug_file.write(safe_buffer + "\n")
+                        processed = clean_log_fallback(safe_buffer)
                         if processed:
                             yield sse_pack("thinking", processed + "\n")
 

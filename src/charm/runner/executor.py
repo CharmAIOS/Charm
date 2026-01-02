@@ -25,7 +25,7 @@ TEMP_DIR = tempfile.gettempdir()
 HOST_CACHE_DIR = os.path.join(TEMP_DIR, "charm_uv_cache")
 HOST_ARTIFACTS_ROOT = os.path.join(TEMP_DIR, "charm_artifacts_buffer")
 LIMIT_TIMEOUT = 600
-LIMIT_CPU = 1000000000  # 1.0 CPU
+LIMIT_CPU = 1000000000
 LIMIT_MEM = "2048m"
 
 logger = logging.getLogger("charm.runner")
@@ -78,11 +78,11 @@ class CharmDockerExecutor:
         file_urls: Dict[str, str],
         input_payload: Dict[str, Any],
         local_sdk_path: Optional[str] = None,
-        use_local_mount: bool = False,  # [New] Toggle for local simulation
+        use_local_mount: bool = False,  # Toggle for local simulation
     ) -> str:
         """Generates the bash script that runs inside the container."""
 
-        # 1. Prepare Environment Variables (.env)
+        # Prepare Environment Variables (.env)
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
@@ -90,18 +90,18 @@ class CharmDockerExecutor:
         env_file_content = "\n".join(env_file_lines)
         b64_env_content = base64.b64encode(env_file_content.encode()).decode()
 
-        # 2. Prepare File Injections (curl)
+        # Prepare File Injections (curl)
         dl_cmds = []
         if file_urls:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
 
-        # 3. Encode Input Payload
+        # Encode Input Payload
         input_json_str = json.dumps(input_payload)
         b64_payload = base64.b64encode(input_json_str.encode()).decode()
 
-        # 4. Optional: Install local SDK (Dev Mode)
+        # Optional: Install local SDK (Dev Mode)
         install_local_sdk_cmd = ""
         if local_sdk_path:
             install_local_sdk_cmd = f"""
@@ -111,7 +111,7 @@ class CharmDockerExecutor:
             fi
             """
 
-        # 5. [CRITICAL LOGIC BRANCH] Source Code Strategy
+        # Source Code Strategy
         if use_local_mount:
             # Mode A: Local Simulation (Copy from read-only mount)
             source_setup_block = f"""

@@ -160,17 +160,13 @@ def run_command(
         user_input = typer.prompt("Enter input")
         payload = {"input": user_input}
 
-    # ==========================================
     # MODE 1: DOCKER SIMULATION
-    # ==========================================
     if docker:
         # Use asyncio to run the async generator
         asyncio.run(run_docker_simulation(path, payload, loaded_env_vars))
         return
 
-    # ==========================================
     # MODE 2: LOCAL PYTHON EXECUTION
-    # ==========================================
     try:
         with console.status(
             f"[bold green]Loading Agent from {path}...[/bold green]", spinner="dots"
@@ -217,5 +213,4 @@ def run_command(
                 Panel(f"[bold]Error:[/bold] {error_msg}", title="Agent Failed", border_style="red")
             )
     else:
-        # For JSON input, we might want just the raw JSON output
         console.print("[DEBUG CHECK] Silent Mode Active. Panel suppressed.")

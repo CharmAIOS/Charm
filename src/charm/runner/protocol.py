@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-# Magic string to identify system events in stdout
+# String to identify system events in stdout
 EVENT_PREFIX = "__CHARM_EVENT__"
 
 

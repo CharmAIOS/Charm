@@ -21,7 +21,7 @@ class CharmCallbackHandler(BaseCallbackHandler):
         # Shared state allows the wrapper to know if tokens were streamed.
         self.shared_state = shared_state if shared_state is not None else {}
 
-        print("[Charm] 🟢 Loaded Local SDK Fix (Shared State + Attrs)")
+        print("[Charm] Loaded Local SDK Fix (Shared State + Attrs)")
 
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Triggered when a tool starts executing."""
@@ -33,7 +33,7 @@ class CharmCallbackHandler(BaseCallbackHandler):
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Triggered when a tool finishes."""
         out_str = str(output)
-        msg = f"Tool Output: {out_str[:500]}...\n"  # Truncate long outputs / 截斷過長的輸出
+        msg = f"Tool Output: {out_str[:500]}...\n"  # Truncate long outputs
         CharmEmitter.emit_thinking(msg)
         self.current_tool = None
 

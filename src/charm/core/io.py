@@ -2,7 +2,7 @@ import json
 import sys
 from typing import Any, Dict
 
-# The magic string used to identify system events in the stdout stream.
+# The string used to identify system events in the stdout stream.
 EVENT_PREFIX = "__CHARM_EVENT__"
 
 

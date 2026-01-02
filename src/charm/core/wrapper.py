@@ -57,7 +57,7 @@ class CharmWrapper:
         charm_callback = CharmCallbackHandler(shared_state=stream_state)
 
         try:
-            # 3. Execute via Adapter
+            # Execute via Adapter
             result = self.adapter.invoke(inputs_with_memory, callbacks=[charm_callback])
 
             # State Broadcasting
@@ -78,12 +78,12 @@ class CharmWrapper:
                 return result
 
         except Exception as e:
-            # 4. Global Error Handler (Crash protection)
+            # Global Error Handler (Crash protection)
             CharmEmitter.emit_error(str(e))
             sys.exit(0)
             return {"status": "error", "error_type": "CharmExecutionError", "message": str(e)}
         finally:
-            # 5. Restore Stdout
+            # Restore Stdout
             sys.stdout = original_stdout
 
     def get_state(self) -> Dict[str, Any]:

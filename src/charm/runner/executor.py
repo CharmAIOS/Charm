@@ -142,6 +142,12 @@ class CharmDockerExecutor:
         # 6. Construct Final Script
         script = f"""
         set -e
+        
+        # Heartbeat to keep Caddy alive
+        (while true; do echo '::CHARM_EVENT::{{"type":"thinking","content":"..."}}'; sleep 2; done) &
+        HEARTBEAT_PID=$!
+        trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
+
         mkdir -p agent_code
         cd agent_code
 
@@ -296,11 +302,20 @@ class CharmDockerExecutor:
             # Start Container
             IMAGE_NAME = "ucmind/runner-base:latest"
 
+            logger.info(f"Checking for Runner Image: {IMAGE_NAME}...")
+
             try:
-                logger.info(f"Checking for Runner Image: {IMAGE_NAME}...")
-                self.client.images.pull(IMAGE_NAME)
+                self.client.images.get(IMAGE_NAME)
+                logger.info(f"Image {IMAGE_NAME} found locally. Skipping pull.")
+
+            except docker.errors.ImageNotFound:
+                logger.info(f"Image not found locally. Pulling {IMAGE_NAME}...")
+                try:
+                    self.client.images.pull(IMAGE_NAME)
+                except Exception as e:
+                    logger.warning(f"Failed to pull image: {e}")
             except Exception as e:
-                logger.warning(f"Failed to pull image (using local cache if available): {e}")
+                logger.warning(f"Error checking image status: {e}")
 
             # Start Container
             container = self.client.containers.run(

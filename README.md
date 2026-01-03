@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Charm Banner" width="100%" />
+  <img src="assets/Charm banner.png" alt="Charm Banner" width="100%" />
 </p>
 
 <p align="center">
-  <a href="https://charmos.io/">Homepage</a> ·
-  <a href="https://store.charmos.io/">Store</a> ·
+  <a href="https://charmos.io/">Homepage</a>
+  <a href="https://store.charmos.io/">Store</a>
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 
@@ -18,7 +18,7 @@ It provides a standardized architecture that enables agents to assemble, interop
 
 ## Why Charm?
 
-Before you dive deeper, we’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective.
+Before you dive deeper, I’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective.
 
 ## Getting started
 

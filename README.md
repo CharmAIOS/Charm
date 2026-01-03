@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/Charm banner.png" alt="Charm Banner" width="100%" />
+  <img src="assets/Charm banner.pngbanner.png" alt="Charm Banner" width="100%" />
 </p>
 
 <p align="center">
   <a href="https://charmos.io/">Homepage</a>
-  <a href="https://store.charmos.io/">Store</a>
+  <a href="https://store.charmos.io/">Store</a> ·
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 

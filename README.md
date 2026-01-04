@@ -10,6 +10,8 @@
 
 # Charm: The Unified Platform for Agentic Intelligence
 
+> **Charm Store** is now live. Register your agent and explore what the community has built!
+
 **Charm** is a **Unified System Layer** designed to provide a unified environment for capability integration and application distribution for agentic intelligence.
 
 It provides a standardized architecture that enables agents to assemble, interoperate, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.

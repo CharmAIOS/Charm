@@ -29,30 +29,80 @@ IGNORE_SET = {
     "__pycache__",
     "venv",
     ".venv",
+    "env",
+    ".env",
     "dist",
     "build",
+    "node_modules",
+    ".idea",
+    ".vscode",
+    ".ipynb_checkpoints",
+    "egg-info",
+    ".mypy_cache",
+    ".pytest_cache",
 }
 
 
-def is_ignored(name: str) -> bool:
+def get_user_ignores(source_dir: Path) -> set:
+    ignore_file = source_dir / ".charmignore"
+    user_ignores = set()
+    if ignore_file.exists():
+        try:
+            with open(ignore_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        user_ignores.add(line)
+            console.print(f"[dim]Loaded .charmignore: {len(user_ignores)} rules[/dim]")
+        except Exception:
+            pass
+    return user_ignores
+
+
+def is_ignored(name: str, user_ignores: set) -> bool:
     if name in IGNORE_SET:
         return True
-    if name.endswith((".pyc", ".pyo", ".pyd")):
+
+    if name in user_ignores:
+        return True
+    if name.endswith((".pyc", ".pyo", ".pyd", ".db", ".sqlite3", ".log")):
         return True
     return False
 
 
 def create_bundle(source_dir: Path) -> bytes:
     file_stream = io.BytesIO()
+    user_ignores = get_user_ignores(source_dir)
+
+    total_files = 0
+    large_files = []
+
     with tarfile.open(fileobj=file_stream, mode="w:gz") as tar:
         for root, dirs, files in os.walk(source_dir):
-            dirs[:] = [d for d in dirs if not is_ignored(d)]
+            dirs[:] = [d for d in dirs if not is_ignored(d, user_ignores)]
+
             for file in files:
-                if is_ignored(file):
+                if is_ignored(file, user_ignores):
                     continue
+
                 full_path = Path(root) / file
+
+                try:
+                    size_mb = full_path.stat().st_size / (1024 * 1024)
+                    if size_mb > 1.0:
+                        large_files.append(f"{file} ({size_mb:.2f} MB)")
+                except Exception:
+                    pass
+
                 arcname = full_path.relative_to(source_dir)
                 tar.add(full_path, arcname=str(arcname))
+                total_files += 1
+
+    if large_files:
+        console.print("[bold yellow]Warning: Large files included in bundle:[/bold yellow]")
+        for f in large_files:
+            console.print(f"  - {f}")
+
     file_stream.seek(0)
     return file_stream.getvalue()
 

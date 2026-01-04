@@ -20,7 +20,7 @@ It provides a standardized architecture that enables agents to assemble, interop
 
 ## Why Charm?
 
-Before you dive deeper, I’d like you to take a moment to read this [blog post](https://charmos.io/blog/1) to understand our insights and perspective.
+Before you dive deeper, I’d like you to take a moment to read the [blog post](https://charmos.io/blog) to understand our insights and perspective.
 
 ## Getting started
 

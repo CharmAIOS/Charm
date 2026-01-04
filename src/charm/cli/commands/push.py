@@ -30,7 +30,6 @@ IGNORE_SET = {
     "venv",
     ".venv",
     "env",
-    ".env",
     "dist",
     "build",
     "node_modules",

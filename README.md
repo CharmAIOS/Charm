@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://charmos.io/">Homepage</a>
-  <a href="https://store.charmos.io/">Store</a> ·
+  <a href="https://charmos.io/">Homepage</a> .
+  <a href="https://store.charmos.io/">Store</a> .
   <a href="https://discord.gg/gdakynHUEb">Discord</a>
 </p>
 

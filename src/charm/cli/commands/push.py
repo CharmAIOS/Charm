@@ -39,6 +39,12 @@ IGNORE_SET = {
     "egg-info",
     ".mypy_cache",
     ".pytest_cache",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.webp",
+    "*.svg",
 }
 
 

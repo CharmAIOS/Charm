@@ -7,12 +7,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import typer
 from rich.console import Console
 
-from ..config import get_email, get_token, save_auth_data, save_token
+from ..config import get_email, get_token, save_auth_data, save_token, load_config
 
 app = typer.Typer(help="Manage login and authentication")
 console = Console()
-
-STORE_URL = "https://store.charmos.io"
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -65,12 +63,18 @@ def login():
     """
     console.print("[bold blue]Charm CLI Login[/bold blue]")
 
+    config_data = load_config()
+    api_base = config_data.get("core", {}).get("api_base", "https://store.charmos.io/api")
+    store_url = str(api_base).rstrip("/")
+    if store_url.endswith("/api"):
+        store_url = store_url[:-4]
+
     port = find_free_port()
     server = HTTPServer(("127.0.0.1", port), OAuthCallbackHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.start()
 
-    login_url = f"{STORE_URL}/cli/login?port={port}"
+    login_url = f"{store_url}/cli/login?port={port}"
 
     console.print(f"Opening browser: [underline]{login_url}[/underline]")
     console.print("Waiting for authentication...", style="yellow")

@@ -75,6 +75,7 @@ persona:
     
   authors: ["Brand, Company, or Individual Name"]
   tags: ["research", "productivity"] 
+  # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others, and feel free to add any additional tags based on your preferences.
   license: "MIT"
   
   # Assets for the Storefront

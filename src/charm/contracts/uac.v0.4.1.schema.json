@@ -12,6 +12,10 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "id": {
+      "type": "string",
+      "description": "System-generated unique identifier. Do not edit manually."
+    },
     "version": {
       "type": "string",
       "const": "^0\\.4(\\.\\d+)?$",

@@ -1,7 +1,9 @@
+import fnmatch
 import io
 import json
 import os
 import tarfile
+import uuid
 from pathlib import Path
 
 import httpx
@@ -65,13 +67,14 @@ def get_user_ignores(source_dir: Path) -> set:
 
 
 def is_ignored(name: str, user_ignores: set) -> bool:
-    if name in IGNORE_SET:
-        return True
-
-    if name in user_ignores:
-        return True
     if name.endswith((".pyc", ".pyo", ".pyd", ".db", ".sqlite3", ".log")):
         return True
+
+    all_patterns = IGNORE_SET.union(user_ignores)
+
+    for pattern in all_patterns:
+        if fnmatch.fnmatch(name, pattern):
+            return True
     return False
 
 
@@ -112,6 +115,46 @@ def create_bundle(source_dir: Path) -> bytes:
     return file_stream.getvalue()
 
 
+def ensure_agent_id(yaml_path: Path, current_data: dict) -> str:
+    """
+    Checks for 'id' in YAML. If missing, generates a UUID and writes it back safely.
+    """
+    if "id" in current_data and current_data["id"]:
+        return current_data["id"]
+
+    new_id = str(uuid.uuid4())
+    console.print(f"[yellow]ℹ Agent ID missing. Generated new ID: {new_id}[/yellow]")
+    console.print("[dim]Writing ID back to charm.yaml...[/dim]")
+
+    current_data["id"] = new_id
+
+    try:
+        original_content = yaml_path.read_text(encoding="utf-8")
+        lines = original_content.splitlines()
+
+        new_lines = []
+        inserted = False
+
+        for line in lines:
+            new_lines.append(line)
+            if not inserted and line.strip().startswith("version:"):
+                new_lines.append(f'id: "{new_id}"  # [System] Unique Identity')
+                inserted = True
+
+        if not inserted:
+            new_lines.insert(0, f'id: "{new_id}"  # [System] Unique Identity')
+
+        if new_lines and new_lines[-1].strip() != "":
+            new_lines.append("")
+
+        yaml_path.write_text("\n".join(new_lines), encoding="utf-8")
+
+    except Exception as e:
+        console.print(f"[red]Failed to write ID back to file: {e}[/red]")
+
+    return new_id
+
+
 def push_command(
     path: str = typer.Argument(".", help="Path to the Charm project root"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview payload without sending"),
@@ -135,9 +178,14 @@ def push_command(
 
     try:
         with open(yaml_file, "r") as f:
-            uac_payload = yaml.safe_load(f)
-            config = CharmConfig(**uac_payload)
-            uac_payload = config.model_dump(mode="json", exclude_none=True)
+            uac_raw = yaml.safe_load(f)
+
+        agent_id = ensure_agent_id(yaml_file, uac_raw)
+        uac_raw["id"] = agent_id
+
+        config = CharmConfig(**uac_raw)
+        uac_payload = config.model_dump(mode="json", exclude_none=True)
+
     except Exception as e:
         console.print(f"[bold red]Config Error:[/bold red] {e}")
         raise typer.Exit(code=1) from e

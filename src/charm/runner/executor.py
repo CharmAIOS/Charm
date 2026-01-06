@@ -170,7 +170,7 @@ class CharmDockerExecutor:
 
         if [ -f pyproject.toml ]; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Installing dependencies..."}}'
-            uv pip install -q .
+            uv pip install -q -r pyproject.toml || uv pip install -q .
         elif [ -f requirements.txt ]; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Installing dependencies..."}}'
             uv pip install -q -r requirements.txt

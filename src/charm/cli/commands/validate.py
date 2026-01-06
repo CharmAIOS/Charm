@@ -85,6 +85,8 @@ def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> li
             if callable(obj):
                 try:
                     sig = inspect.signature(obj)
+                    if len(sig.parameters) == 0:
+                        return []
                     valid_params = {"inputs", "callbacks"}
 
                     for name, param in sig.parameters.items():

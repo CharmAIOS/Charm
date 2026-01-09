@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import typer
 from rich.console import Console
 
-from ..config import get_email, get_token, save_auth_data, save_token, load_config
+from ..config import get_email, get_token, load_config, save_auth_data, save_token
 
 app = typer.Typer(help="Manage login and authentication")
 console = Console()

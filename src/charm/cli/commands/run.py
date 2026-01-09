@@ -86,7 +86,7 @@ def parse_and_print_sse(sse_line: str):
         content = data.get("content")
 
         if evt_type == "status":
-            console.print(f"[bold green]ℹ️  {content}[/bold green]")
+            console.print(f"[bold green]ℹ️ {content}[/bold green]")
 
         elif evt_type == "thinking":
             # Strip excessive newlines for cleaner CLI output

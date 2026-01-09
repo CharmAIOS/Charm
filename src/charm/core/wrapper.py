@@ -48,7 +48,7 @@ class CharmWrapper:
         debug_keys = [k for k in inputs_with_memory.keys() if k != "__charm_history__"]
         logger.debug(f"[Charm] Invoking Adapter with keys: {debug_keys}")
 
-        # Hijack Stdout (To capture print() as events)
+        # Hijack Stdout
         original_stdout = sys.stdout
         sys.stdout = StdoutInterceptor()
 
@@ -63,7 +63,6 @@ class CharmWrapper:
             # State Broadcasting
             if "charm_state" in result and result["charm_state"]:
                 CharmEmitter._write("state_update", {"content": result["charm_state"]})
-                # del result["charm_state"]
 
             if result.get("status") == "success":
                 # Emit final result only if it wasn't already streamed token-by-token
@@ -78,7 +77,7 @@ class CharmWrapper:
                 return result
 
         except Exception as e:
-            # Global Error Handler (Crash protection)
+            # Global Error Handler
             CharmEmitter.emit_error(str(e))
             sys.exit(0)
             return {"status": "error", "error_type": "CharmExecutionError", "message": str(e)}

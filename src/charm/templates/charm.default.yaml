@@ -34,7 +34,7 @@ interface:
       task:
         type: "string"
         title: "Task Input"
-        description: "What should the agent do?"
+        description: "What should the agent input?"
         x-ui-widget: "textarea"
       
       # [Optional] File Upload Configuration

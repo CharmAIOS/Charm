@@ -129,7 +129,6 @@ class CharmDockerExecutor:
             """
         else:
             # Mode B: Cloud Production (Download Bundle)
-            # This PRESERVES the original logic exactly
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
             curl -s -L {shlex.quote(bundle_url)} -o bundle.tar.gz
@@ -293,7 +292,6 @@ class CharmDockerExecutor:
 
             # Mount user's code if in local mode
             if use_local_mount and local_source_path:
-                # Use 'ro' (Read-Only) to prevent the agent from accidentally deleting user's source files
                 volumes_config[local_source_path] = {
                     "bind": "/app/local_source_mount",
                     "mode": "ro",

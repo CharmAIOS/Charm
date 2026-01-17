@@ -31,10 +31,3 @@ dist
 *.h5
 *.safetensors
 node_modules
-
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.webp
-*.svg

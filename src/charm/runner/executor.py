@@ -475,7 +475,6 @@ class CharmDockerExecutor:
             # Clean up temp files
             shutil.rmtree(host_artifact_path, ignore_errors=True)
 
-            # Yield final exit code for DB tracking
             yield sse_pack(
                 "internal_run_finished",
                 {"exit_code": exit_code, "duration_ms": int((time.time() - start_time) * 1000)},

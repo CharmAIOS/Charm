@@ -61,12 +61,14 @@ class CharmCustomAdapter(BaseAdapter):
 
             result = self._smart_invoke(self.execution_method, **kwargs)
 
-            if isinstance(result, dict):
+            if isinstance(result, dict) and "status" in result:
                 return result
-            elif isinstance(result, str):
-                return {"output": result}
-            else:
-                return {"output": str(result), "raw_type": type(result).__name__}
+
+            return {
+                "status": "success",
+                "output": result,
+                "raw_type": type(result).__name__,
+            }
 
         except TypeError as e:
             error_msg = (

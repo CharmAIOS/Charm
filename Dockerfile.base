@@ -28,7 +28,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN uv venv $VIRTUAL_ENV
 
 RUN uv pip install \
-    "charmos>=0.4.9" \
+    "charmos>=0.4.20" \
     "crewai[tools]>=0.28.0" \
     "langchain>=0.1.0" \
     "langgraph>=0.0.26" \

@@ -175,6 +175,9 @@ class CharmDockerExecutor:
             uv pip install -q -r requirements.txt
         fi
 
+        echo '{EVENT_PREFIX}{{"type":"status","content":"Configuring Runtime Kernel..."}}'
+        uv pip install --upgrade "charmos[runner]>=0.4.20"
+
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         INPUT_JSON="$(echo {b64_payload} | base64 -d)"
         

@@ -4,7 +4,7 @@ Charm Store helps turn agent-based applications into real, commercial-ready prod
 
 ## Charm Store Compatibility & Constraints Guide (v1)
 
-Since the Charm Store is currently in the MVP stage, please make sure to review our current technical specifications and limitations before publishing, to ensure your agent can run stably on the Charm Cloud Runner.
+Please make sure to review our current technical specifications and limitations before publishing, to ensure your agent can run stably on the Charm Cloud Runner.
 
 ### Runtime & System Dependencies
 

@@ -25,6 +25,7 @@ Please make sure to review our current technical specifications and limitations 
 - Patterns: Charm support autonomous interaction patterns including single/multi-turn and reactive/proactive initiation, but currently does not support interrupted workflows (Human-in-the-Loop).
 - System Installs: apt-get is disabled. System-level packages cannot be installed during execution (e.g., custom OCR drivers, Tesseract binaries, Chrome/Chromium).
 - Local Environment / Private Venv: All Python packages must be declared in requirements.txt or pyproject.toml. If you modified a third-party library, vendor the modified source into your project (e.g., src/libs/) and import it from there.
+- To fully leverage Charm’s managed API key infrastructure and unified billing, agents are recommended to use an OpenAI-compatible client. Native vendor SDKs are only supported via the BYOK (Bring Your Own Key) mechanism.
 - No Local Browsers: Selenium/Playwright setups requiring a local Chrome/Chromium will fail. Use API-based scraping (e.g., Tavily/Firecrawl) or requests + BeautifulSoup.
 - No Heavy Local Models / GPU: Do not load local LLMs (e.g., Ollama) or large embedding models. No CUDA/GPU support (use cloud APIs instead).
 - No Inbound Ports / Servers: Do not start servers that listen on inbound ports (e.g., Flask/FastAPI). The runner is not meant for hosting long-running web services.
@@ -33,6 +34,7 @@ Please make sure to review our current technical specifications and limitations 
 ### Checklist
 
 Before publishing, make sure:
+
 - My agent is compatible with Python 3.12
 - I am not using a local browser (Chrome / Selenium / Playwright)
 - I am not loading local LLMs or large embedding models into memory
@@ -48,18 +50,19 @@ Register your agent on the Charm Store.
 
 > If you’re using uv, please prefix all commands with uv run.
 
-1. Authentication
+#### Authentication
+
 Sign in to the Charm platform and link your account.
 
 ```bash
 charm auth login
 ```
 
-2. Preparing your UAC manifest
+#### Preparing your UAC manifest
 
 Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
 
-3. Local Validation & Development
+#### Local Validation & Development
 
 Step A: Static Analysis
 
@@ -90,7 +93,7 @@ charm run . --json '{"field_name": "value", "option_key": 123}'
 ```
 
 > field_name: Must match the property names defined in your charm.yaml.
-> 
+>
 > value: The actual data you want to pass to the agent.
 
 Step C: Sandbox Simulation (Best to have)
@@ -103,7 +106,7 @@ charm run . --input "YOUR_INPUT_TEXT" --docker
 
 > Prerequisite: Ensure you have installed the runner extras (pip install "charmos[runner]") and Docker is running.
 
-4. Publishing
+#### Publishing
 
 ```bash
 charm push

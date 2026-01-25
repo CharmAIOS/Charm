@@ -13,7 +13,6 @@ from .protocol import EVENT_PREFIX, sse_pack
 from .backend.base import RunConfig, ExecutionBackend
 from .backend.docker import DockerBackend
 
-# 嘗試導入 Cloud Run Backend
 try:
     from .backend.cloud_run import CloudRunBackend
 except ImportError:
@@ -21,24 +20,15 @@ except ImportError:
 
 logger = logging.getLogger("charm.runner")
 
-# 主機上的暫存路徑設定
 TEMP_DIR = tempfile.gettempdir()
 HOST_CACHE_DIR = os.path.join(TEMP_DIR, "charm_uv_cache")
 HOST_ARTIFACTS_ROOT = os.path.join(TEMP_DIR, "charm_artifacts_buffer")
 
 
 class CharmDockerExecutor:
-    """
-    Charm 通用執行器 (Orchestrator)。
-    支援混合雲架構：
-    - Development: 使用 Docker Bind Mounts 進行快速 I/O。
-    - Production: 使用 Signed URLs 透過 Object Storage 進行數據交換。
-    """
-
     def __init__(self):
         self.env = os.getenv("APP_ENV", "development")
 
-        # 確保主機目錄存在
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
@@ -63,27 +53,21 @@ class CharmDockerExecutor:
         use_local_mount: bool = False,
     ) -> str:
         print(f"\n[DEBUG] Bundle URL sent to Cloud Run: {bundle_url}\n")
-        """
-        生成通用 Bash 腳本。包含自動下載依賴、執行 Agent 以及上傳 Artifacts。
-        """
-        # 1. 準備環境變數
+
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
 
-        # 2. 準備下載指令
         dl_cmds = []
         if file_urls:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
 
-        # 3. Payload 編碼
         b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
 
-        # 4. 本地 SDK (僅 Dev Docker Mount)
         install_local_sdk_cmd = ""
         if local_sdk_path and use_local_mount:
             install_local_sdk_cmd = f"""
@@ -93,7 +77,6 @@ class CharmDockerExecutor:
             fi
             """
 
-        # 5. 源碼獲取
         if use_local_mount:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Source Code..."}}'
@@ -107,8 +90,6 @@ class CharmDockerExecutor:
             tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
             """
 
-        # 6. [SMART INSTALL] 智能 SDK 檢測
-        # 如果 import charm 成功，代表已經被烤進 Image 了，不需要再下載
         sdk_install_block = """
         if python -c "import charm" 2>/dev/null; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Pre-installed Charm SDK."}}'
@@ -118,7 +99,6 @@ class CharmDockerExecutor:
         fi
         """
 
-        # 7. [PROD] Artifact Upload Logic (Cloud Run)
         artifact_upload_block = """
         if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
             echo '::CHARM_EVENT::{"type":"status","content":"Uploading Cloud Artifacts..."}'
@@ -143,7 +123,6 @@ class CharmDockerExecutor:
         fi
         """
 
-        # 8. [DEV] Docker Local Copy Logic
         docker_copy_block = """
         if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Syncing Artifacts to Host..."}}'
@@ -196,7 +175,6 @@ class CharmDockerExecutor:
 
         echo '{EVENT_PREFIX}{{"type":"status","content":"Configuring Runtime..."}}'
         
-        # [智能安裝]
         {sdk_install_block}
 
         export PYTHONPATH=$PYTHONPATH:$(pwd)
@@ -241,7 +219,6 @@ class CharmDockerExecutor:
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot
 
-        # 1. 記憶體處理 (優先使用雲端同步)
         if history:
             memory_file_name = "charm_memory.json"
             if self.env == "production" and supabase_client:
@@ -261,7 +238,6 @@ class CharmDockerExecutor:
                 except Exception as e:
                     logger.error(f"Cloud memory sync failed: {e}")
 
-            # 本地備份 (給 Docker mount 用)
             try:
                 with open(
                     os.path.join(host_artifact_path, memory_file_name), "w", encoding="utf-8"
@@ -270,7 +246,6 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Local memory write failed: {e}")
 
-        # 2. Artifacts 上傳準備 (Cloud Run)
         artifact_upload_url = ""
         if self.env == "production" and supabase_client:
             try:
@@ -284,7 +259,6 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Failed to generate artifact upload URL: {e}")
 
-        # 3. 生成腳本
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
 
@@ -315,7 +289,6 @@ class CharmDockerExecutor:
                 if "internal_run_finished" in log:
                     yield sse_pack("status", "Finalizing Output...")
 
-                    # A. Local Docker: 掃描硬碟
                     if isinstance(self.backend, DockerBackend):
                         for root, _, files in os.walk(host_artifact_path):
                             for filename in files:
@@ -334,7 +307,6 @@ class CharmDockerExecutor:
                                     },
                                 )
 
-                    # B. Cloud Run: 指向 Tarball
                     elif artifact_upload_url:
                         final_tar_path = f"{agent_id}/{run_id}/output_artifacts.tar.gz"
                         public_url = supabase_client.storage.from_(

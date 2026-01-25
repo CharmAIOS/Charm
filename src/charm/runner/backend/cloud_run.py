@@ -8,7 +8,6 @@ import uuid
 import functools
 from typing import AsyncGenerator, Dict, Any
 
-# Google Cloud Imports
 try:
     from google.cloud import run_v2
     from google.cloud import logging as cloud_logging
@@ -43,26 +42,17 @@ class CloudRunBackend(ExecutionBackend):
         self.parent = f"projects/{self.project_id}/locations/{self.region}"
 
     async def _create_job(self, job_id: str, config: RunConfig) -> str:
-        """
-        建立一個 Cloud Run Job 定義。
-        我們將 Bash 腳本作為環境變數注入，並讓容器啟動時解碼執行。
-        """
-        # 1. 準備啟動腳本 (作為環境變數)
         b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
 
-        # 2. 準備環境變數
         env_vars = [
             {"name": "PYTHONUNBUFFERED", "value": "1"},
             {"name": "CHARM_BOOTSTRAP_SCRIPT", "value": b64_script},
-            # 傳遞用戶定義的 Env Vars
             *[{"name": k, "value": str(v)} for k, v in config.env_vars.items()],
         ]
 
-        # 3. 映像檔選擇 (支援環境變數覆蓋，方便團隊協作)
         default_image = "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-base:latest"
         worker_image = os.getenv("CHARM_WORKER_IMAGE", default_image)
 
-        # 4. 定義 Job Spec
         job = run_v2.Job()
         job.template.template.containers = [
             {
@@ -70,27 +60,24 @@ class CloudRunBackend(ExecutionBackend):
                 "command": ["/bin/bash", "-c"],
                 "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
                 "env": env_vars,
-                # [關鍵修正] 2Gi 記憶體防止 OOM
                 "resources": {"limits": {"memory": "4Gi", "cpu": "1000m"}},
             }
         ]
 
-        # 設定最大重試次數為 0 (Agent 失敗不應自動重試)
         job.template.task_count = 1
         job.template.template.max_retries = 0
-        job.template.template.timeout = "3600s"  # 1小時超時
+        job.template.task_count = 1
+        job.template.template.max_retries = 0
+        job.template.template.timeout = "3600s"
 
         request = run_v2.CreateJobRequest(parent=self.parent, job=job, job_id=job_id)
 
         operation = await self.jobs_client.create_job(request=request)
         logger.info(f"[CloudRun] Creating Job {job_id} using image {worker_image}...")
-        result = await operation.result()  # 等待建立完成
+        result = await operation.result()
         return result.name
 
     async def _fetch_logs_sync(self, filter_str):
-        """
-        [優化] 將同步的 Log 查詢封裝起來，方便丟到 ThreadPool 跑
-        """
         entries = self.logging_client.list_entries(
             filter_=filter_str,
             order_by=cloud_logging.DESCENDING,
@@ -99,17 +86,14 @@ class CloudRunBackend(ExecutionBackend):
         return sorted(list(entries), key=lambda x: x.timestamp)
 
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
-        # 為每次執行生成唯一的 Job ID
         safe_agent_id = config.agent_id.replace("_", "-").lower()[:20]
         job_id = f"charm-{safe_agent_id}-{uuid.uuid4().hex[:6]}"
         job_name = ""
 
         try:
-            # 1. 建立 Job
             yield sse_pack("status", "Provisioning Cloud Sandbox...")
             job_name = await self._create_job(job_id, config)
 
-            # 2. 執行 Job
             yield sse_pack("status", "Starting Execution Environment...")
             run_request = run_v2.RunJobRequest(name=job_name)
             operation = await self.jobs_client.run_job(request=run_request)
@@ -117,7 +101,6 @@ class CloudRunBackend(ExecutionBackend):
             execution_name = operation.metadata.name
             logger.info(f"[CloudRun] Tailing logs for execution: {execution_name}")
 
-            # 3. 日誌輪詢迴圈
             filter_str = f"""
             resource.type="cloud_run_job"
             labels."run.googleapis.com/execution_name"="{execution_name.split("/")[-1]}"
@@ -128,11 +111,9 @@ class CloudRunBackend(ExecutionBackend):
             loop = asyncio.get_running_loop()
 
             while not is_done:
-                # [關鍵修正] 使用 await 檢查 operation 狀態
                 if await operation.done():
                     is_done = True
 
-                # [優化] 使用 run_in_executor 執行同步的 Logging API，避免卡住 Event Loop
                 try:
                     new_logs = await loop.run_in_executor(
                         None,
@@ -143,7 +124,6 @@ class CloudRunBackend(ExecutionBackend):
                             page_size=50,
                         ),
                     )
-                    # 轉換並排序
                     new_logs = sorted(list(new_logs), key=lambda x: x.timestamp)
                 except Exception as e:
                     logger.warning(f"Log fetch failed (transient): {e}")
@@ -171,14 +151,12 @@ class CloudRunBackend(ExecutionBackend):
                             if clean:
                                 yield sse_pack("thinking", clean + "\n")
                             else:
-                                # [新增] 如果是系統錯誤 (如 Memory limit)，也回傳給前端顯示
                                 if "Memory" in line or "Exited" in line or "Error" in line:
                                     yield sse_pack("error", f"System: {line}\n")
 
                 if not is_done:
                     await asyncio.sleep(2)
 
-            # 4. 檢查最終狀態
             try:
                 await operation.result()
                 yield sse_pack("status", "Cloud Job Completed Successfully.")
@@ -191,10 +169,9 @@ class CloudRunBackend(ExecutionBackend):
             yield sse_pack("error", f"Cloud Infrastructure Error: {str(e)}")
 
         finally:
-            # 5. 清理
             if job_name:
                 yield sse_pack("status", "Cleaning up resources...")
-                # await self.cleanup(job_name)
+                await self.cleanup(job_name)
 
     async def cleanup(self, job_name: str):
         try:

@@ -1,6 +1,5 @@
 FROM python:3.12-slim
 
-# [Layer 1: OS 基礎]
 RUN apt-get update && apt-get install -y \
     git curl tar build-essential pkg-config libffi-dev libssl-dev libjpeg-dev \
     zlib1g-dev libcairo2-dev libpango-1.0-0 libpangocairo-1.0-0 libxml2-dev \
@@ -16,7 +15,6 @@ ENV UV_CACHE_DIR=/root/.cache/uv
 
 RUN uv venv $VIRTUAL_ENV
 
-# [Layer 2: 重型依賴] (Cache 命中率極高，幾乎不用重跑)
 RUN uv pip install \
     "crewai[tools]>=0.28.0" \
     "langchain>=0.1.0" \
@@ -35,16 +33,10 @@ RUN uv pip install \
     "google-cloud-run" \
     "google-cloud-logging"
 
-# [Layer 3: 專案配置] (如果你改了依賴，從這裡開始重跑)
 COPY pyproject.toml .
-
-# [Layer 3.5: 補丁安裝] (uv 會自動比對，只安裝新加的套件，很快)
 RUN uv pip install -r pyproject.toml
 
-# [Layer 4: 源碼] (你每天改的地方，複製速度 < 1秒)
 COPY src /app/src
-
-# [Layer 5: 註冊]
 RUN uv pip install --no-deps -e .
 
 CMD ["echo", "Charm Fat Runtime Ready"]

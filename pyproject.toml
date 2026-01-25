@@ -26,6 +26,8 @@ dependencies = [
     "langchain-core", 
     "langgraph",
     "crewai",
+    "google-cloud-run",
+    "google-cloud-logging",
 ]
 
 [project.urls]

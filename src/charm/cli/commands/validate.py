@@ -140,12 +140,25 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
         )
     )
 
-    # Code Static Analysis (Linting)
+    # Code Static Analysis
     console.print("\n[bold]Running Code Analysis...[/bold]")
     issues_found = False
 
-    # Entry Point Signature
-    if config.runtime.adapter.type == "custom":
+    # Conditional Validation based on Adapter Type
+    if config.runtime.adapter.type == "node":
+        # Node.js specific checks
+        package_json = project_path / "package.json"
+        if not package_json.exists():
+            issues_found = True
+            console.print("[bold red]✖ Missing package.json for Node.js agent.[/bold red]")
+        else:
+            console.print("[green]✔ package.json found.[/green]")
+        if not config.runtime.adapter.entry_point.strip():
+            issues_found = True
+            console.print("[bold red]✖ Entry point command cannot be empty.[/bold red]")
+
+    elif config.runtime.adapter.type == "custom":
+        # Python checks
         ep_errors = _check_entry_point_signature(project_path, config.runtime.adapter.entry_point)
         if ep_errors:
             issues_found = True
@@ -155,19 +168,19 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
         else:
             console.print("[green]✔ Entry Point Signature looks correct.[/green]")
 
-    # Absolute Paths
-    path_warnings = _check_absolute_paths(project_path)
-    if path_warnings:
-        console.print(
-            "\n[bold yellow]⚠ Portability Warnings (Absolute Paths Detected):[/bold yellow]"
-        )
-        console.print("  [dim]Absolute paths will break when running in the cloud.[/dim]")
-        for w in path_warnings[:5]:
-            console.print(f"  - {w}")
-        if len(path_warnings) > 5:
-            console.print(f"  - ... and {len(path_warnings) - 5} more.")
-    else:
-        console.print("[green]✔ No hardcoded absolute paths detected.[/green]")
+        # Absolute Paths (Python code)
+        path_warnings = _check_absolute_paths(project_path)
+        if path_warnings:
+            console.print(
+                "\n[bold yellow]⚠ Portability Warnings (Absolute Paths Detected):[/bold yellow]"
+            )
+            console.print("  [dim]Absolute paths will break when running in the cloud.[/dim]")
+            for w in path_warnings[:5]:
+                console.print(f"  - {w}")
+            if len(path_warnings) > 5:
+                console.print(f"  - ... and {len(path_warnings) - 5} more.")
+        else:
+            console.print("[green]✔ No hardcoded absolute paths detected.[/green]")
 
     if issues_found:
         console.print("\n[bold red]Validation Failed due to code issues.[/bold red]")

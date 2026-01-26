@@ -56,10 +56,14 @@ class InterfaceConfig(BaseModel):
 class RuntimeAdapter(BaseModel):
     """Instructs the Loader how to bootstrap this agent."""
 
-    type: Literal["langchain", "crewai", "langgraph", "custom"] = Field(
+    # [UPDATED] Added 'node' to the allowed types
+    type: Literal["langchain", "crewai", "langgraph", "custom", "node"] = Field(
         ..., description="The specific SDK adapter to use"
     )
-    entry_point: str = Field(..., description="Python import path e.g. 'src.agent:my_crew'")
+    # [UPDATED] Description updated to reflect support for shell commands
+    entry_point: str = Field(
+        ..., description="Python import path (src.main:app) OR Shell command (npm start)"
+    )
     environment_variables: List[str] = Field(
         default_factory=list, description="Required env vars to be injected"
     )
@@ -78,6 +82,11 @@ class RuntimeInjections(BaseModel):
 class RuntimeConfig(BaseModel):
     adapter: RuntimeAdapter
     injections: Optional[RuntimeInjections] = None
+
+    mode: Literal["standard", "full"] = Field(
+        "standard",
+        description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime.",
+    )
 
 
 class HumanInTheLoop(BaseModel):

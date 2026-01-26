@@ -21,7 +21,7 @@ Path B: Create the file manually
 
 my-agent/             <-- Project Root
 ├── charm.yaml        <-- The Manifest
-├── pyproject.toml / requirements.txt    <-- Dependencies
+├── pyproject.toml / requirements.txt / package.json   <-- Dependencies
 └── src/
     └── main.py       <-- Your Agent Logic
 ```
@@ -133,18 +133,21 @@ interface:
 # ------------------------------------------------------------------
 runtime:
   adapter:
-    type: "crewai" # Options: crewai, langchain, langgraph, custom
+    type: "crewai" # Options: crewai, langchain, langgraph, custom, node
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?
     # Format: <python_module_path>:<variable_or_function_name>
+    #         OR <shell_command> (for Node.js)
     # --------------------------------------------------------------
     # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
     # entry_point: "src.main:my_crew"
     
     # [Case B] For Custom (Pure Python): Point to a function or class instance.
-    # It must accept a dictionary and return a dictionary (or string).
-    entry_point: "src.my_script:run_pipeline"
+    # entry_point: "src.my_script:run_pipeline"
+
+    # [Case C] For Node.js (Remotion, Puppeteer, etc.): Provide the shell command.
+    # entry_point: "npm start"
     
     # --------------------------------------------------------------
     # SECURE ENV VARS: List keys your agent needs.
@@ -153,6 +156,13 @@ runtime:
     environment_variables:
       - "OPENAI_API_KEY"
       - "SERPER_API_KEY"
+
+  # --------------------------------------------------------------
+  # RUNTIME MODE (Environment Selection)
+  # --------------------------------------------------------------
+  # "standard" (Default): Lightweight Python environment. Fast boot time.
+  # "full": Heavy environment including Headless Chrome, FFmpeg, and Node.js. Use this if your agent does Browser Automation or Video Generation.
+  mode: "standard"
 
   # (Advanced) Dependency Injection from Charm System (The associated logic is not yet implemented, and the field is kept as a placeholder).
   injections:
@@ -177,7 +187,8 @@ policies:
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
-|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom.|
-| |entry_point| String| Python path (module:obj). For custom, can be a function or object with invoke().|
+|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node.|
+| |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
 | |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
+| |mode |Enum |standard (Default), full. Selects the container environment.|
 |Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|

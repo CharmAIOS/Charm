@@ -237,13 +237,14 @@
                 "langchain",
                 "langgraph",
                 "crewai",
-                "custom"
+                "custom",
+                "node"
               ],
-              "description": "The specific SDK adapter to use."
+              "description": "The specific SDK adapter to use. Use 'node' for Node.js agents."
             },
             "entry_point": {
               "type": "string",
-              "description": "Python import path to the agent instance (e.g., 'src.agent:my_crew')."
+              "description": "Python import path (e.g., 'src.agent:my_crew') OR Shell command for Node agents (e.g., 'npm start')."
             },
             "environment_variables": {
               "type": "array",
@@ -253,6 +254,15 @@
               "description": "List of required environment variables (e.g., OPENAI_API_KEY) that Runtime must inject."
             }
           }
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "full"
+          ],
+          "default": "standard",
+          "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js."
         },
         "injections": {
           "type": "object",

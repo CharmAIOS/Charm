@@ -53,16 +53,22 @@ interface:
 # 4. Runtime Configuration
 runtime:
   adapter:
-    # [Updated] Options: crewai, langchain, langgraph, custom
+    # [Updated] Options: crewai, langchain, langgraph, custom, node
+    # Use 'node' if your agent is a Node.js application (e.g. Remotion).
     type: "crewai"  
     
-    # Path to your agent object (module:variable)
-    # If type is 'custom', this can be a simple function (e.g., 'src.main:run').
+    # Execution Entry Point:
+    # - Python: "module:variable" (e.g. "src.main:agent")
+    # - Node.js: "shell command"  (e.g. "npm start")
     entry_point: "src.main:agent"
     
     # List required environment variable NAMES (keys only, no values)
     environment_variables:
       - "OPENAI_API_KEY"
+
+  # "standard" (Default): Lightweight Python env. Best for text/data tasks.
+  # "full": Heavy env with Chrome, FFmpeg, and Node.js. Use this for Browser Automation or Remotion.
+  mode: "standard"
 
   injections:
     llm_client: true

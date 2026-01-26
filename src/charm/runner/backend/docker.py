@@ -1,6 +1,6 @@
 import asyncio
-import logging
 import base64
+import logging
 import time
 from collections import deque
 from typing import AsyncGenerator, Dict
@@ -71,7 +71,10 @@ class DockerBackend(ExecutionBackend):
         exit_code = -1
 
         try:
-            IMAGE_NAME = "ucmind/runner-base:latest"
+            # Use dynamic image from config, fallback to default
+            IMAGE_NAME = config.image or "ucmind/runner-base:latest"
+
+            logger.info(f"Spawning container with image: {IMAGE_NAME}")
 
             container = self.client.containers.run(
                 IMAGE_NAME,

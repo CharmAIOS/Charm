@@ -15,6 +15,7 @@ class RunConfig(BaseModel):
     host_artifact_path: str
     host_cache_dir: str
     local_source_path: Optional[str] = None
+    image: Optional[str] = None
 
 
 class ExecutionBackend(ABC):

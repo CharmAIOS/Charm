@@ -6,41 +6,81 @@ Charm Store helps turn agent-based applications into real, commercial-ready prod
 
 Please make sure to review our current technical specifications and limitations before publishing, to ensure your agent can run stably on the Charm Cloud Runner.
 
-### Runtime & System Dependencies
+### Runtime Environments
 
-#### Execution Environment
+Charm provides two optimized runtime environments. You can select the environment by configuring the `runtime.mode` field in your `charm.yaml`.
 
-- Python Version: 3.12 (Fixed)
-- Resources: 2 GB RAM, 1 vCPU, 600s Timeout
-- Pre-installed Stack:
-  - Data: pandas, numpy, scipy, requests, beautifulsoup4
-  - Multimedia: ffmpeg, libgl1, opencv-python, pydub, moviepy.
-  - For a complete list, verify our full [dockerfile.base](https://github.com/CharmAIOS/Charm/blob/main/Dockerfile.base)
-- File System: Ephemeral (temporary). Artifacts generated during the run can be downloaded by the user.
-- Internet Access: You can make API calls to external services (Outbound)
+#### A. Standard Runtime (Default)
 
-### Hard Limitations
+> **Config:** `mode: "standard"`
 
-- Frameworks: The SDK currently supports parsing and wrapping source agents built with **CrewAI, LangChain (Python), LangGraph, as well as custom Python agents**.
-- Patterns: Charm support autonomous interaction patterns including single/multi-turn and reactive/proactive initiation, but currently does not support interrupted workflows (Human-in-the-Loop).
-- System Installs: apt-get is disabled. System-level packages cannot be installed during execution (e.g., custom OCR drivers, Tesseract binaries, Chrome/Chromium).
-- Local Environment / Private Venv: All Python packages must be declared in requirements.txt or pyproject.toml. If you modified a third-party library, vendor the modified source into your project (e.g., src/libs/) and import it from there.
-- To fully leverage Charm’s managed API key infrastructure and unified billing, agents are recommended to use an OpenAI-compatible client. Native vendor SDKs are only supported via the BYOK (Bring Your Own Key) mechanism.
-- No Local Browsers: Selenium/Playwright setups requiring a local Chrome/Chromium will fail. Use API-based scraping (e.g., Tavily/Firecrawl) or requests + BeautifulSoup.
-- No Heavy Local Models / GPU: Do not load local LLMs (e.g., Ollama) or large embedding models. No CUDA/GPU support (use cloud APIs instead).
-- No Inbound Ports / Servers: Do not start servers that listen on inbound ports (e.g., Flask/FastAPI). The runner is not meant for hosting long-running web services.
-- No Absolute Paths: The runner executes in a container, so your local filesystem paths won’t exist. Use relative paths inside the container (e.g., ./data/...) or construct paths from os.getcwd().
+The default lightweight environment. Optimized for fast cold-starts and low latency.
+
+- **Target Use Cases**:
+  - Text processing & RAG (Retrieval-Augmented Generation).
+  - Data analysis (Pandas, Numpy).
+  - API-based agents (calling External Tools).
+- **Frameworks**: CrewAI, LangChain (Python), LangGraph, Custom Python Agent
+- **Base Image**: `runner-standard` (Approx. 400MB)
+- **Python Version**: 3.12 (Fixed)
+- **Pre-installed Stack**: `pandas`, `numpy`, `scipy`, `requests`, `beautifulsoup4`.
+- **Browser Support**: **None**. (This environment does NOT contain Chrome/Chromium).
+
+#### B. Full Runtime (Multimedia & Polyglot)
+
+> **Config:** `mode: "full"`
+
+A heavy-duty environment equipped with system-level dependencies for multimedia and browser automation. Select this if your agent requires a display server, audio processing, or Node.js.
+
+- **Target Use Cases**:
+  - **Browser Automation**: Selenium, Playwright, Puppeteer (Python or Node.js).
+  - **Video/Audio Generation**: Remotion, MoviePy, Pydub.
+  - **Node.js Applications**: LangChain.js, Vercel AI SDK, Claude Skills Agent
+- **Base Image**: `runner-full` (Approx. 2GB)
+- **Included Capabilities**:
+  - **Node.js 20 (LTS)** & `npm`.
+  - **Headless Chrome / Chromium** (with `libnss3`, `libatk`, etc.).
+  - **FFmpeg** (Full build).
+
+### Shared Environment Features
+
+- **Resources**: 2 GB RAM, 1 vCPU, 600s Timeout (Hard Limit).
+- **File System**: Ephemeral (temporary). Files written to disk will be lost after execution.
+- **Internet Access**: Outbound allowed (API calls). Inbound blocked.
+
+### Hard Limitations (CRITICAL)
+
+Please read this section carefully. Most deployment failures are caused by violating these rules.
+
+1. **No Heavy Local Models / GPU Support**
+   - **Do NOT** load local LLMs (e.g., Ollama, Llama.cpp) or large embedding models (e.g., HuggingFace transformers > 500MB) into memory.
+   - The runtime environments **do not have GPU access (No CUDA)**.
+   - **Solution**: Use cloud APIs (OpenAI, Anthropic, Groq, HuggingFace Inference API) for all inference tasks.
+
+2. **Strict Resource Limits**
+   - Memory is capped at **2 GB**. Attempting to load large datasets or models will cause an OOM (Out Of Memory) crash immediately.
+   - Execution time is limited to **600 seconds** (10 minutes). Long-running background jobs are not supported.
+
+3. **No Inbound Ports / Web Servers**
+   - **Do NOT** start servers that listen on inbound ports (e.g., `flask run`, `express`, `fastapi`).
+   - The runner is designed for **task execution**, not hosting web services. Any process waiting for inbound HTTP requests will timeout.
+
+4. **System Installs Disabled**
+   - `apt-get` is disabled. You cannot install system-level packages at runtime.
+   - **Solution**: If you need **FFmpeg** or **Chrome**, you **MUST** set `mode: "full"` in your `charm.yaml`.
+
+5. **No Absolute Paths**
+   - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.
+   - **Solution**: Use relative paths (e.g., `./data/...`) or `os.getcwd()` / `process.cwd()`.
 
 ### Checklist
 
 Before publishing, make sure:
 
-- My agent is compatible with Python 3.12
-- I am not using a local browser (Chrome / Selenium / Playwright)
-- I am not loading local LLMs or large embedding models into memory
-- All Python dependencies are listed in requirements.txt or pyproject.toml
-- All file operations use relative paths
-- All secrets are defined in charm.yaml, not in .env
+- [ ] **Config**: `charm.yaml` has the correct `adapter.type` and `mode`.
+- [ ] **No Local Models**: I am not loading local LLMs or heavy weights.
+- [ ] **Dependencies**: All libraries are listed in `requirements.txt`/`pyproject.toml` (Python) or `package.json` (Node).
+- [ ] **Secrets**: All API keys are defined in `charm.yaml` (environment_variables list), not hardcoded.
 
 > If you hit any issues, feel free to open an [issue](https://github.com/CharmAIOS/Charm/issues/new/choose) or ask in our [community](https://discord.gg/gdakynHUEb). It really helps us make the docs and product better.
 
@@ -98,7 +138,7 @@ charm run . --json '{"field_name": "value", "option_key": 123}'
 
 Step C: Sandbox Simulation (Best to have)
 
-Run your agent inside the Charm Docker Sandbox. This guarantees compatibility with the cloud runtime.
+Run your agent inside the Charm Docker Sandbox. This guarantees compatibility with the cloud runtime and validates system dependencies.
 
 ```bash
 charm run . --input "YOUR_INPUT_TEXT" --docker
@@ -121,9 +161,9 @@ The Charm SDK transforms your agent into a unified capability component, allowin
 ### Secure Sandbox & Runtime Governance
 
 Charm provides agents with an out-of-the-box Secure Runtime.
-It uses isolated sandbox execution to dynamically injects state, memory, and execution dependencies at runtime. Each agent runs in a dedicated, controlled environment with support for pausing and resuming long-running tasks, effectively preventing malicious behavior and resource contention.
+It uses isolated sandbox execution to dynamically injects state, memory, and execution dependencies at runtime. Each agent runs in a dedicated container.
 
-All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, use-once model, sensitive credentials are never written to disk or persisted, ensuring security guarantees by default.
+All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, use-once model, sensitive credentials are never written to disk or persisted.
 
 ### The Storefront
 

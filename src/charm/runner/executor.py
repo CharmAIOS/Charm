@@ -33,14 +33,14 @@ class CharmDockerExecutor:
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
         if self.env == "production":
-            logger.info("Production Mode: Backend Selection Strategy Active")
+            logger.info("🚀 Production Mode: Backend Selection Strategy Active")
             if CloudRunBackend:
                 self.backend: ExecutionBackend = CloudRunBackend()
             else:
-                logger.error("CloudRunBackend missing. Falling back to Docker.")
+                logger.error("❌ CloudRunBackend missing. Falling back to Docker.")
                 self.backend = DockerBackend()
         else:
-            logger.info("Development Mode: Using DockerBackend")
+            logger.info("🛠️ Development Mode: Using DockerBackend")
             self.backend = DockerBackend()
 
     def _generate_bash_script(
@@ -52,19 +52,23 @@ class CharmDockerExecutor:
         local_sdk_path: Optional[str] = None,
         use_local_mount: bool = False,
         use_file_input: bool = False,
+        adapter_type: str = "python",
     ) -> str:
+        # 1. Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
 
+        # 2. File Downloads
         dl_cmds = []
         if file_urls:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
 
+        # 3. Local SDK Install (Dev Only)
         install_local_sdk_cmd = ""
         if local_sdk_path and use_local_mount:
             install_local_sdk_cmd = f"""
@@ -74,6 +78,7 @@ class CharmDockerExecutor:
             fi
             """
 
+        # 4. Source Code Setup
         if use_local_mount:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Source Code..."}}'
@@ -87,6 +92,33 @@ class CharmDockerExecutor:
             tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
             """
 
+        # 5. Dependency Installation Logic (Polyglot)
+
+        # Node.js Dependencies
+        install_node_deps_block = """
+        if [ -f "package.json" ]; then
+            echo '::CHARM_EVENT::{"type":"status","content":"Installing Node.js dependencies..."}'
+            # Prefer 'npm ci' if lockfile exists for speed/consistency
+            if [ -f "package-lock.json" ]; then
+                npm ci --quiet
+            else
+                npm install --no-audit --no-fund --quiet
+            fi
+        fi
+        """
+
+        # Python Dependencies
+        install_python_deps_block = """
+        if [ -f pyproject.toml ]; then
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Installing Python dependencies..."}}'
+            uv pip install -q -r pyproject.toml || uv pip install -q .
+        elif [ -f requirements.txt ]; then
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Installing Python dependencies..."}}'
+            uv pip install -q -r requirements.txt
+        fi
+        """
+
+        # SDK Setup
         sdk_install_block = """
         if python -c "import charm" 2>/dev/null; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Pre-installed Charm SDK."}}'
@@ -96,7 +128,15 @@ class CharmDockerExecutor:
         fi
         """
 
-        if use_file_input:
+        # 6. Execution Command Selection
+        if adapter_type == "node":
+            # Node Execution Path
+            execution_cmd = """
+            echo '::CHARM_EVENT::{"type":"status","content":"Starting Node.js Agent..."}'
+            npm start
+            """
+        elif use_file_input:
+            # Python File Input Path (Docker Optimized)
             execution_cmd = """
             echo '::CHARM_EVENT::{"type":"status","content":"Running Agent (File Mode)..."}'
             python3 -c "import sys, subprocess, pathlib; \
@@ -104,6 +144,7 @@ class CharmDockerExecutor:
             sys.exit(subprocess.run(['charm', 'run', '.', '--json', json_payload]).returncode)"
             """
         else:
+            # Python Cloud Run Fallback
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Running Agent (Cloud Mode)..."}}'
@@ -111,18 +152,21 @@ class CharmDockerExecutor:
             charm run . --json "$INPUT_JSON"
             """
 
+        # 7. Cleanup & Persistence Logic
         cleanup_function = """
         function cleanup {
             EXIT_CODE=$?
+            echo '::CHARM_EVENT::{"type":"status","content":"Saving Execution Context..."}'
             
+            # (A) Cloud Upload
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
-                echo '::CHARM_EVENT::{"type":"status","content":"Uploading Cloud Artifacts..."}'
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
                     --exclude='__pycache__' \
                     --exclude='charm.yaml' \
                     --exclude='requirements.txt' \
                     --exclude='pyproject.toml' \
+                    --exclude='node_modules' \
                     --exclude='*.py' \
                     --exclude='output_artifacts.tar.gz' \
                     --newer .charm_snapshot .
@@ -130,13 +174,14 @@ class CharmDockerExecutor:
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
 
+            # (B) Local Sync
             if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                echo '::CHARM_EVENT::{"type":"status","content":"Syncing Artifacts..."}'
                 [ -f "charm_memory.json" ] && cp charm_memory.json /app/artifacts_mount/ 2>/dev/null
                 
                 find . -type f -newer .charm_snapshot \
                     -not -path "*/\\.*" \
                     -not -path "*/__pycache__/*" \
+                    -not -path "*/node_modules/*" \
                     -not -name ".charm_snapshot" \
                     -not -name "charm.yaml" \
                     -not -name "*.py" \
@@ -154,6 +199,7 @@ class CharmDockerExecutor:
         trap cleanup EXIT
         """
 
+        # 8. Assemble Final Script
         script = f"""
         set -e
         (while true; do echo '::CHARM_EVENT::{{"type":"thinking","content":"..."}}'; sleep 5; done) &
@@ -167,11 +213,13 @@ class CharmDockerExecutor:
 
         {source_setup_block}
 
-        [ ! -f charm.yaml ] && echo '{EVENT_PREFIX}{{"type":"error","content":"Missing charm.yaml"}}' && exit 1
+        # [TWEAK] Only check charm.yaml if not in node mode (optional policy)
+        # [ ! -f charm.yaml ] && echo '{{EVENT_PREFIX}}{{"type":"error","content":"Missing charm.yaml"}}' && exit 1
 
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
 
+        # Memory File Setup
         if [ -f "charm_memory.json" ]; then
             export CHARM_MEMORY_FILE="$(pwd)/charm_memory.json"
         else
@@ -181,19 +229,18 @@ class CharmDockerExecutor:
 
         {install_local_sdk_cmd}
 
-        if [ -f pyproject.toml ]; then
-            echo '{EVENT_PREFIX}{{"type":"status","content":"Installing dependencies..."}}'
-            uv pip install -q -r pyproject.toml || uv pip install -q .
-        elif [ -f requirements.txt ]; then
-            echo '{EVENT_PREFIX}{{"type":"status","content":"Installing dependencies..."}}'
-            uv pip install -q -r requirements.txt
+        # Install Dependencies
+        {install_node_deps_block}
+        {install_python_deps_block}
+
+        # Config Runtime (Python only)
+        if [ "{adapter_type}" != "node" ]; then
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Configuring Python Runtime..."}}'
+            {sdk_install_block}
+            export PYTHONPATH=$PYTHONPATH:$(pwd)
         fi
-
-        echo '{EVENT_PREFIX}{{"type":"status","content":"Configuring Runtime..."}}'
-        {sdk_install_block}
-
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
         
+        # Snapshot for artifact diffing
         find . -type f > .charm_snapshot
 
         set +e
@@ -214,6 +261,8 @@ class CharmDockerExecutor:
         state_snapshot: str = "",
         local_source_path: Optional[str] = None,
         supabase_client: Any = None,
+        image: Optional[str] = None,
+        adapter_type: str = "python",
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
         run_id = f"{agent_id}_{run_timestamp}"
@@ -285,6 +334,7 @@ class CharmDockerExecutor:
             local_sdk_path=local_sdk_path,
             use_local_mount=should_mount_local,
             use_file_input=use_file_input,
+            adapter_type=adapter_type,
         )
 
         config = RunConfig(
@@ -298,6 +348,7 @@ class CharmDockerExecutor:
             host_artifact_path=host_artifact_path,
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
+            image=image,
         )
 
         try:

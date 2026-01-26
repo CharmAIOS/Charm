@@ -7,6 +7,7 @@ from ..adapters.crewai import CharmCrewAIAdapter
 from ..adapters.custom import CharmCustomAdapter
 from ..adapters.langchain import CharmLangChainAdapter
 from ..adapters.langgraph import CharmLangGraphAdapter
+from ..adapters.process import CharmProcessAdapter
 from ..contracts.uac import CharmConfig
 from .errors import CharmConfigError, CharmValidationError
 from .logger import logger
@@ -34,24 +35,28 @@ class CharmLoader:
         except Exception as e:
             raise CharmValidationError(f"Invalid charm.yaml: {e}") from e
 
-        # 2. Dynamic Import of User Code
-        agent_instance = dynamic_import(config.runtime.adapter.entry_point, project_path)
-
-        # 3. Adapter Selection
         adapter_type = config.runtime.adapter.type
         logger.debug(f"Detected adapter: {adapter_type}")
 
         adapter: BaseAdapter
-        if adapter_type == "crewai":
-            adapter = CharmCrewAIAdapter(agent_instance)
-        elif adapter_type == "langchain":
-            adapter = CharmLangChainAdapter(agent_instance)
-        elif adapter_type == "langgraph":
-            adapter = CharmLangGraphAdapter(agent_instance)
-        elif adapter_type == "custom":
-            adapter = CharmCustomAdapter(agent_instance)
+
+        # Branching logic for Node/Process vs Python
+        if adapter_type == "node":
+            adapter = CharmProcessAdapter(command=config.runtime.adapter.entry_point)
+
         else:
-            raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")
+            agent_instance = dynamic_import(config.runtime.adapter.entry_point, project_path)
+
+            if adapter_type == "crewai":
+                adapter = CharmCrewAIAdapter(agent_instance)
+            elif adapter_type == "langchain":
+                adapter = CharmLangChainAdapter(agent_instance)
+            elif adapter_type == "langgraph":
+                adapter = CharmLangGraphAdapter(agent_instance)
+            elif adapter_type == "custom":
+                adapter = CharmCustomAdapter(agent_instance)
+            else:
+                raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")
 
         # 4. Return the standardized wrapper
         return CharmWrapper(adapter=adapter, config=config)

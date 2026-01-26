@@ -60,7 +60,7 @@ class CloudRunBackend(ExecutionBackend):
                 "command": ["/bin/bash", "-c"],
                 "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
                 "env": env_vars,
-                "resources": {"limits": {"memory": "4Gi", "cpu": "1000m"}},
+                "resources": {"limits": {"memory": "2Gi", "cpu": "1000m"}},
             }
         ]
 

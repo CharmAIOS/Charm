@@ -1,17 +1,17 @@
-import os
-import json
 import base64
-import time
+import json
+import logging
+import mimetypes
+import os
+import shlex
 import shutil
 import tempfile
-import logging
-import shlex
-import mimetypes
+import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from .protocol import EVENT_PREFIX, sse_pack
-from .backend.base import RunConfig, ExecutionBackend
+from .backend.base import ExecutionBackend, RunConfig
 from .backend.docker import DockerBackend
+from .protocol import EVENT_PREFIX, sse_pack
 
 try:
     from .backend.cloud_run import CloudRunBackend
@@ -33,14 +33,14 @@ class CharmDockerExecutor:
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
         if self.env == "production":
-            logger.info("🚀 Production Mode: Backend Selection Strategy Active")
+            logger.info("Production Mode: Backend Selection Strategy Active")
             if CloudRunBackend:
                 self.backend: ExecutionBackend = CloudRunBackend()
             else:
-                logger.error("❌ CloudRunBackend missing. Falling back to Docker.")
+                logger.error("CloudRunBackend missing. Falling back to Docker.")
                 self.backend = DockerBackend()
         else:
-            logger.info("🛠️ Development Mode: Using DockerBackend")
+            logger.info("Development Mode: Using DockerBackend")
             self.backend = DockerBackend()
 
     def _generate_bash_script(
@@ -51,9 +51,8 @@ class CharmDockerExecutor:
         input_payload: Dict[str, Any],
         local_sdk_path: Optional[str] = None,
         use_local_mount: bool = False,
+        use_file_input: bool = False,
     ) -> str:
-        print(f"\n[DEBUG] Bundle URL sent to Cloud Run: {bundle_url}\n")
-
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
@@ -65,8 +64,6 @@ class CharmDockerExecutor:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
-
-        b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
 
         install_local_sdk_cmd = ""
         if local_sdk_path and use_local_mount:
@@ -99,53 +96,72 @@ class CharmDockerExecutor:
         fi
         """
 
-        artifact_upload_block = """
-        if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
-            echo '::CHARM_EVENT::{"type":"status","content":"Uploading Cloud Artifacts..."}'
-            
-            tar -czf output_artifacts.tar.gz \
-                --exclude='./.*' \
-                --exclude='__pycache__' \
-                --exclude='charm.yaml' \
-                --exclude='requirements.txt' \
-                --exclude='pyproject.toml' \
-                --exclude='*.py' \
-                --exclude='output_artifacts.tar.gz' \
-                --newer .charm_snapshot .
+        if use_file_input:
+            execution_cmd = """
+            echo '::CHARM_EVENT::{"type":"status","content":"Running Agent (File Mode)..."}'
+            python3 -c "import sys, subprocess, pathlib; \
+            json_payload = pathlib.Path('/app/artifacts_mount/input.json').read_text(encoding='utf-8'); \
+            sys.exit(subprocess.run(['charm', 'run', '.', '--json', json_payload]).returncode)"
+            """
+        else:
+            b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
+            execution_cmd = f"""
+            echo '::CHARM_EVENT::{{"type":"status","content":"Running Agent (Cloud Mode)..."}}'
+            INPUT_JSON="$(echo {b64_payload} | base64 -d)"
+            charm run . --json "$INPUT_JSON"
+            """
 
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL")
+        cleanup_function = """
+        function cleanup {
+            EXIT_CODE=$?
             
-            if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 204 ]; then
-                echo '::CHARM_EVENT::{"type":"status","content":"Artifacts Uploaded Successfully."}'
-            else
-                echo "::CHARM_EVENT::{\"type\":\"error\",\"content\":\"Artifact Upload Failed with code $HTTP_CODE\"}"
+            if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
+                echo '::CHARM_EVENT::{"type":"status","content":"Uploading Cloud Artifacts..."}'
+                tar -czf output_artifacts.tar.gz \
+                    --exclude='./.*' \
+                    --exclude='__pycache__' \
+                    --exclude='charm.yaml' \
+                    --exclude='requirements.txt' \
+                    --exclude='pyproject.toml' \
+                    --exclude='*.py' \
+                    --exclude='output_artifacts.tar.gz' \
+                    --newer .charm_snapshot .
+
+                curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
-        fi
-        """
 
-        docker_copy_block = """
-        if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-            echo '{EVENT_PREFIX}{{"type":"status","content":"Syncing Artifacts to Host..."}}'
-            find . -type f -newer .charm_snapshot \\
-                -not -path "*/\\.*" \\
-                -not -path "*/__pycache__/*" \\
-                -not -name ".charm_snapshot" \\
-                -not -name "charm.yaml" \\
-                -not -name "*.py" \\
-                -not -name ".env" \\
-                > .charm_new_files
+            if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
+                echo '::CHARM_EVENT::{"type":"status","content":"Syncing Artifacts..."}'
+                [ -f "charm_memory.json" ] && cp charm_memory.json /app/artifacts_mount/ 2>/dev/null
+                
+                find . -type f -newer .charm_snapshot \
+                    -not -path "*/\\.*" \
+                    -not -path "*/__pycache__/*" \
+                    -not -name ".charm_snapshot" \
+                    -not -name "charm.yaml" \
+                    -not -name "*.py" \
+                    -not -name ".env" \
+                    -not -name "charm_memory.json" \
+                    > .charm_new_files
 
-            while IFS= read -r file; do
-                [ -f "$file" ] && cp --parents "$file" /app/artifacts_mount/ 2>/dev/null || true
-            done < .charm_new_files
-        fi
+                while IFS= read -r file; do
+                    [ -f "$file" ] && cp --parents "$file" /app/artifacts_mount/ 2>/dev/null || true
+                done < .charm_new_files
+            fi
+            
+            echo "::CHARM_EVENT::{\"type\":\"internal_run_finished\",\"content\":{\"exit_code\":$EXIT_CODE}}"
+        }
+        trap cleanup EXIT
         """
 
         script = f"""
         set -e
         (while true; do echo '::CHARM_EVENT::{{"type":"thinking","content":"..."}}'; sleep 5; done) &
         HEARTBEAT_PID=$!
-        trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
+        
+        {cleanup_function}
+        
+        trap "kill $HEARTBEAT_PID 2>/dev/null; cleanup" EXIT
 
         mkdir -p agent_code && cd agent_code
 
@@ -174,28 +190,16 @@ class CharmDockerExecutor:
         fi
 
         echo '{EVENT_PREFIX}{{"type":"status","content":"Configuring Runtime..."}}'
-        
         {sdk_install_block}
 
         export PYTHONPATH=$PYTHONPATH:$(pwd)
-        INPUT_JSON="$(echo {b64_payload} | base64 -d)"
         
         find . -type f > .charm_snapshot
 
-        echo '{EVENT_PREFIX}{{"type":"status","content":"Running Agent..."}}'
-        
         set +e
         export TERM=dumb 
-        charm run . --json "$INPUT_JSON"
-        EXIT_CODE=$?
-        set -e
-
-        if [ $EXIT_CODE -eq 0 ]; then
-            {artifact_upload_block}
-            {docker_copy_block}
-        fi
-
-        exit $EXIT_CODE
+        
+        {execution_cmd}
         """
         return script
 
@@ -219,8 +223,8 @@ class CharmDockerExecutor:
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot
 
+        memory_file_name = "charm_memory.json"
         if history:
-            memory_file_name = "charm_memory.json"
             if self.env == "production" and supabase_client:
                 try:
                     yield sse_pack("status", "Syncing Context to Cloud...")
@@ -262,6 +266,17 @@ class CharmDockerExecutor:
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
 
+        use_file_input = False
+        if isinstance(self.backend, DockerBackend):
+            try:
+                input_path = os.path.join(host_artifact_path, "input.json")
+                with open(input_path, "w", encoding="utf-8") as f:
+                    json.dump(input_payload, f, ensure_ascii=False)
+                use_file_input = True
+                logger.info(f"Payload written to {input_path} for Docker mount.")
+            except Exception as e:
+                logger.error(f"Failed to write input.json: {e}")
+
         script_content = self._generate_bash_script(
             bundle_url=bundle_url,
             env_vars=env_vars,
@@ -269,6 +284,7 @@ class CharmDockerExecutor:
             input_payload=input_payload,
             local_sdk_path=local_sdk_path,
             use_local_mount=should_mount_local,
+            use_file_input=use_file_input,
         )
 
         config = RunConfig(
@@ -286,41 +302,9 @@ class CharmDockerExecutor:
 
         try:
             async for log in self.backend.stream_logs(config):
-                if "internal_run_finished" in log:
-                    yield sse_pack("status", "Finalizing Output...")
-
-                    if isinstance(self.backend, DockerBackend):
-                        for root, _, files in os.walk(host_artifact_path):
-                            for filename in files:
-                                if filename in ["charm_memory.json", "runner_debug.log"]:
-                                    continue
-                                full_path = os.path.join(root, filename)
-                                rel_path = os.path.relpath(full_path, host_artifact_path)
-                                ct, _ = mimetypes.guess_type(full_path)
-                                yield sse_pack(
-                                    "internal_artifact_found",
-                                    {
-                                        "path": full_path,
-                                        "rel_path": rel_path,
-                                        "mime": ct,
-                                        "run_id": run_id,
-                                    },
-                                )
-
-                    elif artifact_upload_url:
-                        final_tar_path = f"{agent_id}/{run_id}/output_artifacts.tar.gz"
-                        public_url = supabase_client.storage.from_(
-                            "agent_artifacts"
-                        ).get_public_url(final_tar_path)
-                        yield sse_pack(
-                            "artifact",
-                            {
-                                "name": "All Output Files (Download)",
-                                "url": public_url,
-                                "mime": "application/gzip",
-                            },
-                        )
-
+                if "internal_artifact_found" in log:
+                    yield log
+                    continue
                 yield log
 
         except Exception as e:

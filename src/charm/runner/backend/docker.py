@@ -81,10 +81,11 @@ class DockerBackend(ExecutionBackend):
                 mem_limit="2048m",
                 nano_cpus=1000000000,
                 network_mode="bridge",
+                extra_hosts={"host.docker.internal": "host-gateway"},
                 working_dir="/app",
                 volumes=volumes_config,
-                cap_drop=["ALL"],
-                security_opt=["no-new-privileges"],
+                # cap_drop=["ALL"],
+                # security_opt=["no-new-privileges"],
             )
 
             start_time = time.time()

@@ -1,4 +1,4 @@
-name: Deploy Staging
+name: Build Runtime Images (Staging)
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   REPO_NAME: charm-images
 
 jobs:
-  build-and-deploy:
+  build-runtimes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,32 +27,12 @@ jobs:
       - name: "Configure Docker"
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      - name: "Build Standard Image"
+      - name: "Build & Push Standard Image"
         run: |
           docker build -f Dockerfile.standard -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging
 
-      - name: "Build Full Image"
+      - name: "Build & Push Full Image"
         run: |
           docker build -f Dockerfile.full -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging
-
-      - name: "Build Runner API"
-        run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging .
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging
-
-      - name: "Deploy to Cloud Run (Staging)"
-        uses: "google-github-actions/deploy-cloudrun@v2"
-        with:
-          service: "charm-runner-staging"
-          image: "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging"
-          region: "${{ env.REGION }}"
-          flags: "--allow-unauthenticated --memory=1Gi"
-          env_vars: |
-            APP_ENV=staging
-            CHARM_IMAGE_STANDARD=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging
-            CHARM_IMAGE_FULL=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging
-            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.STAGING_SUPABASE_KEY }}
-            ALLOWED_ORIGINS=*

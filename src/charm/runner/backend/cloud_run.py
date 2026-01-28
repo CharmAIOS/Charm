@@ -50,8 +50,12 @@ class CloudRunBackend(ExecutionBackend):
             *[{"name": k, "value": str(v)} for k, v in config.env_vars.items()],
         ]
 
-        default_image = "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-base:latest"
-        worker_image = os.getenv("CHARM_WORKER_IMAGE", default_image)
+        default_fallback = (
+            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
+        )
+        worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
+
+        logger.info(f"[CloudRun] Target Image resolved to: {worker_image}")
 
         job = run_v2.Job()
         job.template.template.containers = [

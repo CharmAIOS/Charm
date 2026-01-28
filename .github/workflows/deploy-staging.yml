@@ -1,0 +1,58 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  PROJECT_ID: charm-cloud-runner
+  REGION: us-central1
+  REPO_NAME: charm-images
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+
+      - name: "Configure Docker"
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: "Build Standard Image"
+        run: |
+          docker build -f Dockerfile.standard -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging
+
+      - name: "Build Full Image"
+        run: |
+          docker build -f Dockerfile.full -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging
+
+      - name: "Build Runner API"
+        run: |
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging
+
+      - name: "Deploy to Cloud Run (Staging)"
+        uses: "google-github-actions/deploy-cloudrun@v2"
+        with:
+          service: "charm-runner-staging"
+          image: "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-api:staging"
+          region: "${{ env.REGION }}"
+          flags: "--allow-unauthenticated --memory=1Gi"
+          env_vars: |
+            APP_ENV=staging
+            CHARM_IMAGE_STANDARD=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:staging
+            CHARM_IMAGE_FULL=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:staging
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.STAGING_SUPABASE_KEY }}
+            ALLOWED_ORIGINS=*

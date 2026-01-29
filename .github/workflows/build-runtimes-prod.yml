@@ -1,0 +1,38 @@
+name: Build Runtime Images (Production)
+
+on:
+    push:
+        branches:
+            - main
+
+env:
+    PROJECT_ID: charm-cloud-runner
+    REGION: us-central1
+    REPO_NAME: charm-images
+
+jobs:
+    build-runtimes:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - id: "auth"
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+            - name: "Set up Cloud SDK"
+              uses: "google-github-actions/setup-gcloud@v2"
+
+            - name: "Configure Docker"
+              run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+            - name: "Build & Push Standard Image"
+              run: |
+                  docker build -f Dockerfile.standard -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:prod .
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:prod
+
+            - name: "Build & Push Full Image"
+              run: |
+                  docker build -f Dockerfile.full -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:prod .
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:prod

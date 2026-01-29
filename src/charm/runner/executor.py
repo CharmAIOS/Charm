@@ -32,15 +32,15 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        if self.env == "production":
-            logger.info("🚀 Production Mode: Backend Selection Strategy Active")
+        if self.env in ["production", "staging"]:
+            logger.info(f"Cloud Mode ({self.env}): Backend Selection Strategy Active")
             if CloudRunBackend:
                 self.backend: ExecutionBackend = CloudRunBackend()
             else:
-                logger.error("❌ CloudRunBackend missing. Falling back to Docker.")
+                logger.error("CloudRunBackend missing. Falling back to Docker.")
                 self.backend = DockerBackend()
         else:
-            logger.info("🛠️ Development Mode: Using DockerBackend")
+            logger.info("Development Mode: Using DockerBackend")
             self.backend = DockerBackend()
 
     def _generate_bash_script(

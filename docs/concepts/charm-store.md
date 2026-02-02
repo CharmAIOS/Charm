@@ -151,20 +151,3 @@ charm run . --input "YOUR_INPUT_TEXT" --docker
 ```bash
 charm push
 ```
-
-## What does Charm do?
-
-### Agent Encapsulation
-
-The Charm SDK transforms your agent into a unified capability component, allowing it to be consistently described, executed, and invoked.
-
-### Secure Sandbox & Runtime Governance
-
-Charm provides agents with an out-of-the-box Secure Runtime.
-It uses isolated sandbox execution to dynamically injects state, memory, and execution dependencies at runtime. Each agent runs in a dedicated container.
-
-All API keys are injected only at execution time and exist solely in memory. Using an ephemeral, use-once model, sensitive credentials are never written to disk or persisted.
-
-### The Storefront
-
-Generates a contract-driven UI from the manifest, instantly creating a web chat interface and securely handling user keys through encryption.

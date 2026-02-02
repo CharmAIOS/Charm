@@ -8,6 +8,7 @@ from ..adapters.custom import CharmCustomAdapter
 from ..adapters.langchain import CharmLangChainAdapter
 from ..adapters.langgraph import CharmLangGraphAdapter
 from ..adapters.process import CharmProcessAdapter
+from ..adapters.openclaw import CharmOpenClawAdapter
 from ..contracts.uac import CharmConfig
 from .errors import CharmConfigError, CharmValidationError
 from .logger import logger
@@ -40,11 +41,24 @@ class CharmLoader:
 
         adapter: BaseAdapter
 
-        # Branching logic for Node/Process vs Python
-        if adapter_type == "node":
+        # 2. Adapter Selection Logic
+
+        if adapter_type == "openclaw":
+            adapter = CharmOpenClawAdapter(config=config)
+
+        elif adapter_type == "node":
+            if not config.runtime.adapter.entry_point:
+                raise CharmValidationError(
+                    "Node adapter requires 'entry_point' (e.g. 'npm start')."
+                )
             adapter = CharmProcessAdapter(command=config.runtime.adapter.entry_point)
 
         else:
+            if not config.runtime.adapter.entry_point:
+                raise CharmValidationError(
+                    f"{adapter_type} adapter requires 'entry_point' (python path)."
+                )
+
             agent_instance = dynamic_import(config.runtime.adapter.entry_point, project_path)
 
             if adapter_type == "crewai":

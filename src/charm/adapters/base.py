@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import os  # [NEW] Needed for env vars
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generator, List, Optional
 
@@ -14,6 +15,19 @@ class BaseAdapter(ABC):
     def __init__(self, agent_instance: Any):
         self.agent = agent_instance
         self._pending_inputs: Dict[str, Any] = {}
+
+    # --- [NEW] Memory & Auth Helpers ---
+    def _get_user_profile(self) -> str:
+        """Retrieve the global user profile injected by the Runner."""
+        return os.getenv("CHARM_USER_PROFILE", "")
+
+    def _check_auth_requirements(self, required_keys: List[str]):
+        """Log warnings if required auth tokens are missing."""
+        for key in required_keys:
+            if not os.getenv(key):
+                logger.warning(f"[Auth] Required environment variable '{key}' is missing or empty.")
+
+    # -----------------------------------
 
     @abstractmethod
     def invoke(

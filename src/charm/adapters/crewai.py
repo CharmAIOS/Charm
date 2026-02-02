@@ -74,10 +74,20 @@ class CharmCrewAIAdapter(BaseAdapter):
         native_input = inputs.copy()
 
         _ = native_input.pop("__charm_state__", None)
-
         history_data = native_input.pop("__charm_history__", None)
 
-        # Advanced Context Injection for CrewAI
+        # --- [NEW] Inject User Profile (Global Memory) ---
+        user_profile = self._get_user_profile()
+        if user_profile:
+            profile_str = f"\n\n--- User Profile & Preferences ---\n{user_profile}\n"
+            # Prepend profile to input so the agent sees it first
+            if "topic" in native_input and isinstance(native_input["topic"], str):
+                native_input["topic"] = profile_str + native_input["topic"]
+            elif "input" in native_input and isinstance(native_input["input"], str):
+                native_input["input"] = profile_str + native_input["input"]
+        # -------------------------------------------------
+
+        # Advanced Context Injection for CrewAI (Existing Logic Preserved)
         if history_data:
             # Append to input string
             history_str = self._format_history_as_context(history_data)

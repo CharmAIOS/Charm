@@ -28,6 +28,7 @@ dependencies = [
     "crewai",
     "google-cloud-run",
     "google-cloud-logging",
+    "mcp"
 ]
 
 [project.urls]

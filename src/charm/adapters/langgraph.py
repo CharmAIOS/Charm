@@ -98,19 +98,39 @@ class CharmLangGraphAdapter(BaseAdapter):
             except Exception as e:
                 logger.warning(f"[Charm] Failed to restore state: {e}")
 
+        # 1. 準備上下文元件
         history_data = native_input.pop("__charm_history__", None)
+        lc_history = []
+        if history_data:
+            lc_history = self._convert_history_to_messages(history_data)
 
-        if history_data and "messages" in native_input:
-            lc_messages = self._convert_history_to_messages(history_data)
-            if isinstance(native_input["messages"], list):
-                native_input["messages"] = lc_messages + native_input["messages"]
-            else:
-                native_input["messages"] = lc_messages
-
+        # 2. 標準化輸入格式 (確保有 messages 列表)
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
             del native_input["input"]
+
+        # 3. [NEW] 組合最終的 Messages 序列
+        # 順序: [System: Profile] -> [History] -> [User Input]
+        if "messages" in native_input:
+            current_messages = native_input["messages"]
+            if not isinstance(current_messages, list):
+                current_messages = [current_messages]
+
+            final_messages = []
+
+            # Inject Profile
+            user_profile = self._get_user_profile()
+            if user_profile:
+                final_messages.append(SystemMessage(content=f"User Profile: {user_profile}"))
+
+            # Inject History
+            final_messages.extend(lc_history)
+
+            # Append Current Input
+            final_messages.extend(current_messages)
+
+            native_input["messages"] = final_messages
 
         result = None
 

@@ -50,6 +50,8 @@ class DockerBackend(ExecutionBackend):
             yield sse_pack("error", "Docker Engine Unavailable.")
             return
 
+        start_time = time.time()
+
         redactor = LogRedactor(config.env_vars)
         recent_logs: deque[str] = deque(maxlen=50)
         sent_event_contents: deque[str] = deque(maxlen=20)
@@ -91,7 +93,6 @@ class DockerBackend(ExecutionBackend):
                 # security_opt=["no-new-privileges"],
             )
 
-            start_time = time.time()
             logs_iterator = container.logs(stream=True, follow=True, stdout=True, stderr=True)
 
             buffer = ""

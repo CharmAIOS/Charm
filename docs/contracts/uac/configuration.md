@@ -7,7 +7,7 @@ Depending on your project status, choose the path that fits you best.
 Path A: Start a new project
 
 ```bash
-charm init my-agent
+charm init my-agent #--template skill
 cd my-agent
 ```
 

@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 from ..core.logger import logger
 from .base import BaseAdapter
 
-# Import MemorySaver for state checkpointing
 try:
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
@@ -81,7 +80,7 @@ class CharmLangGraphAdapter(BaseAdapter):
                 ),
             }
 
-        # Use a fixed thread ID for the stateless run (state is hydrated manually)
+        # Use a fixed thread ID for the stateless run
         config: Dict[str, Any] = {"configurable": {"thread_id": "charm_session"}}
         if callbacks:
             config["callbacks"] = callbacks
@@ -98,20 +97,19 @@ class CharmLangGraphAdapter(BaseAdapter):
             except Exception as e:
                 logger.warning(f"[Charm] Failed to restore state: {e}")
 
-        # 1. 準備上下文元件
+        # 1. Prepare Context Components
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
             lc_history = self._convert_history_to_messages(history_data)
 
-        # 2. 標準化輸入格式 (確保有 messages 列表)
+        # 2. Normalize Input Format (ensure 'messages' list exists)
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
             del native_input["input"]
 
-        # 3. [NEW] 組合最終的 Messages 序列
-        # 順序: [System: Profile] -> [History] -> [User Input]
+        # 3. Assemble Final Messages Sequence
         if "messages" in native_input:
             current_messages = native_input["messages"]
             if not isinstance(current_messages, list):

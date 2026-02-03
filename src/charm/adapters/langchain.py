@@ -68,21 +68,21 @@ class CharmLangChainAdapter(BaseAdapter):
 
         native_input = inputs.copy()
 
-        # 1. 處理短期記憶 (Chat History)
+        # 1. Handle Short-term Memory (Chat History)
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
             lc_history = self._convert_history_to_messages(history_data)
 
-        # 兼容常見的 LangChain 參數命名
+        # Compatible with common LangChain parameter naming.
         if "chat_history" not in native_input:
             native_input["chat_history"] = lc_history
 
         if "messages" in native_input and isinstance(native_input["messages"], list):
             native_input["messages"] = lc_history + native_input["messages"]
 
-        # 2. [NEW] 處理長期記憶 (User Profile)
-        # 從 BaseAdapter 獲取 Profile，並注入到 System Message 或 Input 中
+        # 2. Handle Long-term Memory (User Profile)
+        # Retrieve Profile from BaseAdapter and inject into System Message or Input.
         user_profile = self._get_user_profile()
 
         if user_profile:
@@ -90,22 +90,22 @@ class CharmLangChainAdapter(BaseAdapter):
 
             # Case A: Chat Models (List of Messages)
             if "messages" in native_input and isinstance(native_input["messages"], list):
-                # 將 Profile 作為 SystemMessage 插入到最前面
+                # Insert Profile as SystemMessage at the beginning.
                 system_msg = SystemMessage(content=f"User Profile & Preferences:\n{user_profile}")
                 native_input["messages"].insert(0, system_msg)
 
             # Case B: Chains / LLMs (String Input)
             elif "input" in native_input:
                 original_input = native_input["input"] or ""
-                # 將 Profile 拼接到用戶輸入的前面
+                # Prepend Profile to user input.
                 native_input["input"] = f"User Profile: {user_profile}\n\nTask: {original_input}"
 
             # Case C: Other (Fallback)
             else:
-                # 嘗試作為變數傳入
+                # Attempt to pass as a variable.
                 native_input["user_profile"] = user_profile
 
-        # 確保 input 不為 None
+        # Ensure input is not None
         if "input" in native_input:
             if native_input["input"] is None:
                 native_input["input"] = ""

@@ -45,7 +45,7 @@ class CharmDockerExecutor:
 
     def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
         """
-        計算 Skill 的唯一 Hash，用於緩存路徑。
+        Calculate unique Hash for Skill, used for cache path.
         Same Source + Same Version = Same Hash (Cache Hit)
         """
         raw = f"{source}@{version}".encode("utf-8")
@@ -53,8 +53,8 @@ class CharmDockerExecutor:
 
     def _generate_skill_install_block(self, skills: List[Dict[str, Any]]) -> str:
         """
-        生成 Bash 腳本區塊：負責檢查緩存、安裝 Skill、並建立連結。
-        這是實現「熱更新」與「秒開」的核心邏輯。
+        Generate Bash script block: handles cache checking, Skill installation, and linking.
+        This is the core logic for realizing "Hot Update" and "Instant Open".
         """
         if not skills:
             return ""
@@ -70,12 +70,12 @@ class CharmDockerExecutor:
             source = skill.get("source", "")
             version = skill.get("version", "latest")
 
-            # [Logic] Git Repositories (需要 Clone 的 Skill)
+            # Git Repositories (Skills requiring Clone)
             if source.startswith("git:") or source.startswith("http"):
                 repo_url = source.replace("git:", "")
                 skill_hash = self._calculate_skill_hash(source, version)
 
-                # 這是 Docker 容器內的掛載路徑 (由 Dockerfile 定義)
+                # Mount path inside Docker container (defined by Dockerfile).
                 cache_path = f"/charm_cache/skills/{skill_hash}"
                 local_link_path = f"./skills/{name}"
 
@@ -88,17 +88,16 @@ class CharmDockerExecutor:
                 )
                 script_lines.append(f"    echo 'Cache Miss. Cloning {repo_url}...'")
                 script_lines.append(f"    git clone --depth 1 {repo_url} '{cache_path}'")
-                # 如果有依賴安裝腳本，可以在這裡執行 (但建議由 Adapter 執行 runtime install)
+                # Dependency installation scripts can be executed here (runtime install via Adapter suggested).
                 script_lines.append(f"fi")
 
-                # 建立軟連結，讓 OpenClaw 以為它是本地 Skill
+                # Create symlink so OpenClaw treats it as a local Skill.
                 script_lines.append(f"rm -rf '{local_link_path}'")
                 script_lines.append(f"ln -s '{cache_path}' '{local_link_path}'")
 
-            # [Logic] NPM/Pip Skills (Smithery, PyPI)
-            # 這類 Skill 不需要「安裝到目錄」，而是依賴全域 Cache (npm cache / uv cache)
-            # Adapter 執行時會呼叫 npx/uvx，它們會自動利用我們掛載的 Cache Volume。
-            # 所以這裡不需要做額外動作，只需要確保 UI 顯示狀態。
+            # NPM/Pip Skills (Smithery, PyPI)
+            # These Skills rely on global Cache (npm cache / uv cache) instead of directory installation.
+            # Adapter invokes npx/uvx during execution, automatically utilizing the mounted Cache Volume.
             elif source.startswith("smithery:") or source.startswith("npm:"):
                 pass  # Runtime handled by npx
 
@@ -117,23 +116,23 @@ class CharmDockerExecutor:
         use_local_mount: bool = False,
         use_file_input: bool = False,
         adapter_type: str = "python",
-        skills: List[Dict[str, Any]] = [],  # [NEW] Pass skills definitions
+        skills: List[Dict[str, Any]] = [],
     ) -> str:
-        # 1. Environment Variables
+        # Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
 
-        # 2. File Downloads
+        # File Downloads
         dl_cmds = []
         if file_urls:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
 
-        # 3. Local SDK Install (Dev Only)
+        # Local SDK Install (Dev Only)
         install_local_sdk_cmd = ""
         if local_sdk_path and use_local_mount:
             install_local_sdk_cmd = f"""
@@ -143,7 +142,7 @@ class CharmDockerExecutor:
             fi
             """
 
-        # 4. Source Code Setup
+        # Source Code Setup
         if use_local_mount:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Source Code..."}}'
@@ -157,7 +156,7 @@ class CharmDockerExecutor:
             tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
             """
 
-        # 5. Dependency Installation Logic (Polyglot)
+        # Dependency Installation Logic (Polyglot)
         install_node_deps_block = """
         if [ -f "package.json" ]; then
             echo '::CHARM_EVENT::{"type":"status","content":"Installing Node.js dependencies..."}'
@@ -190,26 +189,26 @@ class CharmDockerExecutor:
         fi
         """
 
-        # [NEW] Skill Installation Block
-        # 這是為了 OpenClaw Agent 準備的
+        # Skill Installation Block
+        # Prepared for OpenClaw Agent.
         skill_setup_block = self._generate_skill_install_block(skills)
 
-        # 6. Execution Command Selection
+        # Execution Command Selection
         if adapter_type == "node":
             execution_cmd = """
             echo '::CHARM_EVENT::{"type":"status","content":"Starting Node.js Agent..."}'
             npm start
             """
         elif adapter_type == "openclaw":
-            # [NEW] OpenClaw Execution Path
-            # 這裡不直接跑 openclaw cli，而是跑 Charm 的 Wrapper
-            # Wrapper 會初始化 OpenClawAdapter，然後由 Adapter 去呼叫 OpenClaw
+            # OpenClaw Execution Path
+            # Do not run openclaw cli directly; run Charm's Wrapper instead.
+            # Wrapper initializes OpenClawAdapter, then Adapter calls OpenClaw.
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
-            # 確保有設定 UAC_SKILLS 環境變數 (雖然 Adapter 通常讀 charm.yaml，但備用)
+            # Ensure UAC_SKILLS environment variable is set (Adapter usually reads charm.yaml, but valid as backup).
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
-            # 使用 Charm SDK 啟動，讓它去載入 OpenClawAdapter
+            # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
             """
         elif use_file_input:
@@ -227,7 +226,7 @@ class CharmDockerExecutor:
             charm run . --json "$INPUT_JSON"
             """
 
-        # 7. Cleanup & Persistence Logic (保持不變)
+        # Cleanup & Persistence Logic
         cleanup_function = """
         function cleanup {
             EXIT_CODE=$?
@@ -251,14 +250,14 @@ class CharmDockerExecutor:
 
             # (B) Local Sync
             if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                # 同步記憶檔
+                # Sync memory file.
                 if [ -f "$CHARM_MEMORY_FILE" ]; then 
                     cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
                 elif [ -f "charm_memory.json" ]; then
                     cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
                 fi
                 
-                # 同步 OpenClaw 記憶 (如果有的話)
+                # Sync OpenClaw memory (if available).
                 if [ -d "/root/.openclaw/workspace" ]; then
                      cp /root/.openclaw/workspace/MEMORY.md /app/artifacts_mount/MEMORY.md 2>/dev/null
                 fi
@@ -285,7 +284,7 @@ class CharmDockerExecutor:
         trap cleanup EXIT
         """
 
-        # 8. Assemble Final Script
+        # Assemble Final Script
         script = f"""
         set -e
         (while true; do echo '::CHARM_EVENT::{{"type":"thinking","content":"..."}}'; sleep 5; done) &
@@ -316,7 +315,7 @@ class CharmDockerExecutor:
         {install_node_deps_block}
         {install_python_deps_block}
         
-        # [NEW] Install Skills (Dynamic Loading)
+        # Install Skills (Dynamic Loading)
         {skill_setup_block}
 
         # Config Runtime (Python only)
@@ -349,7 +348,7 @@ class CharmDockerExecutor:
         supabase_client: Any = None,
         image: Optional[str] = None,
         adapter_type: str = "python",
-        skills: List[Dict[str, Any]] = [],  # [NEW] Accept skills definition
+        skills: List[Dict[str, Any]] = [],
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
         run_id = f"{agent_id}_{run_timestamp}"
@@ -361,9 +360,7 @@ class CharmDockerExecutor:
 
         memory_file_name = "charm_memory.json"
         if history:
-            # (Cloud Sync Logic ... preserved)
             if self.env == "production" and supabase_client:
-                # ... (existing upload logic) ...
                 pass
 
             try:
@@ -373,8 +370,6 @@ class CharmDockerExecutor:
                     json.dump(history, f, ensure_ascii=False)
             except Exception as e:
                 logger.error(f"Local memory write failed: {e}")
-
-        # (Artifact URL logic ... preserved)
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
@@ -399,7 +394,7 @@ class CharmDockerExecutor:
             use_local_mount=should_mount_local,
             use_file_input=use_file_input,
             adapter_type=adapter_type,
-            skills=skills,  # [NEW] Pass skills to script generator
+            skills=skills,
         )
 
         config = RunConfig(

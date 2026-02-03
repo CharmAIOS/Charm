@@ -33,12 +33,10 @@ class CharmCustomAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info("Executing Custom Agent...")
 
-        # --- [NEW] Inject User Profile ---
-        # Make profile available in the inputs dict for the user code
+        # Inject User Profile
         user_profile = self._get_user_profile()
         if user_profile:
             inputs["user_profile"] = user_profile
-        # ---------------------------------
 
         try:
             sig = inspect.signature(self.execution_method)
@@ -99,11 +97,10 @@ class CharmCustomAdapter(BaseAdapter):
             sig = inspect.signature(self.agent.stream)
             kwargs: Dict[str, Any] = {}
 
-            # --- [NEW] Inject User Profile for Stream too ---
+            # Inject User Profile for Stream too
             user_profile = self._get_user_profile()
             if user_profile:
                 inputs["user_profile"] = user_profile
-            # ------------------------------------------------
 
             if len(sig.parameters) > 0:
                 if "callbacks" in sig.parameters:

@@ -23,7 +23,7 @@ class CharmLoader:
     def load(project_path: str) -> CharmWrapper:
         logger.info(f"Loading Charm project from: {project_path}")
 
-        # 1. Load Configuration
+        # Load Configuration
         yaml_path = os.path.join(project_path, "charm.yaml")
         if not os.path.exists(yaml_path):
             raise CharmConfigError(f"Missing charm.yaml in {project_path}")
@@ -41,7 +41,7 @@ class CharmLoader:
 
         adapter: BaseAdapter
 
-        # 2. Adapter Selection Logic
+        # Adapter Selection Logic
 
         if adapter_type == "openclaw":
             adapter = CharmOpenClawAdapter(config=config)
@@ -72,5 +72,5 @@ class CharmLoader:
             else:
                 raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")
 
-        # 4. Return the standardized wrapper
+        # Return the standardized wrapper
         return CharmWrapper(adapter=adapter, config=config)

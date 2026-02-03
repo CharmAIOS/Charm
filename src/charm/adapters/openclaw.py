@@ -24,9 +24,8 @@ class CharmOpenClawAdapter(BaseAdapter):
         self.config = config
         self.work_dir = os.getcwd()
 
-        # [Config] OpenClaw Workspace Paths
-        # 我們將 Workspace 指向容器內的持久化路徑或當前目錄的子目錄
-        # 確保與 Dockerfile 中的 ENV OPENCLAW_WORKSPACE 一致
+        # Point the workspace to a persistent path within the container or a subdirectory of the current directory.
+        # Ensure consistency with ENV OPENCLAW_WORKSPACE in the Dockerfile.
         self.openclaw_home = os.getenv("OPENCLAW_HOME", os.path.expanduser("~/.openclaw"))
         self.workspace_dir = os.getenv(
             "OPENCLAW_WORKSPACE", os.path.join(self.openclaw_home, "workspace")
@@ -37,26 +36,26 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def _inject_memory(self, history: List[Dict[str, Any]]):
         """
-        將 Charm 的用戶 Profile 和對話歷史注入到 OpenClaw 的長期記憶檔案中。
+        Inject Charm's user profile and conversation history into OpenClaw's long-term memory file.
         """
         try:
             if not os.path.exists(self.workspace_dir):
                 os.makedirs(self.workspace_dir, exist_ok=True)
 
-            # 1. 獲取全域用戶設定 (User Profile)
-            # 這通常由 Runner 從 DB 獲取並注入到環境變數中
+            # 1. Retrieve Global User Profile
+            # This is typically fetched from the DB by the Runner and injected into environment variables.
             user_profile = os.getenv(
                 "CHARM_USER_PROFILE", "User prefers concise and accurate answers."
             )
 
-            # 2. 構建記憶內容
-            # OpenClaw 啟動時會讀取這個檔案作為 Context
+            # 2. Build Memory Content
+            # OpenClaw reads this file as context upon startup.
             content = []
             content.append(f"# User Profile\n{user_profile}\n")
 
             if history:
                 content.append("# Recent Context\n")
-                # 取最近 10 輪對話，避免 Context Window 爆炸
+                # Retrieve the last 10 conversation turns to avoid exceeding the context window.
                 for msg in history[-10:]:
                     role = msg.get("role", "unknown").upper()
                     text = msg.get("content", "")
@@ -74,7 +73,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def _generate_openclaw_config(self) -> str:
         """
-        將 charm.yaml 中的 'runtime.skills' 轉換為標準 MCP Servers 設定檔 (JSON)。
+        Transform 'runtime.skills' from charm.yaml into a standard MCP Servers configuration file (JSON).
         """
         mcp_servers = {}
 
@@ -85,7 +84,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                 # --- A. Smithery / NPM Skills ---
                 if skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
                     pkg_name = skill.source.replace("smithery:", "").replace("npm:", "")
-                    # 使用 npx 執行 (確保 @smithery/cli 已安裝或即時下載)
+                    # Execute using npx (ensure @smithery/cli is installed or successfully downloaded).
                     server_config = {
                         "command": "npx",
                         "args": [
@@ -101,13 +100,13 @@ class CharmOpenClawAdapter(BaseAdapter):
                 # --- B. Python / PyPI Skills ---
                 elif skill.source.startswith("pip:") or skill.source.startswith("pypi:"):
                     pkg_name = skill.source.replace("pip:", "").replace("pypi:", "")
-                    # 使用 uvx (uv tool run) 執行，這是最快且隔離最好的方式
+                    # Execute using uvx (uv tool run) for speed and isolation.
                     server_config = {"command": "uvx", "args": [pkg_name]}
 
                 # --- C. Local Skills (Repositories) ---
                 elif skill.source.startswith("local:"):
-                    # Executor 在 Phase 3 會將 skill 連結到當前目錄
-                    # 路徑範例: local:./skills/browser-use -> ./skills/browser-use
+                    # The Executor links the skill to the current directory in Phase 3.
+                    # Example path: local:./skills/browser-use -> ./skills/browser-use
                     rel_path = skill.source.replace("local:", "")
                     abs_path = os.path.abspath(rel_path)
 
@@ -115,17 +114,17 @@ class CharmOpenClawAdapter(BaseAdapter):
                         logger.warning(f"Skill path not found: {abs_path}")
                         continue
 
-                    # 自動偵測啟動方式
+                    # Automatically detect startup method.
                     if os.path.isfile(abs_path):
-                        # 如果指向單一檔案
+                        # Targeted at a single file.
                         if abs_path.endswith(".py"):
                             server_config = {"command": "python", "args": [abs_path]}
                         elif abs_path.endswith(".js"):
                             server_config = {"command": "node", "args": [abs_path]}
                     else:
-                        # 如果指向目錄，檢查常見入口
+                        # Targeted at a directory, check for common entry points.
                         if os.path.exists(os.path.join(abs_path, "pyproject.toml")):
-                            # Python 專案，使用 uv run
+                            # Python project, use uv run.
                             server_config = {
                                 "command": "uv",
                                 "args": [
@@ -133,24 +132,24 @@ class CharmOpenClawAdapter(BaseAdapter):
                                     "python",
                                     "-m",
                                     "server",
-                                ],  # 假設 module 名為 server
-                                "cwd": abs_path,  # 設定工作目錄
+                                ],  # Assumes module name is 'server'.
+                                "cwd": abs_path,  # Set working directory.
                             }
                         elif os.path.exists(os.path.join(abs_path, "package.json")):
-                            # Node 專案
+                            # Node project.
                             server_config = {"command": "npm", "args": ["start"], "cwd": abs_path}
                         else:
-                            # Fallback: 嘗試執行 server.py
+                            # Fallback: Try executing server.py.
                             server_config = {
                                 "command": "python",
                                 "args": [os.path.join(abs_path, "server.py")],
                             }
 
                 # --- Auth & Env Injection ---
-                # 將 charm.yaml 定義的 config 轉為環境變數
+                # Convert configs defined in charm.yaml to environment variables.
                 env_vars = skill.config.copy() if skill.config else {}
 
-                # 自動注入全域 API Keys (如果環境變數有)
+                # Automatically inject global API Keys (if present in environment variables).
                 for key in [
                     "OPENAI_API_KEY",
                     "ANTHROPIC_API_KEY",
@@ -165,11 +164,11 @@ class CharmOpenClawAdapter(BaseAdapter):
 
                 mcp_servers[skill.name] = server_config
 
-        # 構建完整設定
+        # Build complete configuration
         full_config = {
             "mcpServers": mcp_servers,
             "workspace": self.workspace_dir,
-            # 可以根據 charm.yaml 擴充這裡，例如指定模型
+            # Expand here based on charm.yaml, e.g., specifying the model:
             # "llm": { "model": "claude-3-5-sonnet-latest" }
         }
 
@@ -186,42 +185,42 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def _parse_log(self, line: str):
         """
-        解析 OpenClaw 的 stdout/stderr，轉為 Charm 的 UI 事件。
-        Regex 需根據 OpenClaw 實際輸出調整。
+        Parse OpenClaw's stdout/stderr and convert into Charm UI events.
+        Regex requires adjustment based on actual OpenClaw output.
         """
         clean_line = line.strip()
         if not clean_line:
             return
 
         # [Log Type 1] Thinking / Planning
-        # OpenClaw 輸出範例: "Thought: I need to use google-search..."
+        # OpenClaw output example: "Thought: I need to use google-search..."
         if re.match(r"^(Thought|Plan|Reasoning):", clean_line, re.IGNORECASE):
             content = clean_line.split(":", 1)[1].strip()
             CharmEmitter.emit_thinking(content)
 
         # [Log Type 2] Tool Execution
-        # OpenClaw 輸出範例: "Calling tool 'google-search' with args..."
+        # OpenClaw output example: "Calling tool 'google-search' with args..."
         elif re.match(r"^(Calling|Executing|Tool):", clean_line, re.IGNORECASE):
             CharmEmitter.emit_thinking(f"🛠️ {clean_line}")
 
         # [Log Type 3] Artifact Generation
-        # 假設 OpenClaw 輸出: "Created artifact: /path/to/file.pdf"
+        # Assume OpenClaw output: "Created artifact: /path/to/file.pdf"
         elif "Created artifact:" in clean_line:
             match = re.search(r"Created artifact:\s*(.+)", clean_line)
             if match:
                 path = match.group(1).strip()
                 name = os.path.basename(path)
-                # 使用 mime="auto" 讓 Runner 自動判斷
+                # Use mime="auto" to let the Runner determine automatically.
                 CharmEmitter.emit_artifact(name=name, url=path, mime="auto")
 
         # [Log Type 4] Errors
         elif "Error:" in clean_line or "Exception" in clean_line:
-            # 過濾掉噪音警告
+            # Filter out noise warnings.
             if "DeprecationWarning" not in clean_line:
                 CharmEmitter.emit_error(clean_line)
 
         else:
-            # 其他訊息作為 debug log
+            # Log other messages as debug logs.
             logger.debug(f"[OpenClaw] {clean_line}")
 
     def invoke(
@@ -229,29 +228,29 @@ class CharmOpenClawAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info(" Booting OpenClaw Adapter...")
 
-        # 1. 記憶注入
+        # 1. Memory Injection
         self._inject_memory(inputs.get("__charm_history__", []))
 
-        # 2. 設定檔生成
+        # 2. Config Generation
         config_path = self._generate_openclaw_config()
 
-        # 3. 準備用戶輸入
+        # 3. Prepare User Input
         user_input = inputs.get("input", "")
-        # 如果有特定變數注入，拼接到 Prompt
+        # If specific variables are injected, append to Prompt.
         for k, v in inputs.items():
             if k not in ["input", "__charm_history__"]:
                 user_input += f"\n\n[{k}]: {v}"
 
-        # 4. 啟動 OpenClaw CLI
-        # 使用 npm install -g 安裝後的 'openclaw' 指令
-        # 模式: 單次執行 (exec / run)
+        # 4. Start OpenClaw CLI
+        # Use 'openclaw' command installed via npm install -g.
+        # Mode: Single execution (exec / run).
         cmd = ["openclaw", "run", "--config", config_path, "--prompt", user_input]
 
         logger.info(f"Executing Command: {' '.join(cmd)}")
 
-        # 複製環境變數，確保 API Keys 傳遞
+        # Copy environment variables to ensure API Keys are passed.
         env = os.environ.copy()
-        # 強制指定 HOME，避免找不到 .openclaw 目錄
+        # Force HOME to prevent failure in finding the .openclaw directory.
         env["HOME"] = "/root"
 
         try:
@@ -260,7 +259,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1,  # Line buffered
+                bufsize=1,
                 env=env,
             )
         except FileNotFoundError:
@@ -272,22 +271,22 @@ class CharmOpenClawAdapter(BaseAdapter):
         stdout_lines = []
         final_output = ""
 
-        # 定義 Stream Reader
+        # Define Stream Reader
         def read_stream(stream, is_stderr):
             nonlocal final_output
             for line in stream:
-                # 只有 stdout 才包含結果，stderr 通常是 log
+                # Only stdout contains results; stderr is typically for logs.
                 if not is_stderr:
-                    # 簡單啟發式：如果包含 "Final Answer:" 則提取後面的內容
+                    # Simple heuristic: extract content following "Final Answer:".
                     if "Final Answer:" in line:
                         final_output = line.split("Final Answer:", 1)[1].strip()
                     else:
                         stdout_lines.append(line)
 
-                # 統一解析 Log 並 Emit 事件
+                # Unify log parsing and emit events.
                 self._parse_log(line)
 
-        # 雙線程讀取，避免 Buffer 塞滿導致 Deadlock
+        # Dual-thread reading to prevent buffer overflow leading to Deadlock.
         t_out = threading.Thread(target=read_stream, args=(process.stdout, False))
         t_err = threading.Thread(target=read_stream, args=(process.stderr, True))
 
@@ -301,19 +300,18 @@ class CharmOpenClawAdapter(BaseAdapter):
         if process.returncode != 0:
             return {"status": "error", "message": f"OpenClaw exited with code {process.returncode}"}
 
-        # 如果沒抓到 "Final Answer:" 標籤，嘗試使用 stdout 最後一段作為結果
         if not final_output and stdout_lines:
-            # 過濾掉明顯的 Log 行
+            # Filter out obvious log lines.
             clean_output = [
                 l for l in stdout_lines if not l.startswith("[") and "Thought:" not in l
             ]
             if clean_output:
-                final_output = "\n".join(clean_output[-10:])  # 取最後 10 行
+                final_output = "\n".join(clean_output[-10:])  # Take the last 10 lines.
 
         return {
             "status": "success",
             "output": final_output or "Task completed successfully (check artifacts).",
-            "charm_state": "",  # 暫無 State Snapshot
+            "charm_state": "",  # No State Snapshot yet.
         }
 
     def get_state(self) -> Dict[str, Any]:

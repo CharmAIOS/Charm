@@ -76,7 +76,7 @@ class CharmCrewAIAdapter(BaseAdapter):
         _ = native_input.pop("__charm_state__", None)
         history_data = native_input.pop("__charm_history__", None)
 
-        # --- [NEW] Inject User Profile (Global Memory) ---
+        # Inject User Profile (Global Memory)
         user_profile = self._get_user_profile()
         if user_profile:
             profile_str = f"\n\n--- User Profile & Preferences ---\n{user_profile}\n"
@@ -85,7 +85,6 @@ class CharmCrewAIAdapter(BaseAdapter):
                 native_input["topic"] = profile_str + native_input["topic"]
             elif "input" in native_input and isinstance(native_input["input"], str):
                 native_input["input"] = profile_str + native_input["input"]
-        # -------------------------------------------------
 
         # Advanced Context Injection for CrewAI (Existing Logic Preserved)
         if history_data:

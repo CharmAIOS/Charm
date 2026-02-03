@@ -5,7 +5,6 @@ persona:
   name: "My Charm Agent"
   
   # [Required] Semantic version of the agent
-  # Update this number (e.g., 0.1.1 -> 0.1.2) when publishing changes.
   version: "0.1.0"
   
   description: "A short description of what this agent does."
@@ -53,28 +52,45 @@ interface:
 # 4. Runtime Configuration
 runtime:
   adapter:
-    # [Updated] Options: crewai, langchain, langgraph, custom, node
-    # Use 'node' if your agent is a Node.js application (e.g. Remotion).
+    # Options: crewai, langchain, langgraph, custom, node, openclaw
     type: "crewai"  
     
     # Execution Entry Point:
     # - Python: "module:variable" (e.g. "src.main:agent")
     # - Node.js: "shell command"  (e.g. "npm start")
+    # - OpenClaw: Optional (uses default host if empty)
     entry_point: "src.main:agent"
     
     # List required environment variable NAMES (keys only, no values)
     environment_variables:
       - "OPENAI_API_KEY"
+    
+    # [Optional] MCP Skills Configuration (For type='openclaw')
+    # Uncomment and add your skill definitions below.
+    # skills:
+    #   - name: "my-skill"
+    #     source: "./skills/my-skill"
+    #   - name: "google-search"
+    #     source: "smithery:@mcp/google-search"
 
   # "standard" (Default): Lightweight Python env. Best for text/data tasks.
-  # "full": Heavy env with Chrome, FFmpeg, and Node.js. Use this for Browser Automation or Remotion.
+  # "full": Heavy env with Chrome, Node.js, and OpenClaw support.
   mode: "standard"
 
   injections:
     llm_client: true
     tools: []
 
-# 5. Governance
+# 5. [New] Authentication Requirements
+# Declare if your agent needs user's OAuth tokens.
+# auth:
+#   providers:
+#     - name: "google"
+#       scopes: ["calendar.readonly"]
+#     - name: "github"
+#       scopes: ["repo"]
+
+# 6. Governance
 policies:
   allow_internet_access: true
   max_steps: 20

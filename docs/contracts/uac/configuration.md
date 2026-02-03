@@ -7,7 +7,7 @@ Depending on your project status, choose the path that fits you best.
 Path A: Start a new project
 
 ```bash
-charm init my-agent
+charm init my-agent #--template skill
 cd my-agent
 ```
 
@@ -133,7 +133,7 @@ interface:
 # ------------------------------------------------------------------
 runtime:
   adapter:
-    type: "crewai" # Options: crewai, langchain, langgraph, custom, node
+    type: "crewai" # Options: crewai, langchain, langgraph, custom, node, openclaw
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?
@@ -148,6 +148,9 @@ runtime:
 
     # [Case C] For Node.js (Remotion, Puppeteer, etc.): Provide the shell command.
     # entry_point: "npm start"
+
+    # [Case D] For OpenClaw: Optional (uses default host if empty)
+    # entry_point: ""
     
     # --------------------------------------------------------------
     # SECURE ENV VARS: List keys your agent needs.
@@ -158,10 +161,21 @@ runtime:
       - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
+  # SKILLS (For OpenClaw/MCP Agents)
+  # Define external capabilities to mount dynamically.
+  # --------------------------------------------------------------
+  skills:
+    - name: "browser-use"
+      source: "pip:browser-use"  # Supports pip, npm, smithery, git, local
+      version: "latest"
+    - name: "filesystem"
+      source: "smithery:@mcp/filesystem"
+  
+  # --------------------------------------------------------------
   # RUNTIME MODE (Environment Selection)
   # --------------------------------------------------------------
   # "standard" (Default): Lightweight Python environment. Fast boot time.
-  # "full": Heavy environment including Headless Chrome, FFmpeg, and Node.js. Use this if your agent does Browser Automation or Video Generation.
+  # "full": Heavy environment including Headless Chrome, FFmpeg, Node.js and OpenClaw. Use this if your agent does Browser Automation or Video Generation.
   mode: "standard"
 
   # (Advanced) Dependency Injection from Charm System (The associated logic is not yet implemented, and the field is kept as a placeholder).
@@ -170,7 +184,18 @@ runtime:
     tools: []         # Inject other agents as tools?
 
 # ------------------------------------------------------------------
-# 4. Governance (Policies)
+# 4. Authentication (Global)
+# ------------------------------------------------------------------
+# Declare OAuth requirements.
+auth:
+  providers:
+    - name: "google"
+      scopes: ["calendar.readonly", "gmail.send"]
+    - name: "github"
+      scopes: ["repo"]
+
+# ------------------------------------------------------------------
+# 5. Governance (Policies)
 # ------------------------------------------------------------------
 policies:
   allow_internet_access: true
@@ -187,8 +212,10 @@ policies:
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
-|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node.|
+|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|
 | |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
 | |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
+| |skills |List |List of MCP Skills to mount.|
 | |mode |Enum |standard (Default), full. Selects the container environment.|
+| Auth|providers |List |List of OAuth providers.|
 |Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|

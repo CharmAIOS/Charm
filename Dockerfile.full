@@ -28,11 +28,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
+RUN npm install -g openclaw@latest
+
+RUN mkdir -p /charm_cache/skills && chmod 777 /charm_cache/skills \
+    && mkdir -p /root/.openclaw/workspace && chmod 777 /root/.openclaw
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /app
 ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PATH="$VIRTUAL_ENV/bin:/opt/openclaw/bin:$PATH"
 ENV UV_CACHE_DIR=/root/.cache/uv
 
 RUN uv venv $VIRTUAL_ENV
@@ -55,10 +60,13 @@ RUN uv pip install \
     "google-cloud-run" \
     "google-cloud-logging"
 
+
+RUN uv pip install "mcp"
+
 COPY pyproject.toml .
 RUN uv pip install -r pyproject.toml
 
 COPY src /app/src
 RUN uv pip install --no-deps -e .
 
-CMD ["echo", "Charm Node/Multimedia Runtime Ready"]
+CMD ["echo", "Charm Full Runtime (Python + Node + OpenClaw) Ready"]

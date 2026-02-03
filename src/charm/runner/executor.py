@@ -1,7 +1,7 @@
 import base64
+import hashlib
 import json
 import logging
-import mimetypes
 import os
 import shlex
 import shutil
@@ -43,6 +43,69 @@ class CharmDockerExecutor:
             logger.info("Development Mode: Using DockerBackend")
             self.backend = DockerBackend()
 
+    def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
+        """
+        Calculate unique Hash for Skill, used for cache path.
+        Same Source + Same Version = Same Hash (Cache Hit)
+        """
+        raw = f"{source}@{version}".encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()[:16]
+
+    def _generate_skill_install_block(self, skills: List[Dict[str, Any]]) -> str:
+        """
+        Generate Bash script block: handles cache checking, Skill installation, and linking.
+        This is the core logic for realizing "Hot Update" and "Instant Open".
+        """
+        if not skills:
+            return ""
+
+        script_lines = [
+            "\n# --- Dynamic Skill Loading System ---",
+            "mkdir -p ./skills",
+            f'echo \'{EVENT_PREFIX}{{"type":"status","content":"Checking Skill Cache..."}}\'',
+        ]
+
+        for skill in skills:
+            name = skill.get("name")
+            source = skill.get("source", "")
+            version = skill.get("version", "latest")
+
+            # Git Repositories (Skills requiring Clone)
+            if source.startswith("git:") or source.startswith("http"):
+                repo_url = source.replace("git:", "")
+                skill_hash = self._calculate_skill_hash(source, version)
+
+                # Mount path inside Docker container (defined by Dockerfile).
+                cache_path = f"/charm_cache/skills/{skill_hash}"
+                local_link_path = f"./skills/{name}"
+
+                script_lines.append(f"\n# Skill: {name} ({version})")
+                script_lines.append(f"if [ -d '{cache_path}' ]; then")
+                script_lines.append(f"    echo '⚡ Cache Hit for {name}. Linking...'")
+                script_lines.append(f"else")
+                script_lines.append(
+                    f'    echo \'{EVENT_PREFIX}{{"type":"status","content":"Installing Skill: {name}..."}}\''
+                )
+                script_lines.append(f"    echo 'Cache Miss. Cloning {repo_url}...'")
+                script_lines.append(f"    git clone --depth 1 {repo_url} '{cache_path}'")
+                # Dependency installation scripts can be executed here (runtime install via Adapter suggested).
+                script_lines.append(f"fi")
+
+                # Create symlink so OpenClaw treats it as a local Skill.
+                script_lines.append(f"rm -rf '{local_link_path}'")
+                script_lines.append(f"ln -s '{cache_path}' '{local_link_path}'")
+
+            # NPM/Pip Skills (Smithery, PyPI)
+            # These Skills rely on global Cache (npm cache / uv cache) instead of directory installation.
+            # Adapter invokes npx/uvx during execution, automatically utilizing the mounted Cache Volume.
+            elif source.startswith("smithery:") or source.startswith("npm:"):
+                pass  # Runtime handled by npx
+
+            elif source.startswith("pip:") or source.startswith("pypi:"):
+                pass  # Runtime handled by uvx
+
+        return "\n".join(script_lines)
+
     def _generate_bash_script(
         self,
         bundle_url: str,
@@ -53,22 +116,23 @@ class CharmDockerExecutor:
         use_local_mount: bool = False,
         use_file_input: bool = False,
         adapter_type: str = "python",
+        skills: List[Dict[str, Any]] = [],
     ) -> str:
-        # 1. Environment Variables
+        # Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
 
-        # 2. File Downloads
+        # File Downloads
         dl_cmds = []
         if file_urls:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
 
-        # 3. Local SDK Install (Dev Only)
+        # Local SDK Install (Dev Only)
         install_local_sdk_cmd = ""
         if local_sdk_path and use_local_mount:
             install_local_sdk_cmd = f"""
@@ -78,7 +142,7 @@ class CharmDockerExecutor:
             fi
             """
 
-        # 4. Source Code Setup
+        # Source Code Setup
         if use_local_mount:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Source Code..."}}'
@@ -92,9 +156,7 @@ class CharmDockerExecutor:
             tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
             """
 
-        # 5. Dependency Installation Logic (Polyglot)
-
-        # Node.js Dependencies
+        # Dependency Installation Logic (Polyglot)
         install_node_deps_block = """
         if [ -f "package.json" ]; then
             echo '::CHARM_EVENT::{"type":"status","content":"Installing Node.js dependencies..."}'
@@ -107,7 +169,6 @@ class CharmDockerExecutor:
         fi
         """
 
-        # Python Dependencies
         install_python_deps_block = """
         if [ -f pyproject.toml ]; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Installing Python dependencies..."}}'
@@ -128,15 +189,29 @@ class CharmDockerExecutor:
         fi
         """
 
-        # 6. Execution Command Selection
+        # Skill Installation Block
+        # Prepared for OpenClaw Agent.
+        skill_setup_block = self._generate_skill_install_block(skills)
+
+        # Execution Command Selection
         if adapter_type == "node":
-            # Node Execution Path
             execution_cmd = """
             echo '::CHARM_EVENT::{"type":"status","content":"Starting Node.js Agent..."}'
             npm start
             """
+        elif adapter_type == "openclaw":
+            # OpenClaw Execution Path
+            # Do not run openclaw cli directly; run Charm's Wrapper instead.
+            # Wrapper initializes OpenClawAdapter, then Adapter calls OpenClaw.
+            b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
+            execution_cmd = f"""
+            echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
+            # Ensure UAC_SKILLS environment variable is set (Adapter usually reads charm.yaml, but valid as backup).
+            INPUT_JSON="$(echo {b64_payload} | base64 -d)"
+            # Launch using Charm SDK to load OpenClawAdapter.
+            charm run . --json "$INPUT_JSON"
+            """
         elif use_file_input:
-            # Python File Input Path (Docker Optimized)
             execution_cmd = """
             echo '::CHARM_EVENT::{"type":"status","content":"Running Agent (File Mode)..."}'
             python3 -c "import sys, subprocess, pathlib; \
@@ -144,7 +219,6 @@ class CharmDockerExecutor:
             sys.exit(subprocess.run(['charm', 'run', '.', '--json', json_payload]).returncode)"
             """
         else:
-            # Python Cloud Run Fallback
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Running Agent (Cloud Mode)..."}}'
@@ -152,7 +226,7 @@ class CharmDockerExecutor:
             charm run . --json "$INPUT_JSON"
             """
 
-        # 7. Cleanup & Persistence Logic
+        # Cleanup & Persistence Logic
         cleanup_function = """
         function cleanup {
             EXIT_CODE=$?
@@ -176,12 +250,23 @@ class CharmDockerExecutor:
 
             # (B) Local Sync
             if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                [ -f "charm_memory.json" ] && cp charm_memory.json /app/artifacts_mount/ 2>/dev/null
+                # Sync memory file.
+                if [ -f "$CHARM_MEMORY_FILE" ]; then 
+                    cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
+                elif [ -f "charm_memory.json" ]; then
+                    cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
+                fi
+                
+                # Sync OpenClaw memory (if available).
+                if [ -d "/root/.openclaw/workspace" ]; then
+                     cp /root/.openclaw/workspace/MEMORY.md /app/artifacts_mount/MEMORY.md 2>/dev/null
+                fi
                 
                 find . -type f -newer .charm_snapshot \
                     -not -path "*/\\.*" \
                     -not -path "*/__pycache__/*" \
                     -not -path "*/node_modules/*" \
+                    -not -path "*/skills/*" \
                     -not -name ".charm_snapshot" \
                     -not -name "charm.yaml" \
                     -not -name "*.py" \
@@ -199,7 +284,7 @@ class CharmDockerExecutor:
         trap cleanup EXIT
         """
 
-        # 8. Assemble Final Script
+        # Assemble Final Script
         script = f"""
         set -e
         (while true; do echo '::CHARM_EVENT::{{"type":"thinking","content":"..."}}'; sleep 5; done) &
@@ -212,9 +297,6 @@ class CharmDockerExecutor:
         mkdir -p agent_code && cd agent_code
 
         {source_setup_block}
-
-        # [TWEAK] Only check charm.yaml if not in node mode (optional policy)
-        # [ ! -f charm.yaml ] && echo '{{EVENT_PREFIX}}{{"type":"error","content":"Missing charm.yaml"}}' && exit 1
 
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
@@ -232,6 +314,9 @@ class CharmDockerExecutor:
         # Install Dependencies
         {install_node_deps_block}
         {install_python_deps_block}
+        
+        # Install Skills (Dynamic Loading)
+        {skill_setup_block}
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then
@@ -263,6 +348,7 @@ class CharmDockerExecutor:
         supabase_client: Any = None,
         image: Optional[str] = None,
         adapter_type: str = "python",
+        skills: List[Dict[str, Any]] = [],
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
         run_id = f"{agent_id}_{run_timestamp}"
@@ -275,21 +361,7 @@ class CharmDockerExecutor:
         memory_file_name = "charm_memory.json"
         if history:
             if self.env == "production" and supabase_client:
-                try:
-                    yield sse_pack("status", "Syncing Context to Cloud...")
-                    memory_path = f"temp_memory/{run_id}.json"
-                    supabase_client.storage.from_("agent_artifacts").upload(
-                        memory_path,
-                        json.dumps(history, ensure_ascii=False).encode("utf-8"),
-                        {"content-type": "application/json", "upsert": "true"},
-                    )
-                    res = supabase_client.storage.from_("agent_artifacts").create_signed_url(
-                        memory_path, 600
-                    )
-                    signed_url = res.get("signedURL") if isinstance(res, dict) else res.signedURL
-                    file_urls[memory_file_name] = signed_url
-                except Exception as e:
-                    logger.error(f"Cloud memory sync failed: {e}")
+                pass
 
             try:
                 with open(
@@ -298,19 +370,6 @@ class CharmDockerExecutor:
                     json.dump(history, f, ensure_ascii=False)
             except Exception as e:
                 logger.error(f"Local memory write failed: {e}")
-
-        artifact_upload_url = ""
-        if self.env == "production" and supabase_client:
-            try:
-                artifact_path = f"{agent_id}/{run_id}/output_artifacts.tar.gz"
-                res = supabase_client.storage.from_("agent_artifacts").create_signed_upload_url(
-                    artifact_path
-                )
-                if res and "signedUrl" in res:
-                    artifact_upload_url = res["signedUrl"]
-                    env_vars["CHARM_ARTIFACT_UPLOAD_URL"] = artifact_upload_url
-            except Exception as e:
-                logger.error(f"Failed to generate artifact upload URL: {e}")
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
@@ -335,6 +394,7 @@ class CharmDockerExecutor:
             use_local_mount=should_mount_local,
             use_file_input=use_file_input,
             adapter_type=adapter_type,
+            skills=skills,
         )
 
         config = RunConfig(

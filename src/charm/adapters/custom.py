@@ -32,6 +32,12 @@ class CharmCustomAdapter(BaseAdapter):
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
     ) -> Dict[str, Any]:
         logger.info("Executing Custom Agent...")
+
+        # Inject User Profile
+        user_profile = self._get_user_profile()
+        if user_profile:
+            inputs["user_profile"] = user_profile
+
         try:
             sig = inspect.signature(self.execution_method)
             kwargs: Dict[str, Any] = {}
@@ -90,6 +96,11 @@ class CharmCustomAdapter(BaseAdapter):
         if hasattr(self.agent, "stream") and callable(self.agent.stream):
             sig = inspect.signature(self.agent.stream)
             kwargs: Dict[str, Any] = {}
+
+            # Inject User Profile for Stream too
+            user_profile = self._get_user_profile()
+            if user_profile:
+                inputs["user_profile"] = user_profile
 
             if len(sig.parameters) > 0:
                 if "callbacks" in sig.parameters:

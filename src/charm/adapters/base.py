@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generator, List, Optional
 
@@ -14,6 +15,17 @@ class BaseAdapter(ABC):
     def __init__(self, agent_instance: Any):
         self.agent = agent_instance
         self._pending_inputs: Dict[str, Any] = {}
+
+    # Memory & Auth Helpers
+    def _get_user_profile(self) -> str:
+        """Retrieve the global user profile injected by the Runner."""
+        return os.getenv("CHARM_USER_PROFILE", "")
+
+    def _check_auth_requirements(self, required_keys: List[str]):
+        """Log warnings if required auth tokens are missing."""
+        for key in required_keys:
+            if not os.getenv(key):
+                logger.warning(f"[Auth] Required environment variable '{key}' is missing or empty.")
 
     @abstractmethod
     def invoke(
@@ -37,7 +49,6 @@ class BaseAdapter(ABC):
         try:
             return asyncio.run(coro)
         except RuntimeError:
-            # Handle case where an event loop is already running (e.g. inside Jupyter or another async app)
             loop = asyncio.get_event_loop()
             return loop.run_until_complete(coro)
 
@@ -71,10 +82,8 @@ class BaseAdapter(ABC):
                 self.agent = self.agent()
             else:
                 try:
-                    # Try injecting inputs
                     self.agent = self.agent(self._pending_inputs)
                 except TypeError:
-                    # Fallback
                     self.agent = self.agent()
 
         except Exception as e:

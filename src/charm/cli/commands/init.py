@@ -12,7 +12,9 @@ console = Console()
 @app.command("init")
 def init_command(
     name: str = typer.Argument(..., help="Name of the agent directory"),
-    template: str = typer.Option("default", help="Template to use"),
+    template: str = typer.Option(
+        "default", help="Template to use: 'default' (Python Code) or 'skill' (OpenClaw)"
+    ),
 ):
     """
     Scaffold a new Charm Agent project.
@@ -26,22 +28,57 @@ def init_command(
     project_path.mkdir(parents=True)
 
     try:
-        # Load the default template from the package resources.
+        # Load the base template content
         template_source = files("charm.templates").joinpath("charm.default.yaml")
-        content = template_source.read_text(encoding="utf-8")
+        yaml_content = template_source.read_text(encoding="utf-8")
 
-        # Write charm.yaml
-        target_file = project_path / "charm.yaml"
-        target_file.write_text(content, encoding="utf-8")
+        # [Logic] Customize based on template type
+        if template == "skill":
+            # 1. Modify YAML for Skill/OpenClaw mode
+            # Replace default 'crewai' adapter with 'openclaw' and remove entry_point hints
+            yaml_content = yaml_content.replace('type: "crewai"', 'type: "openclaw"')
+            yaml_content = yaml_content.replace(
+                'entry_point: "src.main:agent"', "# entry_point: (Not needed for OpenClaw)"
+            )
 
-        # Create src/main.py placeholder
-        (project_path / "src").mkdir()
-        (project_path / "src" / "main.py").write_text("# Your agent code here\n", encoding="utf-8")
+            # Uncomment the skills section example for better DX
+            yaml_content = yaml_content.replace("# skills:", "skills:")
+            yaml_content = yaml_content.replace(
+                '#   - name: "google-search"', '  - name: "google-search"'
+            )
+            yaml_content = yaml_content.replace(
+                '#     source: "smithery:@mcp/google-search"',
+                '    source: "smithery:@mcp/google-search"',
+            )
 
-        console.print(f"[bold green]✔ Created new agent project: {name}[/bold green]")
-        console.print("  ├── charm.yaml (Created from template)")
-        console.print("  └── src/main.py")
-        console.print("\nNext step:\n  [cyan]cd[/cyan] " + name + "\n  [cyan]charm validate[/cyan]")
+            # Write charm.yaml
+            target_file = project_path / "charm.yaml"
+            target_file.write_text(yaml_content, encoding="utf-8")
+
+            console.print(f"[bold green]✔ Created new Skill Agent project: {name}[/bold green]")
+            console.print("  └── charm.yaml (OpenClaw Configuration)")
+
+        else:
+            # 2. Default (Code-based) mode
+            # Write standard charm.yaml
+            target_file = project_path / "charm.yaml"
+            target_file.write_text(yaml_content, encoding="utf-8")
+
+            # Create src/main.py placeholder
+            (project_path / "src").mkdir()
+            (project_path / "src" / "main.py").write_text(
+                "# Define your agent logic here.\n"
+                "# The object must be named 'agent' to match charm.yaml entry_point.\n\n"
+                "def agent(inputs):\n"
+                '    return f"Hello from Charm! Input received: {inputs}"\n',
+                encoding="utf-8",
+            )
+
+            console.print(f"[bold green]✔ Created new Code Agent project: {name}[/bold green]")
+            console.print("  ├── charm.yaml")
+            console.print("  └── src/main.py")
+
+        console.print("\nNext step:\n  [cyan]cd[/cyan] " + name + "\n  [cyan]charm push[/cyan]")
 
     except Exception as e:
         console.print(f"[bold red]Error loading template:[/bold red] {e}")

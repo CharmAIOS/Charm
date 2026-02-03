@@ -26,9 +26,17 @@ class CharmProcessAdapter(BaseAdapter):
 
         # 1. Prepare Input File
         input_path = os.path.join(os.getcwd(), "input.json")
+
+        native_input = inputs.copy()
+
+        # Inject User Profile explicitly into the JSON payload
+        user_profile = self._get_user_profile()
+        if user_profile:
+            native_input["user_profile"] = user_profile
+
         try:
             with open(input_path, "w", encoding="utf-8") as f:
-                json.dump(inputs, f, ensure_ascii=False)
+                json.dump(native_input, f, ensure_ascii=False)
         except Exception as e:
             return {"status": "error", "message": f"Failed to write input.json: {e}"}
 

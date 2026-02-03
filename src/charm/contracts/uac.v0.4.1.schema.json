@@ -114,6 +114,33 @@
         }
       }
     },
+    "auth": {
+      "type": "object",
+      "description": "Global authentication requirements.",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "e.g. google, github"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "goals": {
       "type": "array",
       "items": {
@@ -227,8 +254,7 @@
           "type": "object",
           "description": "Instructs the Loader how to bootstrap this agent.",
           "required": [
-            "type",
-            "entry_point"
+            "type"
           ],
           "properties": {
             "type": {
@@ -238,13 +264,14 @@
                 "langgraph",
                 "crewai",
                 "custom",
-                "node"
+                "node",
+                "openclaw"
               ],
-              "description": "The specific SDK adapter to use. Use 'node' for Node.js agents."
+              "description": "The specific SDK adapter to use. Use 'node' for Node.js agents, 'openclaw' for Skill agents."
             },
             "entry_point": {
               "type": "string",
-              "description": "Python import path (e.g., 'src.agent:my_crew') OR Shell command for Node agents (e.g., 'npm start')."
+              "description": "Python import path (e.g., 'src.agent:my_crew') OR Shell command. Optional for openclaw."
             },
             "environment_variables": {
               "type": "array",
@@ -252,6 +279,31 @@
                 "type": "string"
               },
               "description": "List of required environment variables (e.g., OPENAI_API_KEY) that Runtime must inject."
+            }
+          }
+        },
+        "skills": {
+          "type": "array",
+          "description": "List of MCP Skills to mount.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "config": {
+                "type": "object"
+              }
             }
           }
         },

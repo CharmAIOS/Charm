@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 from ..core.logger import logger
 from .base import BaseAdapter
 
-# Import MemorySaver for state checkpointing
 try:
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
@@ -81,7 +80,7 @@ class CharmLangGraphAdapter(BaseAdapter):
                 ),
             }
 
-        # Use a fixed thread ID for the stateless run (state is hydrated manually)
+        # Use a fixed thread ID for the stateless run
         config: Dict[str, Any] = {"configurable": {"thread_id": "charm_session"}}
         if callbacks:
             config["callbacks"] = callbacks
@@ -98,19 +97,38 @@ class CharmLangGraphAdapter(BaseAdapter):
             except Exception as e:
                 logger.warning(f"[Charm] Failed to restore state: {e}")
 
+        # 1. Prepare Context Components
         history_data = native_input.pop("__charm_history__", None)
+        lc_history = []
+        if history_data:
+            lc_history = self._convert_history_to_messages(history_data)
 
-        if history_data and "messages" in native_input:
-            lc_messages = self._convert_history_to_messages(history_data)
-            if isinstance(native_input["messages"], list):
-                native_input["messages"] = lc_messages + native_input["messages"]
-            else:
-                native_input["messages"] = lc_messages
-
+        # 2. Normalize Input Format (ensure 'messages' list exists)
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
             del native_input["input"]
+
+        # 3. Assemble Final Messages Sequence
+        if "messages" in native_input:
+            current_messages = native_input["messages"]
+            if not isinstance(current_messages, list):
+                current_messages = [current_messages]
+
+            final_messages = []
+
+            # Inject Profile
+            user_profile = self._get_user_profile()
+            if user_profile:
+                final_messages.append(SystemMessage(content=f"User Profile: {user_profile}"))
+
+            # Inject History
+            final_messages.extend(lc_history)
+
+            # Append Current Input
+            final_messages.extend(current_messages)
+
+            native_input["messages"] = final_messages
 
         result = None
 

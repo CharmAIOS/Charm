@@ -14,7 +14,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Trigger Runner Workflow
-              uses: peter-evans/repository_dispatch@v3
+              uses: peter-evans/repository-dispatch@v3
               with:
                   token: ${{ secrets.PAT_TOKEN }}
                   repository: CharmAIOS/charm-cloud-runner

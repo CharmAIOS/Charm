@@ -29,19 +29,34 @@ class CharmCrewAIAdapter(BaseAdapter):
                             agent.llm.callbacks = []
                         agent.llm.callbacks.extend(callbacks)
 
-    def _format_history_as_context(self, history: List[Dict[str, str]]) -> str:
-        if not history:
-            return ""
-        text = "\n\n--- Conversation History ---\n"
-        for msg in history:
-            role = msg.get("role", "unknown").upper()
-            content = str(msg.get("content", "")).strip()
-            if not content:
-                continue
+    def _build_context_block(self, user_profile: str, history: List[Dict[str, str]]) -> str:
+        """
+        Constructs a clean Markdown block containing Profile and History.
+        """
+        sections = []
 
-            text += f"{role}: {content}\n"
-        text += "--- End of History ---\n\n"
-        return text
+        # 1. Global Memory (Profile)
+        if user_profile:
+            sections.append(f"## User Profile & Preferences\n{user_profile}")
+
+        # 2. Short-term Memory (History)
+        # Unified Logic: Keep last 10 messages to match OpenClaw behavior
+        if history:
+            recent_history = history[-10:]
+            hist_text = "## Recent Conversation Context\n"
+            for msg in recent_history:
+                role = msg.get("role", "unknown").upper()
+                content = str(msg.get("content", "")).strip()
+                if content:
+                    hist_text += f"- **{role}**: {content}\n"
+
+            sections.append(hist_text)
+
+        if not sections:
+            return ""
+
+        # Add a separator to distinguish context from the actual task
+        return "\n\n".join(sections) + "\n\n## Current Task Instruction\n"
 
     def invoke(
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
@@ -73,48 +88,34 @@ class CharmCrewAIAdapter(BaseAdapter):
 
         native_input = inputs.copy()
 
+        # Extract system keys
         _ = native_input.pop("__charm_state__", None)
         history_data = native_input.pop("__charm_history__", None)
-
-        # Inject User Profile (Global Memory)
         user_profile = self._get_user_profile()
-        if user_profile:
-            profile_str = f"\n\n--- User Profile & Preferences ---\n{user_profile}\n"
-            # Prepend profile to input so the agent sees it first
-            if "topic" in native_input and isinstance(native_input["topic"], str):
-                native_input["topic"] = profile_str + native_input["topic"]
-            elif "input" in native_input and isinstance(native_input["input"], str):
-                native_input["input"] = profile_str + native_input["input"]
 
-        # Advanced Context Injection for CrewAI (Existing Logic Preserved)
-        if history_data:
-            # Append to input string
-            history_str = self._format_history_as_context(history_data)
-            if "topic" in native_input and isinstance(native_input["topic"], str):
-                native_input["topic"] += history_str
-            elif "input" in native_input and isinstance(native_input["input"], str):
-                native_input["input"] += history_str
+        # --- OPTIMIZED CONTEXT INJECTION ---
+        # Instead of appending to 'input' string (which is brittle and creates duplicates),
+        # we inject purely into the First Task's description.
 
-            # Inject structured context into the first Task
-            if hasattr(self.agent, "tasks") and self.agent.tasks:
-                context_summary = "\n\n### Context from Previous Turns:\n"
-                for msg in history_data[-6:]:
-                    role = msg.get("role", "user").upper()
-                    content = msg.get("content", "")
-                    context_summary += f"- **{role}**: {content}\n"
+        context_block = self._build_context_block(user_profile, history_data)
 
-                context_summary += (
-                    "\nBased on the above context, continue with the current task goal.\n"
-                )
+        if context_block and hasattr(self.agent, "tasks") and self.agent.tasks:
+            try:
+                first_task = self.agent.tasks[0]
+                # Idempotency Check: Prevent double injection if instance is reused in memory
+                if (
+                    "## User Profile" not in first_task.description
+                    and "## Recent Conversation" not in first_task.description
+                ):
+                    original_desc = first_task.description
+                    first_task.description = context_block + original_desc
+                    logger.debug(
+                        f"[Charm] Injected global context into CrewAI Task: {first_task.description[:50]}..."
+                    )
+            except Exception as e:
+                logger.warning(f"[Charm] Failed to inject context into task: {e}")
 
-                try:
-                    first_task = self.agent.tasks[0]
-                    if "### Context" not in first_task.description:
-                        first_task.description = context_summary + first_task.description
-                        logger.debug("[Charm] Injected history context into CrewAI Task #1")
-                except Exception as e:
-                    logger.warning(f"[Charm] Failed to inject context into task: {e}")
-
+        # Handle simple string input case
         if isinstance(native_input, str):
             native_input = {"topic": native_input}
 

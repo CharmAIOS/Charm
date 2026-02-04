@@ -72,17 +72,19 @@ class CharmLangChainAdapter(BaseAdapter):
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
-            lc_history = self._convert_history_to_messages(history_data)
+            # [Optimization] Slice last 10 messages to avoid context overflow
+            recent_history = history_data[-10:]
+            lc_history = self._convert_history_to_messages(recent_history)
 
         # Compatible with common LangChain parameter naming.
         if "chat_history" not in native_input:
             native_input["chat_history"] = lc_history
 
         if "messages" in native_input and isinstance(native_input["messages"], list):
+            # Prepend history to existing messages
             native_input["messages"] = lc_history + native_input["messages"]
 
         # 2. Handle Long-term Memory (User Profile)
-        # Retrieve Profile from BaseAdapter and inject into System Message or Input.
         user_profile = self._get_user_profile()
 
         if user_profile:
@@ -90,7 +92,7 @@ class CharmLangChainAdapter(BaseAdapter):
 
             # Case A: Chat Models (List of Messages)
             if "messages" in native_input and isinstance(native_input["messages"], list):
-                # Insert Profile as SystemMessage at the beginning.
+                # Insert Profile as SystemMessage at the very beginning
                 system_msg = SystemMessage(content=f"User Profile & Preferences:\n{user_profile}")
                 native_input["messages"].insert(0, system_msg)
 

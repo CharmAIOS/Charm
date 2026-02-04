@@ -121,6 +121,7 @@ class CharmDockerExecutor:
         # Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():
+            # Escape newlines and quotes to prevent bash errors
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
@@ -190,8 +191,20 @@ class CharmDockerExecutor:
         """
 
         # Skill Installation Block
-        # Prepared for OpenClaw Agent.
         skill_setup_block = self._generate_skill_install_block(skills)
+
+        # Memory Hydration Block
+        # OpenClaw expects memory at this specific path.
+        # Other agents can use CHARM_MEMORY_FILE_PATH to find it if needed.
+        MEMORY_FILE_PATH = "/root/.openclaw/workspace/MEMORY.md"
+        memory_hydration_block = f"""
+        mkdir -p "$(dirname "{MEMORY_FILE_PATH}")"
+        # If user profile exists in env, write it to file
+        if [ ! -z "$CHARM_USER_PROFILE" ]; then
+            echo "$CHARM_USER_PROFILE" > "{MEMORY_FILE_PATH}"
+            echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Memory Hydrated"}}'
+        fi
+        """
 
         # Execution Command Selection
         if adapter_type == "node":
@@ -201,12 +214,10 @@ class CharmDockerExecutor:
             """
         elif adapter_type == "openclaw":
             # OpenClaw Execution Path
-            # Do not run openclaw cli directly; run Charm's Wrapper instead.
-            # Wrapper initializes OpenClawAdapter, then Adapter calls OpenClaw.
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
-            # Ensure UAC_SKILLS environment variable is set (Adapter usually reads charm.yaml, but valid as backup).
+            # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
             # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
@@ -227,12 +238,29 @@ class CharmDockerExecutor:
             """
 
         # Cleanup & Persistence Logic
-        cleanup_function = """
-        function cleanup {
+        cleanup_function = f"""
+        function cleanup {{
             EXIT_CODE=$?
-            echo '::CHARM_EVENT::{"type":"status","content":"Saving Execution Context..."}'
+            echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
             
-            # (A) Cloud Upload
+            # --- 1. Memory Dehydration (Sync back to Store) ---
+            # Checks if MEMORY.md exists and if we have the necessary credentials to sync.
+            if [ -f "{MEMORY_FILE_PATH}" ] && [ ! -z "$CHARM_USER_ID" ] && [ ! -z "$CHARM_INTERNAL_SECRET" ]; then
+                echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Syncing Memory to Cloud..."}}'
+                
+                # Read content and base64 encode it to safely transmit via JSON
+                MEM_B64=$(cat "{MEMORY_FILE_PATH}" | base64 -w 0)
+                
+                # Send POST request to Store API
+                # CHARM_STORE_URL is injected by main.py
+                curl -s -X POST \\
+                     -H "Content-Type: application/json" \\
+                     -H "Authorization: Bearer $CHARM_INTERNAL_SECRET" \\
+                     -d "{{\\"user_id\\": \\"$CHARM_USER_ID\\", \\"memory_content_b64\\": \\"$MEM_B64\\"}}" \\
+                     "$CHARM_STORE_URL/api/internal/sync-memory" || true
+            fi
+
+            # --- 2. Cloud Artifact Upload ---
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
@@ -248,18 +276,19 @@ class CharmDockerExecutor:
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
 
-            # (B) Local Sync
+            # --- 3. Local Artifact Sync (Dev Mode) ---
             if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                # Sync memory file.
+                # Sync memory file locally for inspection
                 if [ -f "$CHARM_MEMORY_FILE" ]; then 
                     cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
                 elif [ -f "charm_memory.json" ]; then
                     cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
                 fi
                 
-                # Sync OpenClaw memory (if available).
-                if [ -d "/root/.openclaw/workspace" ]; then
-                     cp /root/.openclaw/workspace/MEMORY.md /app/artifacts_mount/MEMORY.md 2>/dev/null
+                # Sync OpenClaw memory
+                if [ -f "{MEMORY_FILE_PATH}" ]; then
+                     mkdir -p /app/artifacts_mount/.openclaw/workspace
+                     cp "{MEMORY_FILE_PATH}" /app/artifacts_mount/MEMORY.md 2>/dev/null
                 fi
                 
                 find . -type f -newer .charm_snapshot \
@@ -279,8 +308,8 @@ class CharmDockerExecutor:
                 done < .charm_new_files
             fi
             
-            echo "::CHARM_EVENT::{\"type\":\"internal_run_finished\",\"content\":{\"exit_code\":$EXIT_CODE}}"
-        }
+            echo "::CHARM_EVENT::{{\\"type\\":\\"internal_run_finished\\",\\"content\\":{{\\"exit_code\\":$EXIT_CODE}}}}"
+        }}
         trap cleanup EXIT
         """
 
@@ -301,7 +330,7 @@ class CharmDockerExecutor:
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
 
-        # Memory File Setup
+        # Memory File Setup (Chat History)
         if [ -f "charm_memory.json" ]; then
             export CHARM_MEMORY_FILE="$(pwd)/charm_memory.json"
         else
@@ -317,6 +346,9 @@ class CharmDockerExecutor:
         
         # Install Skills (Dynamic Loading)
         {skill_setup_block}
+        
+        # Inject Global Memory (User Profile)
+        {memory_hydration_block}
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then

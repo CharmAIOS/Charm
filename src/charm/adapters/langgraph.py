@@ -101,7 +101,9 @@ class CharmLangGraphAdapter(BaseAdapter):
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
-            lc_history = self._convert_history_to_messages(history_data)
+            # [Optimization] Slice last 10 messages
+            recent_history = history_data[-10:]
+            lc_history = self._convert_history_to_messages(recent_history)
 
         # 2. Normalize Input Format (ensure 'messages' list exists)
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:

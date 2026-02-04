@@ -36,40 +36,39 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def _inject_memory(self, history: List[Dict[str, Any]]):
         """
-        Inject Charm's user profile and conversation history into OpenClaw's long-term memory file.
+        Runner 已經在外部生成了 MEMORY.md (包含 User Profile)。
+        這裡我們只需要把 '短期對話歷史 (Recent Context)' 追加 (Append) 進去即可。
         """
         try:
             if not os.path.exists(self.workspace_dir):
                 os.makedirs(self.workspace_dir, exist_ok=True)
 
-            # 1. Retrieve Global User Profile
-            # This is typically fetched from the DB by the Runner and injected into environment variables.
-            user_profile = os.getenv(
-                "CHARM_USER_PROFILE", "User prefers concise and accurate answers."
-            )
+            # 讀取現有的 MEMORY.md (這是 Runner 從 DB 拉下來的)
+            existing_content = ""
+            if os.path.exists(self.memory_file):
+                with open(self.memory_file, "r", encoding="utf-8") as f:
+                    existing_content = f.read()
 
-            # 2. Build Memory Content
-            # OpenClaw reads this file as context upon startup.
-            content = []
-            content.append(f"# User Profile\n{user_profile}\n")
-
+            # 構建新的 Context (短期記憶)
+            context_str = ""
             if history:
-                content.append("# Recent Context\n")
-                # Retrieve the last 10 conversation turns to avoid exceeding the context window.
+                context_str += "\n\n# Recent Conversation Context (Ephemeral)\n"
                 for msg in history[-10:]:
                     role = msg.get("role", "unknown").upper()
                     text = msg.get("content", "")
-                    content.append(f"- **{role}**: {text}")
+                    context_str += f"- **{role}**: {text}\n"
 
-            final_memory = "\n".join(content)
+            # 寫回檔案：保留長期記憶 + 追加短期 Context
+            # 注意：OpenClaw 運行時會改寫 User Profile 部分，但 Recent Context 只是參考用
+            final_content = existing_content + context_str
 
             with open(self.memory_file, "w", encoding="utf-8") as f:
-                f.write(final_memory)
+                f.write(final_content)
 
-            logger.info(f"Injected memory context into: {self.memory_file}")
+            logger.info(f"Appended short-term context to: {self.memory_file}")
 
         except Exception as e:
-            logger.warning(f"Failed to inject memory: {e}")
+            logger.warning(f"Failed to inject memory context: {e}")
 
     def _generate_openclaw_config(self) -> str:
         """

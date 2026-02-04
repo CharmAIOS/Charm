@@ -24,15 +24,21 @@ class CharmProcessAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info(f"Executing Process Agent via command: {self.command}")
 
-        # 1. Prepare Input File
+        # 1. Prepare Input Payload
         input_path = os.path.join(os.getcwd(), "input.json")
-
         native_input = inputs.copy()
 
-        # Inject User Profile explicitly into the JSON payload
+        # Inject User Profile
         user_profile = self._get_user_profile()
         if user_profile:
             native_input["user_profile"] = user_profile
+
+        # Clean up History (Truncate to last 10 interactions)
+        raw_history = native_input.pop("__charm_history__", [])
+        if raw_history:
+            native_input["chat_history"] = raw_history[-10:]
+        else:
+            native_input["chat_history"] = []
 
         try:
             with open(input_path, "w", encoding="utf-8") as f:

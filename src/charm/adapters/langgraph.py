@@ -97,21 +97,21 @@ class CharmLangGraphAdapter(BaseAdapter):
             except Exception as e:
                 logger.warning(f"[Charm] Failed to restore state: {e}")
 
-        # 1. Prepare Context Components
+        # Prepare Context Components
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
-            # [Optimization] Slice last 10 messages
+            # Slice last 10 messages
             recent_history = history_data[-10:]
             lc_history = self._convert_history_to_messages(recent_history)
 
-        # 2. Normalize Input Format (ensure 'messages' list exists)
+        # Normalize Input Format (ensure 'messages' list exists)
         if "input" in native_input and "messages" not in native_input and len(native_input) == 1:
             logger.debug("[Charm] Converting simple 'input' to 'messages' for LangGraph.")
             native_input["messages"] = [HumanMessage(content=str(native_input["input"]))]
             del native_input["input"]
 
-        # 3. Assemble Final Messages Sequence
+        # Assemble Final Messages Sequence
         if "messages" in native_input:
             current_messages = native_input["messages"]
             if not isinstance(current_messages, list):
@@ -207,7 +207,6 @@ class CharmLangGraphAdapter(BaseAdapter):
                 elif "result" in result:
                     output_str = str(result["result"])
                 else:
-                    # Try to find meaningful string values in the dict
                     output_str = json.dumps(result, ensure_ascii=False, default=str)
 
             else:
@@ -219,7 +218,7 @@ class CharmLangGraphAdapter(BaseAdapter):
             return {
                 "status": "success",
                 "output": output_str,
-                "charm_state": charm_state_payload,  # Return state for wrapper to broadcast
+                "charm_state": charm_state_payload,
             }
 
         except Exception as e:

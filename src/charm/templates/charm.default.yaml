@@ -3,16 +3,14 @@ version: "0.4.1"  # [System] UAC Protocol Version
 # 1. Metadata
 persona:
   name: "My Charm Agent"
-  
-  # [Required] Semantic version of the agent
-  version: "0.1.0"
-  
+  version: "0.1.0" # Semantic Versioning (e.g. 0.1.0, 1.2.0)
   description: "A short description of what this agent does."
   full_description: |
     # My Charm Agent
-    Describe your agent's capabilities and usage here.
+    Write a detailed markdown description here.
+    Explain capabilities, inputs, and what to expect.
   authors: ["Your Name"]
-  tags: ["agent"]
+  tags: ["productivity"] # First tag determines category
   license: "MIT"
   
   # Storefront Assets
@@ -36,7 +34,7 @@ interface:
         description: "What should the agent input?"
         x-ui-widget: "textarea"
       
-      # [Optional] File Upload Configuration
+      # File Upload Configuration
       # Uncomment and rename the variable below if your agent needs to read files.
       # The platform will automatically inject the uploaded filename into this variable.
       # doc_file:
@@ -52,10 +50,13 @@ interface:
 # 4. Runtime Configuration
 runtime:
   adapter:
-    # Options: crewai, langchain, langgraph, custom, node, openclaw
+    # - crewai / langchain / langgraph : Standard Python Frameworks
+    # - openclaw : Configuration-driven Agent (No code required)
+    # - node : For JavaScript/TypeScript Agents
+    # - custom : Pure Python functions
     type: "crewai"  
     
-    # Execution Entry Point:
+    # [Entry Point] Where does execution start?
     # - Python: "module:variable" (e.g. "src.main:agent")
     # - Node.js: "shell command"  (e.g. "npm start")
     # - OpenClaw: Optional (uses default host if empty)
@@ -65,30 +66,33 @@ runtime:
     environment_variables:
       - "OPENAI_API_KEY"
     
-    # [Optional] MCP Skills Configuration (For type='openclaw')
-    # Uncomment and add your skill definitions below.
+    # [Environment Mode]
+    # "standard": Lightweight Python env. Best for text/data tasks.
+    # "full": Includes Node.js, Chrome, FFmpeg. REQUIRED for MCP Skills, Browser Use, or OpenClaw.
+    mode: "standard"
+
+    # [AgentSkills & MCP Tools]
+    # Usage in Code: You are responsible for connecting to them (e.g. using LangChain adapters).
     # skills:
     #   - name: "my-skill"
     #     source: "./skills/my-skill"
     #   - name: "google-search"
     #     source: "smithery:@mcp/google-search"
+    #   - name: "time-server"
+    #     source: "pypi:mcp-server-time"
 
-  # "standard" (Default): Lightweight Python env. Best for text/data tasks.
-  # "full": Heavy env with Chrome, Node.js, and OpenClaw support.
-  mode: "standard"
-
-  injections:
-    llm_client: true
-    tools: []
-
-# 5. [New] Authentication Requirements
+# 5. Authentication Requirements
 # Declare if your agent needs user's OAuth tokens.
-# auth:
-#   providers:
-#     - name: "google"
-#       scopes: ["calendar.readonly"]
-#     - name: "github"
-#       scopes: ["repo"]
+auth:
+  providers:
+    - name: "google"
+      scopes: 
+        - "https://www.googleapis.com/auth/calendar.readonly"
+        - "https://www.googleapis.com/auth/gmail.send"
+    - name: "github"
+      scopes: 
+        - "repo"
+        - "read:user"
 
 # 6. Governance
 policies:

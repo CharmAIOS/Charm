@@ -36,13 +36,12 @@ class CharmCustomAdapter(BaseAdapter):
         # Copy inputs to avoid side effects
         native_input = inputs.copy()
 
-        # 1. Handle Global Memory (Profile)
+        # Handle Global Memory (Profile)
         user_profile = self._get_user_profile()
         if user_profile:
             native_input["user_profile"] = user_profile
 
-        # 2. Handle Short-term Memory (History)
-        # Extract internal history, truncate to last 10, and expose as standard 'chat_history'
+        # Handle Short-term Memory (History)
         raw_history = native_input.pop("__charm_history__", [])
         if raw_history:
             native_input["chat_history"] = raw_history[-10:]
@@ -60,15 +59,15 @@ class CharmCustomAdapter(BaseAdapter):
                     elif name == "callbacks":
                         kwargs["callbacks"] = callbacks
 
-                    # 3. Destructuring Injection
+                    # Destructuring Injection
                     elif name in native_input:
                         kwargs[name] = native_input[name]
 
-                    # 4. Catch-all (**kwargs)
+                    # Catch-all (**kwargs)
                     elif param.kind == inspect.Parameter.VAR_KEYWORD:
                         kwargs.update(native_input)
 
-                    # 5. Default values
+                    # Default values
                     elif param.default != inspect.Parameter.empty:
                         continue
 
@@ -135,9 +134,7 @@ class CharmCustomAdapter(BaseAdapter):
             return
 
         if inspect.isgeneratorfunction(self.execution_method):
-            yield from self.execution_method(
-                inputs
-            )  # Note: inputs here might need processing if stream uses it directly, but usually it calls invoke logic
+            yield from self.execution_method(inputs)
             return
 
         result = self.invoke(inputs, callbacks=callbacks)

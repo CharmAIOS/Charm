@@ -7,7 +7,7 @@ Depending on your project status, choose the path that fits you best.
 Path A: Start a new project
 
 ```bash
-charm init my-agent #--template skill
+charm init my-agent # --template skill (for OpenClaw Agent)
 cd my-agent
 ```
 
@@ -60,12 +60,9 @@ version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
 # 1. Identity & Store Metadata
 # ------------------------------------------------------------------
 persona:
-  name: "Research Assistant"       # Display Project Name (Max 50 chars)
-  
-  # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
-  version: "0.1.0"                 
-  
-  description: "Deep research on any topic."  # Tagline (Card view, Max 100 chars)
+  name: "Research Assistant" # Display Project Name (Max 50 chars)
+  version: "0.1.0" # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
+  description: "Deep research on any topic." # Tagline (Card view, Max 100 chars)
   
   # Full description supports Markdown. Used for the Info Page.
   full_description: |
@@ -74,13 +71,12 @@ persona:
   # Describe usage, available capabilities, and expected deliverables.
     
   authors: ["Brand, Company, or Individual Name"]
-  tags: ["research", "productivity"] 
-  # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others, and feel free to add any additional tags based on your preferences.
+  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others, and feel free to add any additional tags based on your preferences.
   license: "MIT"
   
   # Assets for the Storefront
   assets:
-    icon: "https://your-site.com/assets/icon.png"      # 512x512 Square
+    icon: "https://your-site.com/assets/icon.png" # 512x512 Square
     banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
 pricing:
@@ -89,7 +85,7 @@ pricing:
 # ------------------------------------------------------------------
 # 2. Interface (UI Generation)
 # ------------------------------------------------------------------
-# This section auto-generates the Input Form on Charm Cloud.
+# Defines the input form shown to users.
 # It uses standard JSON Schema.
 interface:
   input:
@@ -109,7 +105,7 @@ interface:
         description: "Paste any background info here."
         x-ui-widget: "textarea" 
       
-      # Example 3: File Upload (Auto-Injection)
+      # Example 3: File Upload
       # The Runner will download the file and inject the filename into this variable.
       document:
         type: "string"
@@ -133,7 +129,11 @@ interface:
 # ------------------------------------------------------------------
 runtime:
   adapter:
-    type: "crewai" # Options: crewai, langchain, langgraph, custom, node, openclaw
+    # - crewai / langchain / langgraph : Standard Python Frameworks
+    # - openclaw : Configuration-driven Agent (No code required)
+    # - node : For JavaScript/TypeScript Agents
+    # - custom : Pure Python functions
+    type: "crewai"
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?
@@ -141,16 +141,16 @@ runtime:
     #         OR <shell_command> (for Node.js)
     # --------------------------------------------------------------
     # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
-    # entry_point: "src.main:my_crew"
+    entry_point: "src.main:my_crew"
     
     # [Case B] For Custom (Pure Python): Point to a function or class instance.
-    # entry_point: "src.my_script:run_pipeline"
+    entry_point: "src.my_script:run_pipeline"
 
     # [Case C] For Node.js (Remotion, Puppeteer, etc.): Provide the shell command.
-    # entry_point: "npm start"
+    entry_point: "npm start"
 
     # [Case D] For OpenClaw: Optional (uses default host if empty)
-    # entry_point: ""
+    entry_point: ""
     
     # --------------------------------------------------------------
     # SECURE ENV VARS: List keys your agent needs.
@@ -161,38 +161,51 @@ runtime:
       - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
-  # SKILLS (For OpenClaw/MCP Agents)
-  # Define external capabilities to mount dynamically.
+  # SKILLS & TOOLS
   # --------------------------------------------------------------
   skills:
-    - name: "browser-use"
-      source: "pip:browser-use"  # Supports pip, npm, smithery, git, local
-      version: "latest"
-    - name: "filesystem"
-      source: "smithery:@mcp/filesystem"
+    # [Agent Skills] 
+    - name: "research-flow"
+      source: "git:https://github.com/openclaw/skill-researcher"
+      version: "main"
+
+    # [MCP Tools (Node.js)]
+    - name: "google-search"
+      source: "npm:@modelcontextprotocol/server-google-search"
+      # (Optional) Configuration for the tool
+      config:
+        GOOGLE_API_KEY: "${GOOGLE_API_KEY}" 
+
+    # [MCP Tools (Python)]
+    - name: "local-time"
+      source: "pip:mcp-server-time"
+    
+    # [MCP Tools (Custom)]
+    - name: "my-custom-tool"
+      source: "git:https://github.com/user/my-python-mcp-server"
   
   # --------------------------------------------------------------
   # RUNTIME MODE (Environment Selection)
   # --------------------------------------------------------------
-  # "standard" (Default): Lightweight Python environment. Fast boot time.
-  # "full": Heavy environment including Headless Chrome, FFmpeg, Node.js and OpenClaw. Use this if your agent does Browser Automation or Video Generation.
+  # "standard": Lightweight Python environment. Fast boot time.
+  # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
   mode: "standard"
 
-  # (Advanced) Dependency Injection from Charm System (The associated logic is not yet implemented, and the field is kept as a placeholder).
-  injections:
-    llm_client: true  # Inject standard LLM client?
-    tools: []         # Inject other agents as tools?
-
 # ------------------------------------------------------------------
-# 4. Authentication (Global)
+# 4. Authentication
 # ------------------------------------------------------------------
 # Declare OAuth requirements.
+# NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
     - name: "google"
-      scopes: ["calendar.readonly", "gmail.send"]
+      scopes: 
+        - "https://www.googleapis.com/auth/calendar.readonly"
+        - "https://www.googleapis.com/auth/gmail.send"
     - name: "github"
-      scopes: ["repo"]
+      scopes: 
+        - "repo"
+        - "read:user"
 
 # ------------------------------------------------------------------
 # 5. Governance (Policies)

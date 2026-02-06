@@ -68,7 +68,7 @@ class CharmLangChainAdapter(BaseAdapter):
 
         native_input = inputs.copy()
 
-        # 1. Handle Short-term Memory (Chat History)
+        # Handle Short-term Memory (Chat History)
         history_data = native_input.pop("__charm_history__", None)
         lc_history = []
         if history_data:
@@ -84,25 +84,24 @@ class CharmLangChainAdapter(BaseAdapter):
             # Prepend history to existing messages
             native_input["messages"] = lc_history + native_input["messages"]
 
-        # 2. Handle Long-term Memory (User Profile)
+        # Handle Long-term Memory (User Profile)
         user_profile = self._get_user_profile()
 
         if user_profile:
             logger.info("[Charm] Injecting User Profile into LangChain context...")
 
-            # Case A: Chat Models (List of Messages)
+            # Chat Models (List of Messages)
             if "messages" in native_input and isinstance(native_input["messages"], list):
-                # Insert Profile as SystemMessage at the very beginning
                 system_msg = SystemMessage(content=f"User Profile & Preferences:\n{user_profile}")
                 native_input["messages"].insert(0, system_msg)
 
-            # Case B: Chains / LLMs (String Input)
+            # Chains / LLMs (String Input)
             elif "input" in native_input:
                 original_input = native_input["input"] or ""
                 # Prepend Profile to user input.
                 native_input["input"] = f"User Profile: {user_profile}\n\nTask: {original_input}"
 
-            # Case C: Other (Fallback)
+            # Other (Fallback)
             else:
                 # Attempt to pass as a variable.
                 native_input["user_profile"] = user_profile

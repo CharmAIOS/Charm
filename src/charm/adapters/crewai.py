@@ -40,7 +40,6 @@ class CharmCrewAIAdapter(BaseAdapter):
             sections.append(f"## User Profile & Preferences\n{user_profile}")
 
         # 2. Short-term Memory (History)
-        # Unified Logic: Keep last 10 messages to match OpenClaw behavior
         if history:
             recent_history = history[-10:]
             hist_text = "## Recent Conversation Context\n"
@@ -55,7 +54,6 @@ class CharmCrewAIAdapter(BaseAdapter):
         if not sections:
             return ""
 
-        # Add a separator to distinguish context from the actual task
         return "\n\n".join(sections) + "\n\n## Current Task Instruction\n"
 
     def invoke(
@@ -93,16 +91,11 @@ class CharmCrewAIAdapter(BaseAdapter):
         history_data = native_input.pop("__charm_history__", None)
         user_profile = self._get_user_profile()
 
-        # --- OPTIMIZED CONTEXT INJECTION ---
-        # Instead of appending to 'input' string (which is brittle and creates duplicates),
-        # we inject purely into the First Task's description.
-
         context_block = self._build_context_block(user_profile, history_data)
 
         if context_block and hasattr(self.agent, "tasks") and self.agent.tasks:
             try:
                 first_task = self.agent.tasks[0]
-                # Idempotency Check: Prevent double injection if instance is reused in memory
                 if (
                     "## User Profile" not in first_task.description
                     and "## Recent Conversation" not in first_task.description

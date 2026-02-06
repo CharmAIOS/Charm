@@ -19,37 +19,35 @@ class CharmOpenClawAdapter(BaseAdapter):
     """
 
     def __init__(self, config: CharmConfig):
-        # OpenClaw is config-driven, so we initialize BaseAdapter with None for agent_instance
         super().__init__(None)
         self.config = config
         self.work_dir = os.getcwd()
 
-        # Point the workspace to a persistent path within the container or a subdirectory of the current directory.
-        # Ensure consistency with ENV OPENCLAW_WORKSPACE in the Dockerfile.
+        # Point the workspace to a persistent path.
         self.openclaw_home = os.getenv("OPENCLAW_HOME", os.path.expanduser("~/.openclaw"))
         self.workspace_dir = os.getenv(
             "OPENCLAW_WORKSPACE", os.path.join(self.openclaw_home, "workspace")
         )
 
-        # [Memory] Standard OpenClaw memory file
+        # Standard OpenClaw memory file
         self.memory_file = os.path.join(self.workspace_dir, "MEMORY.md")
 
     def _inject_memory(self, history: List[Dict[str, Any]]):
         """
-        Runner 已經在外部生成了 MEMORY.md (包含 User Profile)。
-        這裡我們只需要把 '短期對話歷史 (Recent Context)' 追加 (Append) 進去即可。
+        The Runner has externally generated MEMORY.md (containing User Profile).
+        Here we only need to append the 'Recent Conversation Context'.
         """
         try:
             if not os.path.exists(self.workspace_dir):
                 os.makedirs(self.workspace_dir, exist_ok=True)
 
-            # 讀取現有的 MEMORY.md (這是 Runner 從 DB 拉下來的)
+            # Read existing MEMORY.md (pulled from DB by Runner)
             existing_content = ""
             if os.path.exists(self.memory_file):
                 with open(self.memory_file, "r", encoding="utf-8") as f:
                     existing_content = f.read()
 
-            # 構建新的 Context (短期記憶)
+            # Build new Context (Short-term memory)
             context_str = ""
             if history:
                 context_str += "\n\n# Recent Conversation Context (Ephemeral)\n"
@@ -58,8 +56,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                     text = msg.get("content", "")
                     context_str += f"- **{role}**: {text}\n"
 
-            # 寫回檔案：保留長期記憶 + 追加短期 Context
-            # 注意：OpenClaw 運行時會改寫 User Profile 部分，但 Recent Context 只是參考用
+            # Write back to file: Keep long-term memory + append short-term Context
             final_content = existing_content + context_str
 
             with open(self.memory_file, "w", encoding="utf-8") as f:
@@ -80,10 +77,9 @@ class CharmOpenClawAdapter(BaseAdapter):
             for skill in self.config.runtime.skills:
                 server_config = {}
 
-                # --- A. Smithery / NPM Skills ---
+                # Smithery / NPM Skills
                 if skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
                     pkg_name = skill.source.replace("smithery:", "").replace("npm:", "")
-                    # Execute using npx (ensure @smithery/cli is installed or successfully downloaded).
                     server_config = {
                         "command": "npx",
                         "args": [
@@ -96,16 +92,13 @@ class CharmOpenClawAdapter(BaseAdapter):
                         ],
                     }
 
-                # --- B. Python / PyPI Skills ---
+                # Python / PyPI Skills
                 elif skill.source.startswith("pip:") or skill.source.startswith("pypi:"):
                     pkg_name = skill.source.replace("pip:", "").replace("pypi:", "")
-                    # Execute using uvx (uv tool run) for speed and isolation.
                     server_config = {"command": "uvx", "args": [pkg_name]}
 
-                # --- C. Local Skills (Repositories) ---
+                # Local Skills (Repositories)
                 elif skill.source.startswith("local:"):
-                    # The Executor links the skill to the current directory in Phase 3.
-                    # Example path: local:./skills/browser-use -> ./skills/browser-use
                     rel_path = skill.source.replace("local:", "")
                     abs_path = os.path.abspath(rel_path)
 
@@ -131,8 +124,8 @@ class CharmOpenClawAdapter(BaseAdapter):
                                     "python",
                                     "-m",
                                     "server",
-                                ],  # Assumes module name is 'server'.
-                                "cwd": abs_path,  # Set working directory.
+                                ],
+                                "cwd": abs_path,
                             }
                         elif os.path.exists(os.path.join(abs_path, "package.json")):
                             # Node project.
@@ -144,8 +137,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                                 "args": [os.path.join(abs_path, "server.py")],
                             }
 
-                # --- Auth & Env Injection ---
-                # Convert configs defined in charm.yaml to environment variables.
+                # Auth & Env Injection
                 env_vars = skill.config.copy() if skill.config else {}
 
                 # Automatically inject global API Keys (if present in environment variables).
@@ -191,19 +183,16 @@ class CharmOpenClawAdapter(BaseAdapter):
         if not clean_line:
             return
 
-        # [Log Type 1] Thinking / Planning
-        # OpenClaw output example: "Thought: I need to use google-search..."
+        # Thinking / Planning
         if re.match(r"^(Thought|Plan|Reasoning):", clean_line, re.IGNORECASE):
             content = clean_line.split(":", 1)[1].strip()
             CharmEmitter.emit_thinking(content)
 
-        # [Log Type 2] Tool Execution
-        # OpenClaw output example: "Calling tool 'google-search' with args..."
+        # Tool Execution
         elif re.match(r"^(Calling|Executing|Tool):", clean_line, re.IGNORECASE):
             CharmEmitter.emit_thinking(f"🛠️ {clean_line}")
 
-        # [Log Type 3] Artifact Generation
-        # Assume OpenClaw output: "Created artifact: /path/to/file.pdf"
+        # Artifact Generation
         elif "Created artifact:" in clean_line:
             match = re.search(r"Created artifact:\s*(.+)", clean_line)
             if match:
@@ -212,7 +201,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                 # Use mime="auto" to let the Runner determine automatically.
                 CharmEmitter.emit_artifact(name=name, url=path, mime="auto")
 
-        # [Log Type 4] Errors
+        # Errors
         elif "Error:" in clean_line or "Exception" in clean_line:
             # Filter out noise warnings.
             if "DeprecationWarning" not in clean_line:
@@ -227,22 +216,20 @@ class CharmOpenClawAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info(" Booting OpenClaw Adapter...")
 
-        # 1. Memory Injection
+        # Memory Injection
         self._inject_memory(inputs.get("__charm_history__", []))
 
-        # 2. Config Generation
+        # Config Generation
         config_path = self._generate_openclaw_config()
 
-        # 3. Prepare User Input
+        # Prepare User Input
         user_input = inputs.get("input", "")
         # If specific variables are injected, append to Prompt.
         for k, v in inputs.items():
             if k not in ["input", "__charm_history__"]:
                 user_input += f"\n\n[{k}]: {v}"
 
-        # 4. Start OpenClaw CLI
-        # Use 'openclaw' command installed via npm install -g.
-        # Mode: Single execution (exec / run).
+        # Start OpenClaw CLI
         cmd = ["openclaw", "run", "--config", config_path, "--prompt", user_input]
 
         logger.info(f"Executing Command: {' '.join(cmd)}")
@@ -305,7 +292,7 @@ class CharmOpenClawAdapter(BaseAdapter):
                 l for l in stdout_lines if not l.startswith("[") and "Thought:" not in l
             ]
             if clean_output:
-                final_output = "\n".join(clean_output[-10:])  # Take the last 10 lines.
+                final_output = "\n".join(clean_output[-10:])
 
         return {
             "status": "success",

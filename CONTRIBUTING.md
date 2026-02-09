@@ -5,7 +5,7 @@ Thanks for your interest in Charm!
 Contributions are highly welcome. We’d love to gather any feedback you have on our feature modules, for example:
 
 - Does the contract cover your agent’s configuration needs?
-- Are there specific frameworks you’d like to see adapted next?
+- Are there specific agents you’d like to see adapted next?
 
 Let us know what you think.
 
@@ -31,33 +31,33 @@ If you’re interested in contributing to the core features and architecture of 
 - `git`
 - [uv](https://github.com/astral-sh/uv)
 
-2. Fork & Clone
+1. Fork & Clone
 
 ```bash
 git clone https://github.com/CharmAIOS/Charm.git
 cd Charm
 ```
 
-3. Create virtual environment
+1. Create virtual environment
 
 ```bash
 uv venv
 source .venv/bin/activate
 ```
 
-4. Install
+1. Install
 
 ```bash
 uv pip install -e ".[runner,dev]"
 ```
 
-5. Build Base Image (Required for Runner tests)
+1. Build Base Image (Required for Runner tests)
 
 ```bash
 docker build -f Dockerfile.base -t charm-runner-base:latest .
 ```
 
-6. Run Tests
+1. Run Tests
 
 ```bash
 pytest

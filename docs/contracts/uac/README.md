@@ -12,7 +12,7 @@ The UAC serves as the central contract that allows Charm to:
 
 - Semantic Neutrality: To provide a universal definition layer independent of any specific underlying framework or runtime implementation.
 - Interoperability Base: To serve as the source of truth for the Charm Runtime, guiding how adapters should load agents and inject dependencies.
-- Registry, Commerce & Governance: To allow agents to be packaged with commercial metadata and security policies for trusted distribution in a marketplace.
+- Registry, Commerce & Governance: To allow agents to be packaged with commercial metadata and security policies for trusted distribution.
 
 ## Contract Scope
 
@@ -37,7 +37,7 @@ Charm treats the UAC as a **declarative description** of the agent:
 
 - Runtime Configuration (`runtime`):
   - Adapter Selection: Specifies which SDK adapter to use (e.g., `adapter.type = "crewai"`) and the code entry point.
-  - Dependency Injection: Explicitly declares required resources (e.g., `tools`, `llm_client`) to be injected dynamically by the runtime.
+  - Dependency Injection: Explicitly declares required skills to be injected dynamically by the runtime.
 
 ### Safety & Control (Governance Layer)
 

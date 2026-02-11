@@ -2,6 +2,8 @@ import asyncio
 import base64
 import logging
 import time
+import os
+import tempfile
 from collections import deque
 from typing import AsyncGenerator, Dict
 
@@ -51,12 +53,20 @@ class DockerBackend(ExecutionBackend):
             return
 
         start_time = time.time()
-
         redactor = LogRedactor(config.env_vars)
         recent_logs: deque[str] = deque(maxlen=50)
         sent_event_contents: deque[str] = deque(maxlen=20)
+
+        HOST_NPM_CACHE = os.path.join(tempfile.gettempdir(), "charm_npm_cache")
+        os.makedirs(HOST_NPM_CACHE, exist_ok=True)
+
+        # Cache
         volumes_config = {
+            # Python Cache
             config.host_cache_dir: {"bind": "/root/.cache/uv", "mode": "rw"},
+            # Node.js Cache
+            HOST_NPM_CACHE: {"bind": "/root/.npm", "mode": "rw"},
+            # Artifacts
             config.host_artifact_path: {"bind": "/app/artifacts_mount", "mode": "rw"},
         }
 

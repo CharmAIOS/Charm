@@ -70,39 +70,111 @@ class CharmDockerExecutor:
             source = skill.get("source", "")
             version = skill.get("version", "latest")
 
-            # Git Repositories (Skills requiring Clone)
+            # Git Repositories (Smart Update Logic)
             if source.startswith("git:") or source.startswith("http"):
                 repo_url = source.replace("git:", "")
                 skill_hash = self._calculate_skill_hash(source, version)
 
-                # Mount path inside Docker container (defined by Dockerfile).
+                # Path definitions
                 cache_path = f"/charm_cache/skills/{skill_hash}"
                 local_link_path = f"./skills/{name}"
 
-                script_lines.append(f"\n# Skill: {name} ({version})")
+                # Check if it is a dynamic branch (main/master/latest)
+                is_dynamic_branch = version in ["latest", "main", "master", ""]
+
+                script_lines.append(f"\n# Skill (Git): {name}")
+
+                # Download or Update Code
                 script_lines.append(f"if [ -d '{cache_path}' ]; then")
-                script_lines.append(f"    echo '⚡ Cache Hit for {name}. Linking...'")
+
+                if is_dynamic_branch:
+                    # Check only when specified as main/latest
+                    # Fetch remote status
+                    script_lines.append(f"    echo '⚡ Cache Hit. Checking for updates...'")
+                    script_lines.append(f"    cd '{cache_path}'")
+                    script_lines.append(f"    git fetch -q origin {version or 'HEAD'}")
+
+                    # Compare Hash (Local vs Remote)
+                    script_lines.append(
+                        f'    if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then'
+                    )
+                    script_lines.append(f"        echo '🔄 New version detected. Updating...'")
+                    script_lines.append(f"        git merge FETCH_HEAD -q")
+                    script_lines.append(f"        UPDATED=1")
+                    script_lines.append(f"    else")
+                    script_lines.append(f"        echo '✅ Up to date. Skipping download.'")
+                    script_lines.append(f"        UPDATED=0")
+                    script_lines.append(f"    fi")
+                    script_lines.append(f"    cd - > /dev/null")
+                else:
+                    # If pinned version, trust cache directly
+                    script_lines.append(
+                        f"    echo '⚡ Cache Hit (Pinned Version). Skipping checks.'"
+                    )
+                    script_lines.append(f"    UPDATED=0")
+
                 script_lines.append(f"else")
-                script_lines.append(
-                    f'    echo \'{EVENT_PREFIX}{{"type":"status","content":"Installing Skill: {name}..."}}\''
-                )
-                script_lines.append(f"    echo 'Cache Miss. Cloning {repo_url}...'")
+                # Cache Miss: First download
+                script_lines.append(f"    echo 'Installing Skill: {name}...'")
                 script_lines.append(f"    git clone --depth 1 {repo_url} '{cache_path}'")
-                # Dependency installation scripts can be executed here (runtime install via Adapter suggested).
+                script_lines.append(f"    UPDATED=1")
                 script_lines.append(f"fi")
 
-                # Create symlink so OpenClaw treats it as a local Skill.
+                # Smart Dependency Installation
+                script_lines.append(f"if [ -f '{cache_path}/requirements.txt' ]; then")
+                script_lines.append(
+                    f"    REQ_HASH=$(md5sum '{cache_path}/requirements.txt' | awk '{{print $1}}')"
+                )
+                script_lines.append(
+                    f"    INSTALLED_HASH=$(cat '/tmp/{name}_req.hash' 2>/dev/null || echo '')"
+                )
+
+                script_lines.append(
+                    f'    if [ "$UPDATED" -eq 1 ] || [ "$REQ_HASH" != "$INSTALLED_HASH" ]; then'
+                )
+                script_lines.append(
+                    f"        echo '📦 Installing/Updating Python deps for {name}...'"
+                )
+                script_lines.append(f"        uv pip install -r '{cache_path}/requirements.txt'")
+                script_lines.append(f"        echo \"$REQ_HASH\" > '/tmp/{name}_req.hash'")
+                script_lines.append(f"    fi")
+                script_lines.append(f"fi")
+
+                # Node.js Dependencies
+                script_lines.append(f"if [ -f '{cache_path}/package.json' ]; then")
+                script_lines.append(
+                    f"    if [ \"$UPDATED\" -eq 1 ] || [ ! -d '{cache_path}/node_modules' ]; then"
+                )
+                script_lines.append(f"        echo '📦 Check/Update Node deps for {name}...'")
+                script_lines.append(
+                    f"        cd '{cache_path}' && npm install --production --no-audit --quiet && cd -"
+                )
+                script_lines.append(f"    fi")
+                script_lines.append(f"fi")
+
+                # Linking
                 script_lines.append(f"rm -rf '{local_link_path}'")
                 script_lines.append(f"ln -s '{cache_path}' '{local_link_path}'")
 
-            # NPM/Pip Skills (Smithery, PyPI)
-            # These Skills rely on global Cache (npm cache / uv cache) instead of directory installation.
-            # Adapter invokes npx/uvx during execution, automatically utilizing the mounted Cache Volume.
+            # NPM Skills
             elif source.startswith("smithery:") or source.startswith("npm:"):
-                pass  # Runtime handled by npx
+                pkg_name = source.replace("smithery:", "").replace("npm:", "")
+                script_lines.append(f"\n# Skill (NPM): {name}")
+                script_lines.append(f"if command -v npm &> /dev/null; then")
+                script_lines.append(f"    echo '📦 Pre-installing NPM Package: {pkg_name}...'")
+                script_lines.append(f"    npm install -g {pkg_name} --quiet")
+                script_lines.append(f"else")
+                script_lines.append(
+                    f"    echo '⚠️ Node.js not found. Skipping {name}. (Use Full Image)'"
+                )
+                script_lines.append(f"fi")
 
+            # PyPI Skills
             elif source.startswith("pip:") or source.startswith("pypi:"):
-                pass  # Runtime handled by uvx
+                pkg_name = source.replace("pip:", "").replace("pypi:", "")
+                script_lines.append(f"\n# Skill (PyPI): {name}")
+                script_lines.append(f"echo '🐍 Pre-installing PyPI Package: {pkg_name}...'")
+                script_lines.append(f"uv pip install {pkg_name}")
 
         return "\n".join(script_lines)
 
@@ -121,6 +193,7 @@ class CharmDockerExecutor:
         # Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():
+            # Escape newlines and quotes to prevent bash errors
             safe_val = str(v).replace("\n", "\\n").replace('"', '\\"')
             env_file_lines.append(f'{k}="{safe_val}"')
         b64_env_content = base64.b64encode("\n".join(env_file_lines).encode()).decode()
@@ -190,8 +263,17 @@ class CharmDockerExecutor:
         """
 
         # Skill Installation Block
-        # Prepared for OpenClaw Agent.
         skill_setup_block = self._generate_skill_install_block(skills)
+
+        # Memory Hydration Block
+        MEMORY_FILE_PATH = "/root/.openclaw/workspace/MEMORY.md"
+        memory_hydration_block = f"""
+        mkdir -p "$(dirname "{MEMORY_FILE_PATH}")"
+        if [ ! -z "$CHARM_USER_PROFILE" ]; then
+            echo "$CHARM_USER_PROFILE" > "{MEMORY_FILE_PATH}"
+            echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Memory Hydrated"}}'
+        fi
+        """
 
         # Execution Command Selection
         if adapter_type == "node":
@@ -201,12 +283,10 @@ class CharmDockerExecutor:
             """
         elif adapter_type == "openclaw":
             # OpenClaw Execution Path
-            # Do not run openclaw cli directly; run Charm's Wrapper instead.
-            # Wrapper initializes OpenClawAdapter, then Adapter calls OpenClaw.
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
-            # Ensure UAC_SKILLS environment variable is set (Adapter usually reads charm.yaml, but valid as backup).
+            # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
             # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
@@ -227,12 +307,29 @@ class CharmDockerExecutor:
             """
 
         # Cleanup & Persistence Logic
-        cleanup_function = """
-        function cleanup {
+        cleanup_function = f"""
+        function cleanup {{
             EXIT_CODE=$?
-            echo '::CHARM_EVENT::{"type":"status","content":"Saving Execution Context..."}'
+            echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
             
-            # (A) Cloud Upload
+            # --- 1. Memory Dehydration (Sync back to Store) ---
+            # Checks if MEMORY.md exists and if we have the necessary credentials to sync.
+            if [ -f "{MEMORY_FILE_PATH}" ] && [ ! -z "$CHARM_USER_ID" ] && [ ! -z "$CHARM_INTERNAL_SECRET" ]; then
+                echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Syncing Memory to Cloud..."}}'
+                
+                # Read content and base64 encode it to safely transmit via JSON
+                MEM_B64=$(cat "{MEMORY_FILE_PATH}" | base64 -w 0)
+                
+                # Send POST request to Store API
+                # CHARM_STORE_URL is injected by main.py
+                curl -s -X POST \\
+                     -H "Content-Type: application/json" \\
+                     -H "Authorization: Bearer $CHARM_INTERNAL_SECRET" \\
+                     -d "{{\\"user_id\\": \\"$CHARM_USER_ID\\", \\"memory_content_b64\\": \\"$MEM_B64\\"}}" \\
+                     "$CHARM_STORE_URL/api/internal/sync-memory" || true
+            fi
+
+            # --- 2. Cloud Artifact Upload ---
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
@@ -248,18 +345,19 @@ class CharmDockerExecutor:
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
 
-            # (B) Local Sync
+            # --- 3. Local Artifact Sync (Dev Mode) ---
             if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                # Sync memory file.
+                # Sync memory file locally for inspection
                 if [ -f "$CHARM_MEMORY_FILE" ]; then 
                     cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
                 elif [ -f "charm_memory.json" ]; then
                     cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
                 fi
                 
-                # Sync OpenClaw memory (if available).
-                if [ -d "/root/.openclaw/workspace" ]; then
-                     cp /root/.openclaw/workspace/MEMORY.md /app/artifacts_mount/MEMORY.md 2>/dev/null
+                # Sync OpenClaw memory
+                if [ -f "{MEMORY_FILE_PATH}" ]; then
+                     mkdir -p /app/artifacts_mount/.openclaw/workspace
+                     cp "{MEMORY_FILE_PATH}" /app/artifacts_mount/MEMORY.md 2>/dev/null
                 fi
                 
                 find . -type f -newer .charm_snapshot \
@@ -279,8 +377,8 @@ class CharmDockerExecutor:
                 done < .charm_new_files
             fi
             
-            echo "::CHARM_EVENT::{\"type\":\"internal_run_finished\",\"content\":{\"exit_code\":$EXIT_CODE}}"
-        }
+            echo "::CHARM_EVENT::{{\\"type\\":\\"internal_run_finished\\",\\"content\\":{{\\"exit_code\\":$EXIT_CODE}}}}"
+        }}
         trap cleanup EXIT
         """
 
@@ -301,7 +399,7 @@ class CharmDockerExecutor:
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
 
-        # Memory File Setup
+        # Memory File Setup (Chat History)
         if [ -f "charm_memory.json" ]; then
             export CHARM_MEMORY_FILE="$(pwd)/charm_memory.json"
         else
@@ -317,6 +415,9 @@ class CharmDockerExecutor:
         
         # Install Skills (Dynamic Loading)
         {skill_setup_block}
+        
+        # Inject Global Memory (User Profile)
+        {memory_hydration_block}
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then

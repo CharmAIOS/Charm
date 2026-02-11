@@ -33,10 +33,20 @@ class CharmCustomAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info("Executing Custom Agent...")
 
-        # Inject User Profile
+        # Copy inputs to avoid side effects
+        native_input = inputs.copy()
+
+        # Handle Global Memory (Profile)
         user_profile = self._get_user_profile()
         if user_profile:
-            inputs["user_profile"] = user_profile
+            native_input["user_profile"] = user_profile
+
+        # Handle Short-term Memory (History)
+        raw_history = native_input.pop("__charm_history__", [])
+        if raw_history:
+            native_input["chat_history"] = raw_history[-10:]
+        else:
+            native_input["chat_history"] = []
 
         try:
             sig = inspect.signature(self.execution_method)
@@ -45,23 +55,22 @@ class CharmCustomAdapter(BaseAdapter):
             if len(sig.parameters) > 0:
                 for name, param in sig.parameters.items():
                     if name == "inputs":
-                        kwargs["inputs"] = inputs
+                        kwargs["inputs"] = native_input
                     elif name == "callbacks":
                         kwargs["callbacks"] = callbacks
 
-                    # 2. Destructuring Injection
-                    elif name in inputs:
-                        kwargs[name] = inputs[name]
+                    # Destructuring Injection
+                    elif name in native_input:
+                        kwargs[name] = native_input[name]
 
-                    # 3. Catch-all (**kwargs)
+                    # Catch-all (**kwargs)
                     elif param.kind == inspect.Parameter.VAR_KEYWORD:
-                        kwargs.update(inputs)
+                        kwargs.update(native_input)
 
-                    # 4. Default values
+                    # Default values
                     elif param.default != inspect.Parameter.empty:
                         continue
 
-                    # 5. Missing required args: We do nothing and let Python raise TypeError
                     else:
                         pass
 
@@ -97,23 +106,27 @@ class CharmCustomAdapter(BaseAdapter):
             sig = inspect.signature(self.agent.stream)
             kwargs: Dict[str, Any] = {}
 
-            # Inject User Profile for Stream too
+            # Prepare Inputs for Stream (Same logic as invoke)
+            native_input = inputs.copy()
             user_profile = self._get_user_profile()
             if user_profile:
-                inputs["user_profile"] = user_profile
+                native_input["user_profile"] = user_profile
+
+            raw_history = native_input.pop("__charm_history__", [])
+            native_input["chat_history"] = raw_history[-10:] if raw_history else []
 
             if len(sig.parameters) > 0:
                 if "callbacks" in sig.parameters:
                     kwargs["callbacks"] = callbacks
                 if "inputs" in sig.parameters:
-                    kwargs["inputs"] = inputs
+                    kwargs["inputs"] = native_input
                 else:
                     # Fallback logic
                     if len(sig.parameters) == 1:
-                        kwargs = {"inputs": inputs}
+                        kwargs = {"inputs": native_input}
                     else:
                         # Destructuring attempt
-                        for k, v in inputs.items():
+                        for k, v in native_input.items():
                             if k in sig.parameters:
                                 kwargs[k] = v
 

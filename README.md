@@ -12,15 +12,9 @@
 
 > **Charm Store** is now live. Register your agent and explore what the community has built!
 
-**Charm** is a **Unified System Layer** designed to provide a unified environment for capability integration and application distribution for agentic intelligence.
+**Charm** is a **Unified Application Layer** designed to provide a unified environment for capability integration and application distribution for agentic intelligence.
 
 It provides a standardized architecture that enables agents to assemble, interoperate, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
-
----
-
-## Why Charm?
-
-Before you dive deeper, I’d like you to take a moment to read the [blog post](https://charmos.io/blog) to understand our insights and perspective.
 
 ## Getting started
 
@@ -52,7 +46,7 @@ pip install charmos[runner]
 >
 ### Register your agent
 
-Read our simple [tutorial](https://github.com/CharmAIOS/Charm/blob/main/docs/concepts/charm-store.md) to learn how to register your agent on the Charm Store.
+Read our simple [tutorial](https://github.com/CharmAIOS/Charm/blob/main/docs/getting-started/charm-store.md) to learn how to register your agent on the Charm Store.
 
 ## Contributing
 

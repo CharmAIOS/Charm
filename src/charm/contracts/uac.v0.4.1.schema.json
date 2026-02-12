@@ -315,27 +315,6 @@
           ],
           "default": "standard",
           "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js."
-        },
-        "injections": {
-          "type": "object",
-          "description": "Resources the agent expects the Runtime to inject.",
-          "properties": {
-            "llm_client": {
-              "type": "boolean",
-              "description": "If true, Runtime injects a configured LLM client."
-            },
-            "tools": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of standard Charm Tools (IDs) to be injected."
-            },
-            "memory_store": {
-              "type": "boolean",
-              "description": "If true, Runtime injects a connection to the Charm Vector Store."
-            }
-          }
         }
       }
     },
@@ -371,24 +350,6 @@
         "budget_limit": {
           "type": "number",
           "description": "Max USD cost per run"
-        }
-      }
-    },
-    "workflow": {
-      "type": "object",
-      "description": "(Optional) Descriptive graph for observability. Not used for execution in Wrapper mode.",
-      "properties": {
-        "nodes": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        },
-        "edges": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
         }
       }
     }

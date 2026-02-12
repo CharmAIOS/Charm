@@ -201,10 +201,13 @@ runtime:
 # NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
+    # [OAuth: Google]
     - name: "google"
       scopes: 
         - "https://www.googleapis.com/auth/calendar.readonly"
         - "https://www.googleapis.com/auth/gmail.send"
+
+    # [OAuth: GitHub]
     - name: "github"
       scopes: 
         - "repo"

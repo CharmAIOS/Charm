@@ -89,10 +89,8 @@ auth:
       scopes: 
         - "https://www.googleapis.com/auth/calendar.readonly"
         - "https://www.googleapis.com/auth/gmail.send"
-    - name: "github"
-      scopes: 
-        - "repo"
-        - "read:user"
+
+        
 
 # 6. Governance
 policies:

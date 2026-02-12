@@ -161,28 +161,31 @@ runtime:
       - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
-  # SKILLS & TOOLS
+  # SKILLS & MCP TOOLS
   # --------------------------------------------------------------
   skills:
-    # [Agent Skills] 
+    
+    # [Source: Git] 
     - name: "research-flow"
       source: "git:https://github.com/openclaw/skill-researcher"
-      version: "main"
+      version: "main" # Or Commit Hash / Tag (If you want to pin the version)
 
-    # [MCP Tools (Node.js)]
+    # [Source: Zip] 
+    - name: "finance-analyst"
+      source: "https://clawhub.ai/download/skills/finance-v1.2.0.zip"
+
+    # [Source: NPM] 
     - name: "google-search"
       source: "npm:@modelcontextprotocol/server-google-search"
-      # (Optional) Configuration for the tool
-      config:
-        GOOGLE_API_KEY: "${GOOGLE_API_KEY}" 
 
-    # [MCP Tools (Python)]
+    # [Source: PyPI] 
     - name: "local-time"
       source: "pip:mcp-server-time"
-    
-    # [MCP Tools (Custom)]
+
+    # [Source: Repo] 
     - name: "my-custom-tool"
-      source: "git:https://github.com/user/my-python-mcp-server"
+      source: "git:https://github.com/yourname/my-python-mcp-tool"
+      version: "main" # Or Commit Hash / Tag (If you want to pin the version)
   
   # --------------------------------------------------------------
   # RUNTIME MODE (Environment Selection)
@@ -198,10 +201,13 @@ runtime:
 # NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
+    # [OAuth: Google]
     - name: "google"
       scopes: 
         - "https://www.googleapis.com/auth/calendar.readonly"
         - "https://www.googleapis.com/auth/gmail.send"
+
+    # [OAuth: GitHub]
     - name: "github"
       scopes: 
         - "repo"

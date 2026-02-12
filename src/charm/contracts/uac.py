@@ -83,19 +83,8 @@ class RuntimeAdapter(BaseModel):
     )
 
 
-class RuntimeInjections(BaseModel):
-    """Resources the agent expects the Runtime to inject."""
-
-    llm_client: bool = Field(False, description="If true, injects a configured LLM client")
-    tools: List[str] = Field(
-        default_factory=list, description="List of standard Charm Tools (IDs) to be injected"
-    )
-    memory_store: bool = Field(False, description="If true, injects a connection to Vector Store")
-
-
 class RuntimeConfig(BaseModel):
     adapter: RuntimeAdapter
-    injections: Optional[RuntimeInjections] = None
 
     # List of Skills to mount (For OpenClaw/MCP)
     skills: List[SkillConfig] = Field(

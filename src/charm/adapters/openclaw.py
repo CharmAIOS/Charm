@@ -70,6 +70,7 @@ class CharmOpenClawAdapter(BaseAdapter):
     def _generate_openclaw_config(self) -> str:
         """
         Transform 'runtime.skills' from charm.yaml into a standard MCP Servers configuration file (JSON).
+        Now handles Git/Zip sources by resolving them to local paths.
         """
         mcp_servers = {}
 
@@ -77,8 +78,59 @@ class CharmOpenClawAdapter(BaseAdapter):
             for skill in self.config.runtime.skills:
                 server_config = {}
 
-                # Smithery / NPM Skills
-                if skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
+                # --- Normalization Logic ---
+                # Check if this is a downloaded skill (Git/Zip) or a purely local one
+                is_local_path = False
+                target_path = ""
+
+                if skill.source.startswith("local:"):
+                    target_path = skill.source.replace("local:", "")
+                    is_local_path = True
+                elif skill.source.startswith("git:") or skill.source.startswith("http"):
+                    # The Runner script has mounted these to ./skills/{name}
+                    target_path = f"skills/{skill.name}"
+                    is_local_path = True
+
+                # --- 1. Path-based Skills (Local / Git / Zip) ---
+                if is_local_path:
+                    abs_path = os.path.abspath(target_path)
+
+                    if not os.path.exists(abs_path):
+                        logger.warning(f"Skill path not found (Execution might fail): {abs_path}")
+                        continue
+
+                    # Heuristic detection for execution method
+                    if os.path.isfile(abs_path):
+                        # Single file mode
+                        if abs_path.endswith(".py"):
+                            server_config = {"command": "python", "args": [abs_path]}
+                        elif abs_path.endswith(".js"):
+                            server_config = {"command": "node", "args": [abs_path]}
+                    else:
+                        # Directory mode
+                        if os.path.exists(os.path.join(abs_path, "pyproject.toml")):
+                            # Python project (use uv)
+                            server_config = {
+                                "command": "uv",
+                                "args": ["run", "python", "-m", "server"],  # Default assumption
+                                "cwd": abs_path,
+                            }
+                            # Check if main.py or server.py exists to be more specific
+                            if os.path.exists(os.path.join(abs_path, "server.py")):
+                                server_config["args"] = ["run", "python", "server.py"]
+
+                        elif os.path.exists(os.path.join(abs_path, "package.json")):
+                            # Node project
+                            server_config = {"command": "npm", "args": ["start"], "cwd": abs_path}
+                        else:
+                            # Fallback: Try server.py
+                            server_config = {
+                                "command": "python",
+                                "args": [os.path.join(abs_path, "server.py")],
+                            }
+
+                # --- 2. Smithery / NPM Skills ---
+                elif skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
                     pkg_name = skill.source.replace("smithery:", "").replace("npm:", "")
                     server_config = {
                         "command": "npx",
@@ -92,75 +144,34 @@ class CharmOpenClawAdapter(BaseAdapter):
                         ],
                     }
 
-                # Python / PyPI Skills
+                # --- 3. Python / PyPI Skills ---
                 elif skill.source.startswith("pip:") or skill.source.startswith("pypi:"):
                     pkg_name = skill.source.replace("pip:", "").replace("pypi:", "")
                     server_config = {"command": "uvx", "args": [pkg_name]}
 
-                # Local Skills (Repositories)
-                elif skill.source.startswith("local:"):
-                    rel_path = skill.source.replace("local:", "")
-                    abs_path = os.path.abspath(rel_path)
+                # --- Common Config Injection (Env & Auth) ---
+                if server_config:
+                    env_vars = skill.config.copy() if skill.config else {}
 
-                    if not os.path.exists(abs_path):
-                        logger.warning(f"Skill path not found: {abs_path}")
-                        continue
+                    # Inject Global API Keys if present
+                    for key in [
+                        "OPENAI_API_KEY",
+                        "ANTHROPIC_API_KEY",
+                        "TAVILY_API_KEY",
+                        "GOOGLE_API_KEY",
+                    ]:
+                        if key not in env_vars and os.environ.get(key):
+                            env_vars[key] = os.environ[key]
 
-                    # Automatically detect startup method.
-                    if os.path.isfile(abs_path):
-                        # Targeted at a single file.
-                        if abs_path.endswith(".py"):
-                            server_config = {"command": "python", "args": [abs_path]}
-                        elif abs_path.endswith(".js"):
-                            server_config = {"command": "node", "args": [abs_path]}
-                    else:
-                        # Targeted at a directory, check for common entry points.
-                        if os.path.exists(os.path.join(abs_path, "pyproject.toml")):
-                            # Python project, use uv run.
-                            server_config = {
-                                "command": "uv",
-                                "args": [
-                                    "run",
-                                    "python",
-                                    "-m",
-                                    "server",
-                                ],
-                                "cwd": abs_path,
-                            }
-                        elif os.path.exists(os.path.join(abs_path, "package.json")):
-                            # Node project.
-                            server_config = {"command": "npm", "args": ["start"], "cwd": abs_path}
-                        else:
-                            # Fallback: Try executing server.py.
-                            server_config = {
-                                "command": "python",
-                                "args": [os.path.join(abs_path, "server.py")],
-                            }
+                    if env_vars:
+                        server_config["env"] = env_vars
 
-                # Auth & Env Injection
-                env_vars = skill.config.copy() if skill.config else {}
-
-                # Automatically inject global API Keys (if present in environment variables).
-                for key in [
-                    "OPENAI_API_KEY",
-                    "ANTHROPIC_API_KEY",
-                    "TAVILY_API_KEY",
-                    "GOOGLE_API_KEY",
-                ]:
-                    if key not in env_vars and os.environ.get(key):
-                        env_vars[key] = os.environ[key]
-
-                if env_vars:
-                    server_config["env"] = env_vars
-
-                mcp_servers[skill.name] = server_config
+                    mcp_servers[skill.name] = server_config
 
         # Build complete configuration
         full_config = {
             "mcpServers": mcp_servers,
             "workspace": self.workspace_dir,
-            # Expand here based on charm.yaml, e.g., specifying the model:
-            # "llm": { "model": "claude-3-5-sonnet-latest" }
         }
 
         config_path = os.path.join(self.work_dir, "openclaw_runtime_config.json")

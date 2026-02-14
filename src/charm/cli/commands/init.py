@@ -32,9 +32,16 @@ def init_command(
         template_source = files("charm.templates").joinpath("charm.default.yaml")
         yaml_content = template_source.read_text(encoding="utf-8")
 
-        # [Logic] Customize based on template type
+        # Customize based on template type
+        # Create .charmignore
+        ignore_source = files("charm.templates").joinpath("charm.ignore.template")
+        ignore_content = ignore_source.read_text(encoding="utf-8")
+
+        ignore_target = project_path / ".charmignore"
+        ignore_target.write_text(ignore_content, encoding="utf-8")
+
         if template == "skill":
-            # 1. Modify YAML for Skill/OpenClaw mode
+            # Modify YAML for Skill/OpenClaw mode
             # Replace default 'crewai' adapter with 'openclaw' and remove entry_point hints
             yaml_content = yaml_content.replace('type: "crewai"', 'type: "openclaw"')
             yaml_content = yaml_content.replace(
@@ -56,7 +63,8 @@ def init_command(
             target_file.write_text(yaml_content, encoding="utf-8")
 
             console.print(f"[bold green]✔ Created new Skill Agent project: {name}[/bold green]")
-            console.print("  └── charm.yaml (OpenClaw Configuration)")
+            console.print("  ├── charm.yaml (OpenClaw Configuration)")
+            console.print("  └── .charmignore")
 
         else:
             # 2. Default (Code-based) mode
@@ -76,6 +84,7 @@ def init_command(
 
             console.print(f"[bold green]✔ Created new Code Agent project: {name}[/bold green]")
             console.print("  ├── charm.yaml")
+            console.print("  ├── .charmignore")
             console.print("  └── src/main.py")
 
         console.print("\nNext step:\n  [cyan]cd[/cyan] " + name + "\n  [cyan]charm push[/cyan]")

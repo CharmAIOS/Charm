@@ -40,6 +40,7 @@ class CloudRunBackend(ExecutionBackend):
         self.jobs_client = run_v2.JobsAsyncClient()
         self.logging_client = cloud_logging.Client(project=self.project_id)
         self.parent = f"projects/{self.project_id}/locations/{self.region}"
+        self.storage_bucket = os.getenv("CHARM_USER_BUCKET_NAME")
 
     async def _create_job(self, job_id: str, config: RunConfig) -> str:
         b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
@@ -47,7 +48,7 @@ class CloudRunBackend(ExecutionBackend):
         env_vars = [
             {"name": "PYTHONUNBUFFERED", "value": "1"},
             {"name": "CHARM_BOOTSTRAP_SCRIPT", "value": b64_script},
-            *[{"name": k, "value": str(v)} for k, v in config.env_vars.items()],
+            *[{"name": k, "value": str(v)} for k, v in config.env_vars.items() if v is not None],
         ]
 
         default_fallback = (
@@ -57,22 +58,57 @@ class CloudRunBackend(ExecutionBackend):
 
         logger.info(f"[CloudRun] Target Image resolved to: {worker_image}")
 
-        job = run_v2.Job()
-        job.template.template.containers = [
-            {
-                "image": worker_image,
-                "command": ["/bin/bash", "-c"],
-                "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
-                "env": env_vars,
-                "resources": {"limits": {"memory": "2Gi", "cpu": "1000m"}},
-            }
-        ]
+        is_session_mode = False
+        if config.env_vars.get("CHARM_RUNTIME_ADAPTER") == "openclaw":
+            is_session_mode = True
 
-        job.template.task_count = 1
+        logger.info(
+            f"[CloudRun] Creating Job {job_id}. Mode: {'SESSION (OpenClaw)' if is_session_mode else 'TASK'}"
+        )
+
+        container = {
+            "image": worker_image,
+            "command": ["/bin/bash", "-c"],
+            "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
+            "env": env_vars,
+            "resources": {
+                "limits": {
+                    "memory": "2Gi" if is_session_mode else "1Gi",
+                    "cpu": "1000m",
+                }
+            },
+        }
+
+        job = run_v2.Job()
         job.template.template.max_retries = 0
-        job.template.task_count = 1
-        job.template.template.max_retries = 0
-        job.template.template.timeout = "3600s"
+
+        if is_session_mode:
+            # === Session Mode (OpenClaw) ===
+            job.template.template.timeout = "3600s"
+
+            if self.storage_bucket:
+                container["volume_mounts"] = [
+                    {
+                        "name": "gcs-persistence",
+                        "mount_path": "/root/.openclaw",
+                    }
+                ]
+                job.template.template.volumes = [
+                    {
+                        "name": "gcs-persistence",
+                        "gcs": {"bucket": self.storage_bucket, "read_only": False},
+                    }
+                ]
+            else:
+                logger.warning(
+                    "CHARM_USER_BUCKET_NAME not set. Session mode will leverage ephemeral storage only!"
+                )
+
+        else:
+            # === Task Mode (Codebase Agent) ===
+            job.template.template.timeout = "600s"
+
+        job.template.template.containers = [container]
 
         request = run_v2.CreateJobRequest(parent=self.parent, job=job, job_id=job_id)
 

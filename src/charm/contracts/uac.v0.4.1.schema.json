@@ -307,6 +307,32 @@
             }
           }
         },
+        "config": {
+          "type": "object",
+          "description": "Engine-specific configuration (e.g. for OpenClaw).",
+          "properties": {
+            "system_prompt": {
+              "type": "string",
+              "description": "Global system instruction for the agent."
+            },
+            "model": {
+              "type": "string",
+              "default": "gpt-4o",
+              "description": "LLM model ID."
+            },
+            "temperature": {
+              "type": "number",
+              "default": 0.0,
+              "description": "Sampling temperature."
+            },
+            "auto_install_dependencies": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically install dependencies for local skills."
+            }
+          },
+          "additionalProperties": false
+        },
         "mode": {
           "type": "string",
           "enum": [

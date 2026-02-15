@@ -280,15 +280,8 @@ class CharmDockerExecutor:
         # Skill Installation Block
         skill_setup_block = self._generate_skill_install_block(skills)
 
-        # Memory Hydration Block
-        MEMORY_FILE_PATH = "/root/.openclaw/workspace/MEMORY.md"
-        memory_hydration_block = f"""
-        mkdir -p "$(dirname "{MEMORY_FILE_PATH}")"
-        if [ ! -z "$CHARM_USER_PROFILE" ]; then
-            echo "$CHARM_USER_PROFILE" > "{MEMORY_FILE_PATH}"
-            echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Memory Hydrated"}}'
-        fi
-        """
+        # [移除] memory_hydration_block
+        # 原因：現在使用 GCS Mount，檔案已經在那裡了，不需要從環境變數 echo 出來。
 
         # Execution Command Selection
         if adapter_type == "node":
@@ -303,6 +296,10 @@ class CharmDockerExecutor:
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
             # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
+            
+            # [重要] 確保 OpenClawAdapter 知道它現在是 Session Mode
+            export CHARM_SESSION_MODE="true"
+            
             # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
             """
@@ -327,72 +324,22 @@ class CharmDockerExecutor:
             EXIT_CODE=$?
             echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
             
-            # --- 1. Memory Dehydration (Sync back to Store) ---
-            # Checks if MEMORY.md exists and if we have the necessary credentials to sync.
-            if [ -f "{MEMORY_FILE_PATH}" ] && [ ! -z "$CHARM_USER_ID" ] && [ ! -z "$CHARM_INTERNAL_SECRET" ]; then
-                echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Syncing Memory to Cloud..."}}'
-                
-                # Read content and base64 encode it to safely transmit via JSON
-                MEM_B64=$(cat "{MEMORY_FILE_PATH}" | base64 -w 0)
-                
-                # Send POST request to Store API
-                # CHARM_STORE_URL is injected by main.py
-                curl -s -X POST \\
-                     -H "Content-Type: application/json" \\
-                     -H "Authorization: Bearer $CHARM_INTERNAL_SECRET" \\
-                     -d "{{\\"user_id\\": \\"$CHARM_USER_ID\\", \\"memory_content_b64\\": \\"$MEM_B64\\"}}" \\
-                     "$CHARM_STORE_URL/api/internal/sync-memory" || true
-            fi
-
-            # --- 2. Cloud Artifact Upload ---
+            # [移除] Memory Sync logic (curl POST to store)
+            # 原因：GCS Fuse 會自動寫入，不需要手動同步 API。
+            
+            # --- Artifact Upload (保持保留，用於下載生成的 PDF/圖片) ---
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
                     --exclude='__pycache__' \
-                    --exclude='charm.yaml' \
-                    --exclude='requirements.txt' \
-                    --exclude='pyproject.toml' \
                     --exclude='node_modules' \
-                    --exclude='*.py' \
-                    --exclude='output_artifacts.tar.gz' \
+                    --exclude='skills' \
                     --newer .charm_snapshot .
 
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
-
-            # --- 3. Local Artifact Sync (Dev Mode) ---
-            if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                # Sync memory file locally for inspection
-                if [ -f "$CHARM_MEMORY_FILE" ]; then 
-                    cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
-                elif [ -f "charm_memory.json" ]; then
-                    cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
-                fi
-                
-                # Sync OpenClaw memory
-                if [ -f "{MEMORY_FILE_PATH}" ]; then
-                     mkdir -p /app/artifacts_mount/.openclaw/workspace
-                     cp "{MEMORY_FILE_PATH}" /app/artifacts_mount/MEMORY.md 2>/dev/null
-                fi
-                
-                find . -type f -newer .charm_snapshot \
-                    -not -path "*/\\.*" \
-                    -not -path "*/__pycache__/*" \
-                    -not -path "*/node_modules/*" \
-                    -not -path "*/skills/*" \
-                    -not -name ".charm_snapshot" \
-                    -not -name "charm.yaml" \
-                    -not -name "*.py" \
-                    -not -name ".env" \
-                    -not -name "charm_memory.json" \
-                    > .charm_new_files
-
-                while IFS= read -r file; do
-                    [ -f "$file" ] && cp --parents "$file" /app/artifacts_mount/ 2>/dev/null || true
-                done < .charm_new_files
-            fi
             
-            echo "::CHARM_EVENT::{{\\"type\\":\\"internal_run_finished\\",\\"content\\":{{\\"exit_code\\":$EXIT_CODE}}}}"
+            echo "::CHARM_EVENT::{{"type":"internal_run_finished","content":{{"exit_code":$EXIT_CODE}}}}"
         }}
         trap cleanup EXIT
         """
@@ -432,7 +379,7 @@ class CharmDockerExecutor:
         {skill_setup_block}
         
         # Inject Global Memory (User Profile)
-        {memory_hydration_block}
+        # [移除] MEMORY_FILE_PATH 設定與 injection
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then

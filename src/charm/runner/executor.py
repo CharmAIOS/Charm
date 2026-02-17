@@ -407,6 +407,7 @@ class CharmDockerExecutor:
         file_urls: Dict[str, str],
         history: List[Dict[str, str]],
         state_snapshot: str = "",
+        thread_id: Optional[str] = None,
         local_source_path: Optional[str] = None,
         supabase_client: Any = None,
         image: Optional[str] = None,
@@ -417,6 +418,9 @@ class CharmDockerExecutor:
         run_id = f"{agent_id}_{run_timestamp}"
         host_artifact_path = os.path.join(HOST_ARTIFACTS_ROOT, run_id)
         os.makedirs(host_artifact_path, exist_ok=True)
+
+        if thread_id:
+            input_payload["__charm_thread_id__"] = thread_id
 
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot

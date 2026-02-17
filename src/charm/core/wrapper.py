@@ -64,8 +64,20 @@ class CharmWrapper:
             if "charm_state" in result and result["charm_state"]:
                 CharmEmitter._write("state_update", {"content": result["charm_state"]})
 
+            if result.get("status") == "suspended":
+                CharmEmitter._write(
+                    "control",
+                    {
+                        "status": "suspended",
+                        "thread_id": result.get("thread_id"),
+                        "next_step": result.get("next_step"),
+                    },
+                )
+                if "output" in result:
+                    CharmEmitter.emit_final(result["output"])
+                return result
+
             if result.get("status") == "success":
-                # Emit final result only if it wasn't already streamed token-by-token
                 if not stream_state.get("has_streamed", False):
                     CharmEmitter.emit_final(result.get("output", ""))
                 return result

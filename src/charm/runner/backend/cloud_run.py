@@ -79,11 +79,8 @@ class CloudRunBackend(ExecutionBackend):
         # Serverless hard limit: 10 minutes (regardless of adapter type)
         job.template.template.timeout = "600s"
 
-        # If the agent needs GCS (e.g. OpenClaw), mount it but with short lifecycle
-        if config.env_vars.get("CHARM_RUNTIME_ADAPTER") == "openclaw" and self.storage_bucket:
-            container["volume_mounts"] = [
-                {"name": "gcs-persistence", "mount_path": "/root/.openclaw"}
-            ]
+        if self.storage_bucket:
+            container["volume_mounts"] = [{"name": "gcs-persistence", "mount_path": "/workspace"}]
             job.template.template.volumes = [
                 {
                     "name": "gcs-persistence",

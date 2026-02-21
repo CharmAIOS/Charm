@@ -24,26 +24,18 @@ class CharmOpenClawAdapter(BaseAdapter):
         self.work_dir = os.getcwd()  # 這是代碼所在的目錄 (/app/agent_code)
 
         # --- [1. Persistence Strategy] ---
-        # Cloud Run Mount Path: /root/.openclaw (Mapped to GCS Bucket)
-        # We enforce sub-directory isolation: /root/.openclaw/{user_id}/{agent_id}
+        # 🟢 改為直接讀取 Runner 配發的通用工作區路徑
+        self.workspace_dir = os.getenv("CHARM_WORKSPACE_DIR")
 
-        self.mount_root = "/root/.openclaw"
-        self.user_id = os.getenv("CHARM_USER_ID", "local_dev")
+        # 🟢 為了相容本地開發（如果沒有透過 Runner 啟動），給一個 Fallback
+        if not self.workspace_dir:
+            self.workspace_dir = os.path.join(self.work_dir, "workspace")
 
-        # Agent ID comes from YAML, default to uuid if missing
-        self.agent_id = self.config.id or "default_agent"
-
-        # The actual persistent home for THIS agent instance
-        self.agent_home = os.path.join(self.mount_root, self.user_id, self.agent_id)
-        self.workspace_dir = os.path.join(self.agent_home, "workspace")
-
-        # Ensure directories exist (GCS Fuse creates folders on write)
         try:
             os.makedirs(self.workspace_dir, exist_ok=True)
             logger.info(f"📁 Persistence Active. Workspace: {self.workspace_dir}")
         except Exception as e:
-            logger.warning(f"Failed to create persistence path (using tmp?): {e}")
-            self.workspace_dir = os.path.join(self.work_dir, "workspace")
+            logger.warning(f"Failed to create persistence path: {e}")
 
     def _install_dependencies(self, skill_path: str):
         """
@@ -240,7 +232,7 @@ class CharmOpenClawAdapter(BaseAdapter):
         user_input = inputs.get("input", "")
         # Append context if provided
         for k, v in inputs.items():
-            if k not in ["input", "__charm_history__", "user_profile"]:
+            if k not in ["input"]:
                 user_input += f"\n\n[{k}]: {v}"
 
         # 3. Launch OpenClaw

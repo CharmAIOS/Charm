@@ -362,12 +362,7 @@ class CharmDockerExecutor:
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
 
-        # Memory File Setup (Chat History)
-        if [ -f "charm_memory.json" ]; then
-            export CHARM_MEMORY_FILE="$(pwd)/charm_memory.json"
-        else
-            export CHARM_MEMORY_FILE="/app/artifacts_mount/charm_memory.json"
-        fi
+        mkdir -p "$CHARM_WORKSPACE_DIR"
         mkdir -p /app/artifacts_mount
 
         {install_local_sdk_cmd}
@@ -427,18 +422,9 @@ class CharmDockerExecutor:
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot
 
-        memory_file_name = "charm_memory.json"
-        if history:
-            if self.env == "production" and supabase_client:
-                pass
-
-            try:
-                with open(
-                    os.path.join(host_artifact_path, memory_file_name), "w", encoding="utf-8"
-                ) as f:
-                    json.dump(history, f, ensure_ascii=False)
-            except Exception as e:
-                logger.error(f"Local memory write failed: {e}")
+        user_id = env_vars.get("CHARM_USER_ID", "local_dev")
+        thread_id_val = thread_id or "default_thread"
+        env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
 
         # Dynamic backend dispatch based on environment and lifecycle
         if self.env in ["production", "staging"]:

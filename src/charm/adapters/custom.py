@@ -36,18 +36,6 @@ class CharmCustomAdapter(BaseAdapter):
         # Copy inputs to avoid side effects
         native_input = inputs.copy()
 
-        # Handle Global Memory (Profile)
-        user_profile = self._get_user_profile()
-        if user_profile:
-            native_input["user_profile"] = user_profile
-
-        # Handle Short-term Memory (History)
-        raw_history = native_input.pop("__charm_history__", [])
-        if raw_history:
-            native_input["chat_history"] = raw_history[-10:]
-        else:
-            native_input["chat_history"] = []
-
         try:
             sig = inspect.signature(self.execution_method)
             kwargs: Dict[str, Any] = {}
@@ -108,12 +96,6 @@ class CharmCustomAdapter(BaseAdapter):
 
             # Prepare Inputs for Stream (Same logic as invoke)
             native_input = inputs.copy()
-            user_profile = self._get_user_profile()
-            if user_profile:
-                native_input["user_profile"] = user_profile
-
-            raw_history = native_input.pop("__charm_history__", [])
-            native_input["chat_history"] = raw_history[-10:] if raw_history else []
 
             if len(sig.parameters) > 0:
                 if "callbacks" in sig.parameters:

@@ -60,6 +60,9 @@ class DockerBackend(ExecutionBackend):
         HOST_NPM_CACHE = os.path.join(tempfile.gettempdir(), "charm_npm_cache")
         os.makedirs(HOST_NPM_CACHE, exist_ok=True)
 
+        HOST_WORKSPACE = os.path.join(tempfile.gettempdir(), "charm_workspace")
+        os.makedirs(HOST_WORKSPACE, exist_ok=True)
+
         # Cache
         volumes_config = {
             # Python Cache
@@ -68,6 +71,8 @@ class DockerBackend(ExecutionBackend):
             HOST_NPM_CACHE: {"bind": "/root/.npm", "mode": "rw"},
             # Artifacts
             config.host_artifact_path: {"bind": "/app/artifacts_mount", "mode": "rw"},
+            # Workspace
+            HOST_WORKSPACE: {"bind": "/workspace", "mode": "rw"},
         }
 
         if config.local_source_path:

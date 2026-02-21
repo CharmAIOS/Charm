@@ -25,23 +25,6 @@ class CharmLangChainAdapter(BaseAdapter):
                         self.agent = candidate
                         break
 
-    def _convert_history_to_messages(self, history: List[Dict[str, str]]) -> List[Any]:
-        lc_messages: List[Any] = []
-        for msg in history:
-            role = msg.get("role")
-            content = str(msg.get("content") or "").strip()
-
-            if not content:
-                continue
-
-            if role == "user":
-                lc_messages.append(HumanMessage(content=content))
-            elif role == "assistant":
-                lc_messages.append(AIMessage(content=content))
-            elif role == "system":
-                lc_messages.append(SystemMessage(content=content))
-        return lc_messages
-
     def invoke(
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
     ) -> Dict[str, Any]:
@@ -67,44 +50,6 @@ class CharmLangChainAdapter(BaseAdapter):
             }
 
         native_input = inputs.copy()
-
-        # Handle Short-term Memory (Chat History)
-        history_data = native_input.pop("__charm_history__", None)
-        lc_history = []
-        if history_data:
-            # [Optimization] Slice last 10 messages to avoid context overflow
-            recent_history = history_data[-10:]
-            lc_history = self._convert_history_to_messages(recent_history)
-
-        # Compatible with common LangChain parameter naming.
-        if "chat_history" not in native_input:
-            native_input["chat_history"] = lc_history
-
-        if "messages" in native_input and isinstance(native_input["messages"], list):
-            # Prepend history to existing messages
-            native_input["messages"] = lc_history + native_input["messages"]
-
-        # Handle Long-term Memory (User Profile)
-        user_profile = self._get_user_profile()
-
-        if user_profile:
-            logger.info("[Charm] Injecting User Profile into LangChain context...")
-
-            # Chat Models (List of Messages)
-            if "messages" in native_input and isinstance(native_input["messages"], list):
-                system_msg = SystemMessage(content=f"User Profile & Preferences:\n{user_profile}")
-                native_input["messages"].insert(0, system_msg)
-
-            # Chains / LLMs (String Input)
-            elif "input" in native_input:
-                original_input = native_input["input"] or ""
-                # Prepend Profile to user input.
-                native_input["input"] = f"User Profile: {user_profile}\n\nTask: {original_input}"
-
-            # Other (Fallback)
-            else:
-                # Attempt to pass as a variable.
-                native_input["user_profile"] = user_profile
 
         # Ensure input is not None
         if "input" in native_input:

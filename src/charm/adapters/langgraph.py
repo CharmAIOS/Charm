@@ -50,21 +50,6 @@ class CharmLangGraphAdapter(BaseAdapter):
             logger.info("⚙️ [Charm] Compiling StateGraph with Persistence...")
             self.agent = self.agent.compile(checkpointer=self.checkpointer)
 
-    def _convert_history_to_messages(self, history: List[Dict[str, str]]) -> List[Any]:
-        lc_messages: List[Any] = []
-        for msg in history:
-            role = msg.get("role")
-            content = str(msg.get("content", "")).strip()
-            if not content:
-                continue
-            if role == "user":
-                lc_messages.append(HumanMessage(content=content))
-            elif role == "assistant":
-                lc_messages.append(AIMessage(content=content))
-            elif role == "system":
-                lc_messages.append(SystemMessage(content=content))
-        return lc_messages
-
     def invoke(
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
     ) -> Dict[str, Any]:
@@ -81,12 +66,6 @@ class CharmLangGraphAdapter(BaseAdapter):
 
         native_input = inputs.copy()
 
-        # Context Injection (Profile & History)
-        history_data = native_input.pop("__charm_history__", None)
-        lc_history = []
-        if history_data:
-            lc_history = self._convert_history_to_messages(history_data[-10:])
-
         # Normalize Inputs
         if "messages" not in native_input and "input" in native_input:
             native_input["messages"] = [HumanMessage(content=str(native_input.pop("input")))]
@@ -94,14 +73,7 @@ class CharmLangGraphAdapter(BaseAdapter):
         if "messages" in native_input:
             current = native_input["messages"]
             if not isinstance(current, list):
-                current = [current]
-
-            final_msgs = []
-            if profile := self._get_user_profile():
-                final_msgs.append(SystemMessage(content=f"User Profile: {profile}"))
-            final_msgs.extend(lc_history)
-            final_msgs.extend(current)
-            native_input["messages"] = final_msgs
+                native_input["messages"] = [current]
 
         # Execution
         result = None

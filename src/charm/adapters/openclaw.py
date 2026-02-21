@@ -21,13 +21,13 @@ class CharmOpenClawAdapter(BaseAdapter):
     def __init__(self, config: CharmConfig):
         super().__init__(None)
         self.config = config
-        self.work_dir = os.getcwd()  # 這是代碼所在的目錄 (/app/agent_code)
+        self.work_dir = os.getcwd()  # Directory where code is located (/app/agent_code)
 
         # --- [1. Persistence Strategy] ---
-        # 🟢 改為直接讀取 Runner 配發的通用工作區路徑
+        # 🟢 Directly read the universal workspace path assigned by Runner
         self.workspace_dir = os.getenv("CHARM_WORKSPACE_DIR")
 
-        # 🟢 為了相容本地開發（如果沒有透過 Runner 啟動），給一個 Fallback
+        # 🟢 Fallback for local development compatibility (if not started via Runner)
         if not self.workspace_dir:
             self.workspace_dir = os.path.join(self.work_dir, "workspace")
 

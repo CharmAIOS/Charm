@@ -281,8 +281,8 @@ class CharmDockerExecutor:
         # Skill Installation Block
         skill_setup_block = self._generate_skill_install_block(skills)
 
-        # [移除] memory_hydration_block
-        # 原因：現在使用 GCS Mount，檔案已經在那裡了，不需要從環境變數 echo 出來。
+        # [Removed] memory_hydration_block
+        # Reason: Now using GCS Mount, files are already there, no need to inject via env vars.
 
         # Execution Command Selection
         if adapter_type == "node":
@@ -298,7 +298,7 @@ class CharmDockerExecutor:
             # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
             
-            # [重要] 確保 OpenClawAdapter 知道它現在是 Session Mode
+            # [Important] Ensure OpenClawAdapter knows it is now in Session Mode
             export CHARM_SESSION_MODE="true"
             
             # Launch using Charm SDK to load OpenClawAdapter.
@@ -325,10 +325,10 @@ class CharmDockerExecutor:
             EXIT_CODE=$?
             echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
             
-            # [移除] Memory Sync logic (curl POST to store)
-            # 原因：GCS Fuse 會自動寫入，不需要手動同步 API。
+            # [Removed] Memory Sync logic (curl POST to store)
+            # Reason: GCS Fuse writes automatically, no need to manually sync via API.
             
-            # --- Artifact Upload (保持保留，用於下載生成的 PDF/圖片) ---
+            # --- Artifact Upload (Preserved, used to download generated PDFs/Images) ---
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
@@ -375,7 +375,7 @@ class CharmDockerExecutor:
         {skill_setup_block}
         
         # Inject Global Memory (User Profile)
-        # [移除] MEMORY_FILE_PATH 設定與 injection
+        # [Removed] MEMORY_FILE_PATH setup and injection
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then

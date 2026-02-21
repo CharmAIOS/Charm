@@ -18,6 +18,11 @@ try:
 except ImportError:
     CloudRunBackend = None
 
+try:
+    from .backend.fly_io import FlyIoBackend
+except ImportError:
+    FlyIoBackend = None
+
 logger = logging.getLogger("charm.runner")
 
 TEMP_DIR = tempfile.gettempdir()
@@ -32,16 +37,12 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        if self.env in ["production", "staging"]:
-            logger.info(f"Cloud Mode ({self.env}): Backend Selection Strategy Active")
-            if CloudRunBackend:
-                self.backend: ExecutionBackend = CloudRunBackend()
-            else:
-                logger.error("CloudRunBackend missing. Falling back to Docker.")
-                self.backend = DockerBackend()
-        else:
-            logger.info("Development Mode: Using DockerBackend")
-            self.backend = DockerBackend()
+        # Initialize all available backend engines
+        self.local_docker_backend = DockerBackend()
+        self.cloud_run_backend = CloudRunBackend() if CloudRunBackend else None
+        self.daemon_backend = FlyIoBackend() if FlyIoBackend else None
+
+        # Backend is dynamically assigned in run() based on env + lifecycle
 
     def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
         """
@@ -280,15 +281,8 @@ class CharmDockerExecutor:
         # Skill Installation Block
         skill_setup_block = self._generate_skill_install_block(skills)
 
-        # Memory Hydration Block
-        MEMORY_FILE_PATH = "/root/.openclaw/workspace/MEMORY.md"
-        memory_hydration_block = f"""
-        mkdir -p "$(dirname "{MEMORY_FILE_PATH}")"
-        if [ ! -z "$CHARM_USER_PROFILE" ]; then
-            echo "$CHARM_USER_PROFILE" > "{MEMORY_FILE_PATH}"
-            echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Memory Hydrated"}}'
-        fi
-        """
+        # [Removed] memory_hydration_block
+        # Reason: Now using GCS Mount, files are already there, no need to inject via env vars.
 
         # Execution Command Selection
         if adapter_type == "node":
@@ -303,6 +297,10 @@ class CharmDockerExecutor:
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
             # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
+            
+            # [Important] Ensure OpenClawAdapter knows it is now in Session Mode
+            export CHARM_SESSION_MODE="true"
+            
             # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
             """
@@ -327,72 +325,22 @@ class CharmDockerExecutor:
             EXIT_CODE=$?
             echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
             
-            # --- 1. Memory Dehydration (Sync back to Store) ---
-            # Checks if MEMORY.md exists and if we have the necessary credentials to sync.
-            if [ -f "{MEMORY_FILE_PATH}" ] && [ ! -z "$CHARM_USER_ID" ] && [ ! -z "$CHARM_INTERNAL_SECRET" ]; then
-                echo '::CHARM_EVENT::{{"type":"status","content":"🧠 Syncing Memory to Cloud..."}}'
-                
-                # Read content and base64 encode it to safely transmit via JSON
-                MEM_B64=$(cat "{MEMORY_FILE_PATH}" | base64 -w 0)
-                
-                # Send POST request to Store API
-                # CHARM_STORE_URL is injected by main.py
-                curl -s -X POST \\
-                     -H "Content-Type: application/json" \\
-                     -H "Authorization: Bearer $CHARM_INTERNAL_SECRET" \\
-                     -d "{{\\"user_id\\": \\"$CHARM_USER_ID\\", \\"memory_content_b64\\": \\"$MEM_B64\\"}}" \\
-                     "$CHARM_STORE_URL/api/internal/sync-memory" || true
-            fi
-
-            # --- 2. Cloud Artifact Upload ---
+            # [Removed] Memory Sync logic (curl POST to store)
+            # Reason: GCS Fuse writes automatically, no need to manually sync via API.
+            
+            # --- Artifact Upload (Preserved, used to download generated PDFs/Images) ---
             if [ ! -z "$CHARM_ARTIFACT_UPLOAD_URL" ]; then
                 tar -czf output_artifacts.tar.gz \
                     --exclude='./.*' \
                     --exclude='__pycache__' \
-                    --exclude='charm.yaml' \
-                    --exclude='requirements.txt' \
-                    --exclude='pyproject.toml' \
                     --exclude='node_modules' \
-                    --exclude='*.py' \
-                    --exclude='output_artifacts.tar.gz' \
+                    --exclude='skills' \
                     --newer .charm_snapshot .
 
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
-
-            # --- 3. Local Artifact Sync (Dev Mode) ---
-            if [ -z "$CHARM_ARTIFACT_UPLOAD_URL" ] && [ -d "/app/artifacts_mount" ]; then
-                # Sync memory file locally for inspection
-                if [ -f "$CHARM_MEMORY_FILE" ]; then 
-                    cp "$CHARM_MEMORY_FILE" /app/artifacts_mount/ 2>/dev/null
-                elif [ -f "charm_memory.json" ]; then
-                    cp "charm_memory.json" /app/artifacts_mount/ 2>/dev/null
-                fi
-                
-                # Sync OpenClaw memory
-                if [ -f "{MEMORY_FILE_PATH}" ]; then
-                     mkdir -p /app/artifacts_mount/.openclaw/workspace
-                     cp "{MEMORY_FILE_PATH}" /app/artifacts_mount/MEMORY.md 2>/dev/null
-                fi
-                
-                find . -type f -newer .charm_snapshot \
-                    -not -path "*/\\.*" \
-                    -not -path "*/__pycache__/*" \
-                    -not -path "*/node_modules/*" \
-                    -not -path "*/skills/*" \
-                    -not -name ".charm_snapshot" \
-                    -not -name "charm.yaml" \
-                    -not -name "*.py" \
-                    -not -name ".env" \
-                    -not -name "charm_memory.json" \
-                    > .charm_new_files
-
-                while IFS= read -r file; do
-                    [ -f "$file" ] && cp --parents "$file" /app/artifacts_mount/ 2>/dev/null || true
-                done < .charm_new_files
-            fi
             
-            echo "::CHARM_EVENT::{{\\"type\\":\\"internal_run_finished\\",\\"content\\":{{\\"exit_code\\":$EXIT_CODE}}}}"
+            echo "::CHARM_EVENT::{{"type":"internal_run_finished","content":{{"exit_code":$EXIT_CODE}}}}"
         }}
         trap cleanup EXIT
         """
@@ -414,12 +362,7 @@ class CharmDockerExecutor:
         echo "{b64_env_content}" | base64 -d > .env
         {dl_block}
 
-        # Memory File Setup (Chat History)
-        if [ -f "charm_memory.json" ]; then
-            export CHARM_MEMORY_FILE="$(pwd)/charm_memory.json"
-        else
-            export CHARM_MEMORY_FILE="/app/artifacts_mount/charm_memory.json"
-        fi
+        mkdir -p "$CHARM_WORKSPACE_DIR"
         mkdir -p /app/artifacts_mount
 
         {install_local_sdk_cmd}
@@ -432,7 +375,7 @@ class CharmDockerExecutor:
         {skill_setup_block}
         
         # Inject Global Memory (User Profile)
-        {memory_hydration_block}
+        # [Removed] MEMORY_FILE_PATH setup and injection
 
         # Config Runtime (Python only)
         if [ "{adapter_type}" != "node" ]; then
@@ -460,10 +403,12 @@ class CharmDockerExecutor:
         file_urls: Dict[str, str],
         history: List[Dict[str, str]],
         state_snapshot: str = "",
+        thread_id: Optional[str] = None,
         local_source_path: Optional[str] = None,
         supabase_client: Any = None,
         image: Optional[str] = None,
         adapter_type: str = "python",
+        lifecycle: str = "serverless",
         skills: List[Dict[str, Any]] = [],
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
@@ -471,27 +416,46 @@ class CharmDockerExecutor:
         host_artifact_path = os.path.join(HOST_ARTIFACTS_ROOT, run_id)
         os.makedirs(host_artifact_path, exist_ok=True)
 
+        if thread_id:
+            input_payload["__charm_thread_id__"] = thread_id
+
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot
 
-        memory_file_name = "charm_memory.json"
-        if history:
-            if self.env == "production" and supabase_client:
-                pass
+        user_id = env_vars.get("CHARM_USER_ID", "local_dev")
+        thread_id_val = thread_id or "default_thread"
+        env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
 
-            try:
-                with open(
-                    os.path.join(host_artifact_path, memory_file_name), "w", encoding="utf-8"
-                ) as f:
-                    json.dump(history, f, ensure_ascii=False)
-            except Exception as e:
-                logger.error(f"Local memory write failed: {e}")
+        # Dynamic backend dispatch based on environment and lifecycle
+        if self.env in ["production", "staging"]:
+            if lifecycle == "daemon":
+                logger.info(f"[{run_id}] Dispatching to Daemon Infrastructure")
+                if self.daemon_backend:
+                    backend = self.daemon_backend
+                else:
+                    yield sse_pack(
+                        "error",
+                        "Daemon infrastructure (Fly.io/K8s) is not configured on this environment.",
+                    )
+                    return
+            else:
+                logger.info(f"[{run_id}] Dispatching to Serverless Infrastructure")
+                if self.cloud_run_backend:
+                    backend = self.cloud_run_backend
+                else:
+                    yield sse_pack(
+                        "error", "Serverless infrastructure (Cloud Run) is not configured."
+                    )
+                    return
+        else:
+            # Local development always uses Docker
+            backend = self.local_docker_backend
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
-        should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
+        should_mount_local = bool(local_source_path) and isinstance(backend, DockerBackend)
 
         use_file_input = False
-        if isinstance(self.backend, DockerBackend):
+        if isinstance(backend, DockerBackend):
             try:
                 input_path = os.path.join(host_artifact_path, "input.json")
                 with open(input_path, "w", encoding="utf-8") as f:
@@ -525,10 +489,11 @@ class CharmDockerExecutor:
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
             image=image,
+            lifecycle=lifecycle,
         )
 
         try:
-            async for log in self.backend.stream_logs(config):
+            async for log in backend.stream_logs(config):
                 if "internal_artifact_found" in log:
                     yield log
                     continue
@@ -538,5 +503,5 @@ class CharmDockerExecutor:
             logger.exception("Orchestrator Error")
             yield sse_pack("error", f"Orchestrator Error: {e}")
         finally:
-            await self.backend.cleanup(run_id)
+            await backend.cleanup(run_id)
             shutil.rmtree(host_artifact_path, ignore_errors=True)

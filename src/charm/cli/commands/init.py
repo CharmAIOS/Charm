@@ -13,7 +13,7 @@ console = Console()
 def init_command(
     name: str = typer.Argument(..., help="Name of the agent directory"),
     template: str = typer.Option(
-        "default", help="Template to use: 'default' (Python Code) or 'skill' (OpenClaw)"
+        "default", help="Template to use: 'default' (Python Code) or 'openclaw' (MCP Agent)"
     ),
 ):
     """
@@ -40,31 +40,73 @@ def init_command(
         ignore_target = project_path / ".charmignore"
         ignore_target.write_text(ignore_content, encoding="utf-8")
 
-        if template == "skill":
-            # Modify YAML for Skill/OpenClaw mode
-            # Replace default 'crewai' adapter with 'openclaw' and remove entry_point hints
-            yaml_content = yaml_content.replace('type: "crewai"', 'type: "openclaw"')
-            yaml_content = yaml_content.replace(
-                'entry_point: "src.main:agent"', "# entry_point: (Not needed for OpenClaw)"
-            )
+        if template == "skill" or template == "openclaw":
+            # [NEW] OpenClaw Template
+            yaml_content = """version: "0.4.1"
 
-            # Uncomment the skills section example for better DX
-            yaml_content = yaml_content.replace("# skills:", "skills:")
-            yaml_content = yaml_content.replace(
-                '#   - name: "google-search"', '  - name: "google-search"'
-            )
-            yaml_content = yaml_content.replace(
-                '#     source: "smithery:@mcp/google-search"',
-                '    source: "smithery:@mcp/google-search"',
-            )
+persona:
+  name: "My OpenClaw Agent"
+  description: "A persistent, stateful agent."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["assistant"]
 
-            # Write charm.yaml
-            target_file = project_path / "charm.yaml"
-            target_file.write_text(yaml_content, encoding="utf-8")
+interface:
+  input:
+    properties:
+      input: { type: "string", title: "Instruction", x-ui-widget: "textarea" }
+  output:
+    type: "string"
 
-            console.print(f"[bold green]✔ Created new Skill Agent project: {name}[/bold green]")
-            console.print("  ├── charm.yaml (OpenClaw Configuration)")
-            console.print("  └── .charmignore")
+runtime:
+  adapter:
+    type: "openclaw"
+  
+  # The Brain Configuration
+  config:
+    model: "gpt-4o"
+    temperature: 0.5
+    # This becomes your agent's long-term identity
+    system_prompt: |
+      You are a helpful assistant living in the cloud.
+      You have access to a persistent workspace.
+      Always check your memory file before answering.
+
+  mode: "full" # Required for OpenClaw
+
+  skills:
+    # 1. Official Skill (Registry)
+    - name: "google-search"
+      source: "smithery:@mcp/google-search"
+
+    # 2. Local Custom Skill (Folder)
+    # - name: "my-tool"
+    #   source: "local:./skills/my_tool"
+"""
+            # Write YAML
+            (project_path / "charm.yaml").write_text(yaml_content, encoding="utf-8")
+
+            # Create .charmignore
+            ignore_content = ".env\n__pycache__\nnode_modules\n.git\n"
+            (project_path / ".charmignore").write_text(ignore_content, encoding="utf-8")
+
+            # Create Skills Directory Structure
+            skills_dir = project_path / "skills"
+            skills_dir.mkdir(exist_ok=True)
+
+            # Create a sample custom skill
+            sample_skill = skills_dir / "my_tool"
+            sample_skill.mkdir(exist_ok=True)
+
+            (sample_skill / "server.py").write_text(
+                "print('Hello from custom skill!')\n# Implement MCP server here", encoding="utf-8"
+            )
+            (sample_skill / "requirements.txt").write_text("mcp", encoding="utf-8")
+
+            console.print(f"[bold green]✔ Created OpenClaw Agent: {name}[/bold green]")
+            console.print("  ├── charm.yaml")
+            console.print("  └── skills/       <-- Place custom Python/Node skills here")
+            console.print("      └── my_tool/  <-- Example")
 
         else:
             # 2. Default (Code-based) mode

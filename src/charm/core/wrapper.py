@@ -5,7 +5,6 @@ from ..adapters.base import BaseAdapter
 from .callbacks import CharmCallbackHandler
 from .io import CharmEmitter, StdoutInterceptor
 from .logger import logger
-from .memory import load_memory_snapshot
 
 
 class CharmWrapper:
@@ -17,10 +16,12 @@ class CharmWrapper:
         self.adapter = adapter
         self.config = config
 
-    def _inject_memory(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Loads conversation history from disk and injects it into inputs.
+        Main execution entry point. Handles I/O interception and error handling.
         """
+        CharmEmitter.emit_status("Initializing Agent Runtime...")
+
         # Handle None or non-dict inputs gracefully
         if inputs is None:
             inputs = {}
@@ -28,25 +29,7 @@ class CharmWrapper:
             logger.warning(f"[Charm] Input is not a dict: {type(inputs)}. Wrapping in 'input'.")
             inputs = {"input": inputs}
 
-        history = load_memory_snapshot()
-        if history:
-            new_inputs = inputs.copy()
-            new_inputs["__charm_history__"] = history
-            return new_inputs
-        return inputs
-
-    def invoke(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Main execution entry point. Handles I/O interception, memory, and error handling.
-        """
-        CharmEmitter.emit_status("Initializing Agent Runtime...")
-
-        # Memory Injection
-        inputs_with_memory = self._inject_memory(inputs)
-
-        # Log the keys being passed to the adapter
-        debug_keys = [k for k in inputs_with_memory.keys() if k != "__charm_history__"]
-        logger.debug(f"[Charm] Invoking Adapter with keys: {debug_keys}")
+        logger.debug(f"[Charm] Invoking Adapter with keys: {list(inputs.keys())}")
 
         # Hijack Stdout
         original_stdout = sys.stdout
@@ -58,14 +41,26 @@ class CharmWrapper:
 
         try:
             # Execute via Adapter
-            result = self.adapter.invoke(inputs_with_memory, callbacks=[charm_callback])
+            result = self.adapter.invoke(inputs, callbacks=[charm_callback])
 
             # State Broadcasting
             if "charm_state" in result and result["charm_state"]:
                 CharmEmitter._write("state_update", {"content": result["charm_state"]})
 
+            if result.get("status") == "suspended":
+                CharmEmitter._write(
+                    "control",
+                    {
+                        "status": "suspended",
+                        "thread_id": result.get("thread_id"),
+                        "next_step": result.get("next_step"),
+                    },
+                )
+                if "output" in result:
+                    CharmEmitter.emit_final(result["output"])
+                return result
+
             if result.get("status") == "success":
-                # Emit final result only if it wasn't already streamed token-by-token
                 if not stream_state.get("has_streamed", False):
                     CharmEmitter.emit_final(result.get("output", ""))
                 return result

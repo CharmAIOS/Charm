@@ -68,6 +68,29 @@ class SkillConfig(BaseModel):
     )
 
 
+# -----------------------------------------------------------------------------
+# [NEW] OpenClaw Specific Configuration
+# -----------------------------------------------------------------------------
+class OpenClawConfig(BaseModel):
+    """
+    Configuration specific to the OpenClaw runtime engine.
+    """
+
+    system_prompt: Optional[str] = Field(
+        None,
+        description="The core personality or instruction set for the agent (writes to IDENTITY.md).",
+    )
+    model: str = Field(
+        "gpt-4o", description="The LLM model ID to use (e.g. gpt-4o, claude-3-5-sonnet)."
+    )
+    temperature: float = Field(0.0, description="LLM sampling temperature.")
+
+    auto_install_dependencies: bool = Field(
+        True,
+        description="If True, recursively installs requirements.txt/package.json found in local skills.",
+    )
+
+
 class RuntimeAdapter(BaseModel):
     """Instructs the Loader how to bootstrap this agent."""
 
@@ -88,12 +111,22 @@ class RuntimeConfig(BaseModel):
 
     # List of Skills to mount (For OpenClaw/MCP)
     skills: List[SkillConfig] = Field(
-        default_factory=list, description="List of MCP Skills to mount (Used if type='openclaw')"
+        default_factory=list, description="List of MCP Skills to mount."
+    )
+
+    # Add the config field here
+    config: Optional[OpenClawConfig] = Field(
+        None, description="Engine-specific configuration (e.g. for OpenClaw)."
     )
 
     mode: Literal["standard", "full"] = Field(
         "standard",
         description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime.",
+    )
+
+    lifecycle: Literal["serverless", "daemon"] = Field(
+        "serverless",
+        description="Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on).",
     )
 
 

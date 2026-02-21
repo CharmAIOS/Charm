@@ -1,4 +1,4 @@
-version: "0.4.1"  # [System] UAC Protocol Version
+version: "0.4.1" # [System] UAC Protocol Version
 
 # 1. Metadata
 persona:
@@ -12,7 +12,7 @@ persona:
   authors: ["Your Name"]
   tags: ["productivity"] # First tag determines category
   license: "MIT"
-  
+
   # Storefront Assets
   # assets:
   #   icon: "https://.../icon.png"
@@ -33,7 +33,7 @@ interface:
         title: "Task Input"
         description: "What should the agent input?"
         x-ui-widget: "textarea"
-      
+
       # File Upload Configuration
       # Uncomment and rename the variable below if your agent needs to read files.
       # The platform will automatically inject the uploaded filename into this variable.
@@ -54,22 +54,27 @@ runtime:
     # - openclaw : Configuration-driven Agent (No code required)
     # - node : For JavaScript/TypeScript Agents
     # - custom : Pure Python functions
-    type: "crewai"  
-    
+    type: "crewai"
+
     # [Entry Point] Where does execution start?
     # - Python: "module:variable" (e.g. "src.main:agent")
     # - Node.js: "shell command"  (e.g. "npm start")
     # - OpenClaw: Optional (uses default host if empty)
     entry_point: "src.main:agent"
-    
+
     # List required environment variable NAMES (keys only, no values)
     environment_variables:
       - "OPENAI_API_KEY"
-    
+
     # [Environment Mode]
     # "standard": Lightweight Python env. Best for text/data tasks.
     # "full": Includes Node.js, Chrome, FFmpeg. REQUIRED for MCP Skills, Browser Use, or OpenClaw.
     mode: "standard"
+
+    # [Execution Mode]
+    # "serverless": Max 10 mins. Ideal for single tasks.
+    # "daemon": 24/7 Always-on. Ideal for monitoring or long-running services.
+    lifecycle: "serverless"
 
     # [AgentSkills & MCP Tools]
     # Usage in Code: You are responsible for connecting to them (e.g. using LangChain adapters).
@@ -86,11 +91,9 @@ runtime:
 auth:
   providers:
     - name: "google"
-      scopes: 
+      scopes:
         - "https://www.googleapis.com/auth/calendar.readonly"
         - "https://www.googleapis.com/auth/gmail.send"
-
-        
 
 # 6. Governance
 policies:

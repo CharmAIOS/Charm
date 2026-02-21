@@ -28,17 +28,6 @@ class CharmProcessAdapter(BaseAdapter):
         input_path = os.path.join(os.getcwd(), "input.json")
         native_input = inputs.copy()
 
-        # Inject User Profile
-        user_profile = self._get_user_profile()
-        if user_profile:
-            native_input["user_profile"] = user_profile
-
-        raw_history = native_input.pop("__charm_history__", [])
-        if raw_history:
-            native_input["chat_history"] = raw_history[-10:]
-        else:
-            native_input["chat_history"] = []
-
         try:
             with open(input_path, "w", encoding="utf-8") as f:
                 json.dump(native_input, f, ensure_ascii=False)

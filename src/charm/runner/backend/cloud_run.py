@@ -40,6 +40,7 @@ class CloudRunBackend(ExecutionBackend):
         self.jobs_client = run_v2.JobsAsyncClient()
         self.logging_client = cloud_logging.Client(project=self.project_id)
         self.parent = f"projects/{self.project_id}/locations/{self.region}"
+        self.storage_bucket = os.getenv("CHARM_USER_BUCKET_NAME")
 
     async def _create_job(self, job_id: str, config: RunConfig) -> str:
         b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
@@ -47,7 +48,7 @@ class CloudRunBackend(ExecutionBackend):
         env_vars = [
             {"name": "PYTHONUNBUFFERED", "value": "1"},
             {"name": "CHARM_BOOTSTRAP_SCRIPT", "value": b64_script},
-            *[{"name": k, "value": str(v)} for k, v in config.env_vars.items()],
+            *[{"name": k, "value": str(v)} for k, v in config.env_vars.items() if v is not None],
         ]
 
         default_fallback = (
@@ -57,22 +58,37 @@ class CloudRunBackend(ExecutionBackend):
 
         logger.info(f"[CloudRun] Target Image resolved to: {worker_image}")
 
-        job = run_v2.Job()
-        job.template.template.containers = [
-            {
-                "image": worker_image,
-                "command": ["/bin/bash", "-c"],
-                "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
-                "env": env_vars,
-                "resources": {"limits": {"memory": "2Gi", "cpu": "1000m"}},
-            }
-        ]
+        logger.info(f"[CloudRun] Creating Serverless Task Job {job_id}")
 
-        job.template.task_count = 1
+        container = {
+            "image": worker_image,
+            "command": ["/bin/bash", "-c"],
+            "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
+            "env": env_vars,
+            "resources": {
+                "limits": {
+                    "memory": "1Gi",
+                    "cpu": "1000m",
+                }
+            },
+        }
+
+        job = run_v2.Job()
         job.template.template.max_retries = 0
-        job.template.task_count = 1
-        job.template.template.max_retries = 0
-        job.template.template.timeout = "3600s"
+
+        # Serverless hard limit: 10 minutes (regardless of adapter type)
+        job.template.template.timeout = "600s"
+
+        if self.storage_bucket:
+            container["volume_mounts"] = [{"name": "gcs-persistence", "mount_path": "/workspace"}]
+            job.template.template.volumes = [
+                {
+                    "name": "gcs-persistence",
+                    "gcs": {"bucket": self.storage_bucket, "read_only": False},
+                }
+            ]
+
+        job.template.template.containers = [container]
 
         request = run_v2.CreateJobRequest(parent=self.parent, job=job, job_id=job_id)
 

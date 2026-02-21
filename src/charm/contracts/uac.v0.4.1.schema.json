@@ -307,6 +307,32 @@
             }
           }
         },
+        "config": {
+          "type": "object",
+          "description": "Engine-specific configuration (e.g. for OpenClaw).",
+          "properties": {
+            "system_prompt": {
+              "type": "string",
+              "description": "Global system instruction for the agent."
+            },
+            "model": {
+              "type": "string",
+              "default": "gpt-4o",
+              "description": "LLM model ID."
+            },
+            "temperature": {
+              "type": "number",
+              "default": 0.0,
+              "description": "Sampling temperature."
+            },
+            "auto_install_dependencies": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically install dependencies for local skills."
+            }
+          },
+          "additionalProperties": false
+        },
         "mode": {
           "type": "string",
           "enum": [
@@ -315,6 +341,15 @@
           ],
           "default": "standard",
           "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js."
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "serverless",
+            "daemon"
+          ],
+          "default": "serverless",
+          "description": "Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on)."
         }
       }
     },

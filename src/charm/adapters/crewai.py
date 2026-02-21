@@ -29,33 +29,6 @@ class CharmCrewAIAdapter(BaseAdapter):
                             agent.llm.callbacks = []
                         agent.llm.callbacks.extend(callbacks)
 
-    def _build_context_block(self, user_profile: str, history: List[Dict[str, str]]) -> str:
-        """
-        Constructs a clean Markdown block containing Profile and History.
-        """
-        sections = []
-
-        # 1. Global Memory (Profile)
-        if user_profile:
-            sections.append(f"## User Profile & Preferences\n{user_profile}")
-
-        # 2. Short-term Memory (History)
-        if history:
-            recent_history = history[-10:]
-            hist_text = "## Recent Conversation Context\n"
-            for msg in recent_history:
-                role = msg.get("role", "unknown").upper()
-                content = str(msg.get("content", "")).strip()
-                if content:
-                    hist_text += f"- **{role}**: {content}\n"
-
-            sections.append(hist_text)
-
-        if not sections:
-            return ""
-
-        return "\n\n".join(sections) + "\n\n## Current Task Instruction\n"
-
     def invoke(
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
     ) -> Dict[str, Any]:
@@ -88,25 +61,6 @@ class CharmCrewAIAdapter(BaseAdapter):
 
         # Extract system keys
         _ = native_input.pop("__charm_state__", None)
-        history_data = native_input.pop("__charm_history__", None)
-        user_profile = self._get_user_profile()
-
-        context_block = self._build_context_block(user_profile, history_data)
-
-        if context_block and hasattr(self.agent, "tasks") and self.agent.tasks:
-            try:
-                first_task = self.agent.tasks[0]
-                if (
-                    "## User Profile" not in first_task.description
-                    and "## Recent Conversation" not in first_task.description
-                ):
-                    original_desc = first_task.description
-                    first_task.description = context_block + original_desc
-                    logger.debug(
-                        f"[Charm] Injected global context into CrewAI Task: {first_task.description[:50]}..."
-                    )
-            except Exception as e:
-                logger.warning(f"[Charm] Failed to inject context into task: {e}")
 
         # Handle simple string input case
         if isinstance(native_input, str):

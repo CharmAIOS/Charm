@@ -58,13 +58,7 @@ class CloudRunBackend(ExecutionBackend):
 
         logger.info(f"[CloudRun] Target Image resolved to: {worker_image}")
 
-        is_session_mode = False
-        if config.env_vars.get("CHARM_RUNTIME_ADAPTER") == "openclaw":
-            is_session_mode = True
-
-        logger.info(
-            f"[CloudRun] Creating Job {job_id}. Mode: {'SESSION (OpenClaw)' if is_session_mode else 'TASK'}"
-        )
+        logger.info(f"[CloudRun] Creating Serverless Task Job {job_id}")
 
         container = {
             "image": worker_image,
@@ -73,7 +67,7 @@ class CloudRunBackend(ExecutionBackend):
             "env": env_vars,
             "resources": {
                 "limits": {
-                    "memory": "2Gi" if is_session_mode else "1Gi",
+                    "memory": "1Gi",
                     "cpu": "1000m",
                 }
             },
@@ -82,31 +76,20 @@ class CloudRunBackend(ExecutionBackend):
         job = run_v2.Job()
         job.template.template.max_retries = 0
 
-        if is_session_mode:
-            # === Session Mode (OpenClaw) ===
-            job.template.template.timeout = "3600s"
+        # Serverless hard limit: 10 minutes (regardless of adapter type)
+        job.template.template.timeout = "600s"
 
-            if self.storage_bucket:
-                container["volume_mounts"] = [
-                    {
-                        "name": "gcs-persistence",
-                        "mount_path": "/root/.openclaw",
-                    }
-                ]
-                job.template.template.volumes = [
-                    {
-                        "name": "gcs-persistence",
-                        "gcs": {"bucket": self.storage_bucket, "read_only": False},
-                    }
-                ]
-            else:
-                logger.warning(
-                    "CHARM_USER_BUCKET_NAME not set. Session mode will leverage ephemeral storage only!"
-                )
-
-        else:
-            # === Task Mode (Codebase Agent) ===
-            job.template.template.timeout = "600s"
+        # If the agent needs GCS (e.g. OpenClaw), mount it but with short lifecycle
+        if config.env_vars.get("CHARM_RUNTIME_ADAPTER") == "openclaw" and self.storage_bucket:
+            container["volume_mounts"] = [
+                {"name": "gcs-persistence", "mount_path": "/root/.openclaw"}
+            ]
+            job.template.template.volumes = [
+                {
+                    "name": "gcs-persistence",
+                    "gcs": {"bucket": self.storage_bucket, "read_only": False},
+                }
+            ]
 
         job.template.template.containers = [container]
 

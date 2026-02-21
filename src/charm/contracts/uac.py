@@ -114,7 +114,7 @@ class RuntimeConfig(BaseModel):
         default_factory=list, description="List of MCP Skills to mount."
     )
 
-    # [NEW] Add the config field here
+    # Add the config field here
     config: Optional[OpenClawConfig] = Field(
         None, description="Engine-specific configuration (e.g. for OpenClaw)."
     )
@@ -122,6 +122,11 @@ class RuntimeConfig(BaseModel):
     mode: Literal["standard", "full"] = Field(
         "standard",
         description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime.",
+    )
+
+    lifecycle: Literal["serverless", "daemon"] = Field(
+        "serverless",
+        description="Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on).",
     )
 
 

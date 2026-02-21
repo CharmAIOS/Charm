@@ -172,10 +172,16 @@ class CharmOpenClawAdapter(BaseAdapter):
                 # --- Environment Injection ---
                 if server_config:
                     env_vars = skill.config.copy() if skill.config else {}
-                    # Pass through global keys
-                    for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "TAVILY_API_KEY"]:
-                        if os.environ.get(key):
-                            env_vars[key] = os.environ[key]
+
+                    for env_key, env_value in os.environ.items():
+                        if (
+                            env_key.endswith("_API_KEY")
+                            or env_key.endswith("_ACCESS_TOKEN")
+                            or env_key.endswith("_TOKEN")
+                            or env_key in ["OPENAI_API_BASE", "OPENAI_API_HOST"]
+                        ):
+                            if env_key not in env_vars:
+                                env_vars[env_key] = env_value
 
                     if env_vars:
                         server_config["env"] = env_vars
@@ -214,6 +220,18 @@ class CharmOpenClawAdapter(BaseAdapter):
         self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
     ) -> Dict[str, Any]:
         logger.info("🚀 Booting OpenClaw Adapter (Session Mode)")
+
+        try:
+            for item in os.listdir(self.work_dir):
+                if item.endswith(".md") or item.endswith(".txt") or item.endswith(".json"):
+                    src_path = os.path.join(self.work_dir, item)
+                    dst_path = os.path.join(self.workspace_dir, item)
+
+                    if os.path.isfile(src_path):
+                        shutil.copy2(src_path, dst_path)
+                        logger.info(f"📄 Synced asset to workspace: {item}")
+        except Exception as e:
+            logger.error(f"Failed to sync static assets: {e}")
 
         # 1. Config Generation (This triggers dependency install)
         config_path = self._generate_openclaw_config()

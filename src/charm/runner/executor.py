@@ -18,6 +18,11 @@ try:
 except ImportError:
     CloudRunBackend = None
 
+try:
+    from .backend.fly_io import FlyIoBackend
+except ImportError:
+    FlyIoBackend = None
+
 logger = logging.getLogger("charm.runner")
 
 TEMP_DIR = tempfile.gettempdir()
@@ -32,16 +37,12 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        if self.env in ["production", "staging"]:
-            logger.info(f"Cloud Mode ({self.env}): Backend Selection Strategy Active")
-            if CloudRunBackend:
-                self.backend: ExecutionBackend = CloudRunBackend()
-            else:
-                logger.error("CloudRunBackend missing. Falling back to Docker.")
-                self.backend = DockerBackend()
-        else:
-            logger.info("Development Mode: Using DockerBackend")
-            self.backend = DockerBackend()
+        # Initialize all available backend engines
+        self.local_docker_backend = DockerBackend()
+        self.cloud_run_backend = CloudRunBackend() if CloudRunBackend else None
+        self.daemon_backend = FlyIoBackend() if FlyIoBackend else None
+
+        # Backend is dynamically assigned in run() based on env + lifecycle
 
     def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
         """
@@ -412,6 +413,7 @@ class CharmDockerExecutor:
         supabase_client: Any = None,
         image: Optional[str] = None,
         adapter_type: str = "python",
+        lifecycle: str = "serverless",
         skills: List[Dict[str, Any]] = [],
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
@@ -438,11 +440,36 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Local memory write failed: {e}")
 
+        # Dynamic backend dispatch based on environment and lifecycle
+        if self.env in ["production", "staging"]:
+            if lifecycle == "daemon":
+                logger.info(f"[{run_id}] Dispatching to Daemon Infrastructure")
+                if self.daemon_backend:
+                    backend = self.daemon_backend
+                else:
+                    yield sse_pack(
+                        "error",
+                        "Daemon infrastructure (Fly.io/K8s) is not configured on this environment.",
+                    )
+                    return
+            else:
+                logger.info(f"[{run_id}] Dispatching to Serverless Infrastructure")
+                if self.cloud_run_backend:
+                    backend = self.cloud_run_backend
+                else:
+                    yield sse_pack(
+                        "error", "Serverless infrastructure (Cloud Run) is not configured."
+                    )
+                    return
+        else:
+            # Local development always uses Docker
+            backend = self.local_docker_backend
+
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
-        should_mount_local = bool(local_source_path) and isinstance(self.backend, DockerBackend)
+        should_mount_local = bool(local_source_path) and isinstance(backend, DockerBackend)
 
         use_file_input = False
-        if isinstance(self.backend, DockerBackend):
+        if isinstance(backend, DockerBackend):
             try:
                 input_path = os.path.join(host_artifact_path, "input.json")
                 with open(input_path, "w", encoding="utf-8") as f:
@@ -476,10 +503,11 @@ class CharmDockerExecutor:
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
             image=image,
+            lifecycle=lifecycle,
         )
 
         try:
-            async for log in self.backend.stream_logs(config):
+            async for log in backend.stream_logs(config):
                 if "internal_artifact_found" in log:
                     yield log
                     continue
@@ -489,5 +517,5 @@ class CharmDockerExecutor:
             logger.exception("Orchestrator Error")
             yield sse_pack("error", f"Orchestrator Error: {e}")
         finally:
-            await self.backend.cleanup(run_id)
+            await backend.cleanup(run_id)
             shutil.rmtree(host_artifact_path, ignore_errors=True)

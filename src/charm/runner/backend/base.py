@@ -16,6 +16,7 @@ class RunConfig(BaseModel):
     host_cache_dir: str
     local_source_path: Optional[str] = None
     image: Optional[str] = None
+    lifecycle: str = "serverless"
 
 
 class ExecutionBackend(ABC):

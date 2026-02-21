@@ -341,6 +341,15 @@
           ],
           "default": "standard",
           "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js."
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "serverless",
+            "daemon"
+          ],
+          "default": "serverless",
+          "description": "Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on)."
         }
       }
     },

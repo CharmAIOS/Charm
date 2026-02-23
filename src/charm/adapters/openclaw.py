@@ -334,7 +334,7 @@ class CharmOpenClawAdapter(BaseAdapter):
         if not final_output and stdout_lines:
             # Filter out obvious log lines.
             clean_output = [
-                l for l in stdout_lines if not l.startswith("[") and "Thought:" not in l
+                line for line in stdout_lines if not line.startswith("[") and "Thought:" not in line
             ]
             if clean_output:
                 final_output = "\n".join(clean_output[-10:])

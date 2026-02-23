@@ -42,3 +42,8 @@ htmlcov/
 *.log
 *.tmp
 assets/*
+
+# --- Agent ---
+AGENTS.md
+CLAUDE.md
+skills/*

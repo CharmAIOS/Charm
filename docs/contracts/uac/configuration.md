@@ -181,11 +181,6 @@ runtime:
     # [Source: PyPI] 
     - name: "local-time"
       source: "pip:mcp-server-time"
-
-    # [Source: Repo] 
-    - name: "my-custom-tool"
-      source: "git:https://github.com/yourname/my-python-mcp-tool"
-      version: "main" # Or Commit Hash / Tag (If you want to pin the version)
   
   # --------------------------------------------------------------
   # RUNTIME MODE (Environment Selection)

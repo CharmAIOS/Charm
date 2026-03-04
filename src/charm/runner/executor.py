@@ -37,12 +37,27 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        # Initialize all available backend engines
         self.local_docker_backend = DockerBackend()
-        self.cloud_run_backend = CloudRunBackend() if CloudRunBackend else None
-        self.daemon_backend = FlyIoBackend() if FlyIoBackend else None
+        self.cloud_run_backend = self._safe_cloud_run_backend()
+        self.daemon_backend = self._safe_flyio_backend()
 
-        # Backend is dynamically assigned in run() based on env + lifecycle
+    def _safe_cloud_run_backend(self) -> Optional[Any]:
+        if not CloudRunBackend:
+            return None
+        try:
+            return CloudRunBackend()
+        except Exception as e:
+            logger.debug("Cloud Run backend unavailable (local dev ok): %s", e)
+            return None
+
+    def _safe_flyio_backend(self) -> Optional[Any]:
+        if not FlyIoBackend:
+            return None
+        try:
+            return FlyIoBackend()
+        except Exception as e:
+            logger.debug("Fly.io backend unavailable (local dev ok): %s", e)
+            return None
 
     def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
         """

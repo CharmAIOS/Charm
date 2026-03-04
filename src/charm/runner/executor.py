@@ -258,6 +258,10 @@ class CharmDockerExecutor:
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
             curl -s -L {shlex.quote(bundle_url)} -o bundle.tar.gz
             tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
+            # If tarball had a single top-level dir (e.g. agent name), cd into it so charm.yaml is in .
+            if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
+                cd "$(ls -A)" || true
+            fi
             """
 
         # Dependency Installation Logic (Polyglot)

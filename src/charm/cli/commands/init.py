@@ -11,7 +11,10 @@ console = Console()
 
 @app.command("init")
 def init_command(
-    name: str = typer.Argument(..., help="Name of the agent directory"),
+    name: str = typer.Argument(
+        ...,
+        help="Agent directory path (e.g. 'my-agent' or 'agents/my-agent' to keep under agents/)",
+    ),
     template: str = typer.Option(
         "default", help="Template to use: 'default' (Python Code) or 'openclaw' (MCP Agent)"
     ),

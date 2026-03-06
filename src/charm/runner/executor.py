@@ -257,7 +257,12 @@ class CharmDockerExecutor:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
             curl -s -L {shlex.quote(bundle_url)} -o bundle.tar.gz
-            tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
+            if ! tar -xzf bundle.tar.gz --no-same-owner; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download invalid (not gzip). Check signed URL expiry and Storage path."}}'
+              rm -f bundle.tar.gz
+              exit 1
+            fi
+            rm -f bundle.tar.gz
             # If tarball had a single top-level dir (e.g. agent name), cd into it so charm.yaml is in .
             if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
                 cd "$(ls -A)" || true

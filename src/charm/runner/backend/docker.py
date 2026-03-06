@@ -124,14 +124,24 @@ class DockerBackend(ExecutionBackend):
                     if not safe_line:
                         continue
 
+                    # Parse both __CHARM_EVENT__ and ::CHARM_EVENT:: (script uses both)
+                    json_part = None
                     if EVENT_PREFIX in safe_line:
                         try:
-                            json_part = safe_line.split(EVENT_PREFIX)[1]
+                            json_part = safe_line.split(EVENT_PREFIX)[1].strip()
+                        except IndexError:
+                            pass
+                    elif "::CHARM_EVENT::" in safe_line:
+                        try:
+                            json_part = safe_line.split("::CHARM_EVENT::", 1)[1].strip()
+                        except IndexError:
+                            pass
+                    if json_part:
+                        try:
                             import json
-
                             payload = json.loads(json_part)
                             content_str = str(payload.get("content", ""))
-                            if content_str:
+                            if content_str and payload.get("type") != "thinking":
                                 sent_event_contents.append(content_str)
                             yield f"data: {json_part}\n\n"
                         except Exception:
@@ -153,7 +163,12 @@ class DockerBackend(ExecutionBackend):
             exit_code = result.get("StatusCode", 1)
 
             if exit_code != 0:
-                err_detail = "\n".join(recent_logs)
+                # Drop raw protocol lines from error detail so UI stays readable
+                err_lines = [
+                    line for line in recent_logs
+                    if EVENT_PREFIX not in line and "::CHARM_EVENT::" not in line
+                ]
+                err_detail = "\n".join(err_lines) if err_lines else "See runner logs."
                 yield sse_pack("error", f"Execution Failed (Code {exit_code}).\n{err_detail}")
 
         except Exception as e:

@@ -37,12 +37,27 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        # Initialize all available backend engines
         self.local_docker_backend = DockerBackend()
-        self.cloud_run_backend = CloudRunBackend() if CloudRunBackend else None
-        self.daemon_backend = FlyIoBackend() if FlyIoBackend else None
+        self.cloud_run_backend = self._safe_cloud_run_backend()
+        self.daemon_backend = self._safe_flyio_backend()
 
-        # Backend is dynamically assigned in run() based on env + lifecycle
+    def _safe_cloud_run_backend(self) -> Optional[Any]:
+        if not CloudRunBackend:
+            return None
+        try:
+            return CloudRunBackend()
+        except Exception as e:
+            logger.debug("Cloud Run backend unavailable (local dev ok): %s", e)
+            return None
+
+    def _safe_flyio_backend(self) -> Optional[Any]:
+        if not FlyIoBackend:
+            return None
+        try:
+            return FlyIoBackend()
+        except Exception as e:
+            logger.debug("Fly.io backend unavailable (local dev ok): %s", e)
+            return None
 
     def _calculate_skill_hash(self, source: str, version: str = "latest") -> str:
         """
@@ -242,7 +257,16 @@ class CharmDockerExecutor:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
             curl -s -L {shlex.quote(bundle_url)} -o bundle.tar.gz
-            tar -xzf bundle.tar.gz --no-same-owner && rm bundle.tar.gz
+            if ! tar -xzf bundle.tar.gz --no-same-owner; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download invalid (not gzip). Check signed URL expiry and Storage path."}}'
+              rm -f bundle.tar.gz
+              exit 1
+            fi
+            rm -f bundle.tar.gz
+            # If tarball had a single top-level dir (e.g. agent name), cd into it so charm.yaml is in .
+            if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
+                cd "$(ls -A)" || true
+            fi
             """
 
         # Dependency Installation Logic (Polyglot)
@@ -452,7 +476,12 @@ class CharmDockerExecutor:
             backend = self.local_docker_backend
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
-        should_mount_local = bool(local_source_path) and isinstance(backend, DockerBackend)
+        has_bundle_url = bool(bundle_url) and str(bundle_url).strip().startswith(("http://", "https://"))
+        should_mount_local = (
+            bool(local_source_path)
+            and isinstance(backend, DockerBackend)
+            and not has_bundle_url
+        )
 
         use_file_input = False
         if isinstance(backend, DockerBackend):

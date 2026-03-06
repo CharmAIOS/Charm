@@ -471,7 +471,12 @@ class CharmDockerExecutor:
             backend = self.local_docker_backend
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
-        should_mount_local = bool(local_source_path) and isinstance(backend, DockerBackend)
+        has_bundle_url = bool(bundle_url) and str(bundle_url).strip().startswith(("http://", "https://"))
+        should_mount_local = (
+            bool(local_source_path)
+            and isinstance(backend, DockerBackend)
+            and not has_bundle_url
+        )
 
         use_file_input = False
         if isinstance(backend, DockerBackend):

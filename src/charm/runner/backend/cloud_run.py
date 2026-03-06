@@ -141,7 +141,7 @@ class CloudRunBackend(ExecutionBackend):
                             self.logging_client.list_entries,
                             filter_=filter_str,
                             order_by=cloud_logging.DESCENDING,
-                            page_size=50,
+                            page_size=200,
                         ),
                     )
                     new_logs = sorted(list(new_logs), key=lambda x: x.timestamp)

@@ -254,13 +254,15 @@ class CharmDockerExecutor:
             cp -rT /app/local_source_mount/. .
             """
         else:
+            # Use CHARM_BUNDLE_URL from env so URL is not mangled by script embedding; log it for debugging
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
+            echo "[Runner] Job container received CHARM_BUNDLE_URL (length=${{#CHARM_BUNDLE_URL}}): $CHARM_BUNDLE_URL"
             set +e
             curl -s -L -f -w "\\n%{{http_code}}" \\
               -H "User-Agent: Charm-Runner/1.0" \\
               -H "Accept: application/octet-stream" \\
-              {shlex.quote(bundle_url)} -o bundle.tar.gz
+              "$CHARM_BUNDLE_URL" -o bundle.tar.gz
             CURL_EXIT=$?
             set -e
             if [ $CURL_EXIT -ne 0 ]; then
@@ -268,7 +270,7 @@ class CharmDockerExecutor:
               rm -f bundle.tar.gz
               exit 1
             fi
-            HTTP_CODE="${{tail -n 1 bundle.tar.gz 2>/dev/null}}"
+            HTTP_CODE="$(tail -n 1 bundle.tar.gz 2>/dev/null)"
             sed '$d' bundle.tar.gz > bundle.tar.gz.tmp 2>/dev/null && mv bundle.tar.gz.tmp bundle.tar.gz
             if [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
               echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: HTTP '"$HTTP_CODE"' (signed URL expired or path wrong)."}}'
@@ -472,6 +474,9 @@ class CharmDockerExecutor:
         user_id = env_vars.get("CHARM_USER_ID", "local_dev")
         thread_id_val = thread_id or "default_thread"
         env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
+
+        if bundle_url and str(bundle_url).strip().startswith(("http://", "https://")):
+            env_vars["CHARM_BUNDLE_URL"] = bundle_url
 
         # Dynamic backend dispatch based on environment and lifecycle
         if self.env in ["production", "staging"]:

@@ -119,11 +119,15 @@ class CloudRunBackend(ExecutionBackend):
             operation = await self.jobs_client.run_job(request=run_request)
 
             execution_name = operation.metadata.name
+            execution_id = execution_name.split("/")[-1]  # e.g. charm-2247afda-4665-4a01-b-0cba9b-cg7nt
             logger.info(f"[CloudRun] Tailing logs for execution: {execution_name}")
 
+            # Fetch logs from the Job *container* (script stdout/stderr), not the Runner API.
+            # In GCP: Cloud Run > Jobs > <job> > Executions > <execution> > LOGS, or
+            # Logs Explorer: resource.type="cloud_run_job" + label run.googleapis.com/execution_name=<execution_id>
             filter_str = f"""
             resource.type="cloud_run_job"
-            labels."run.googleapis.com/execution_name"="{execution_name.split("/")[-1]}"
+            labels."run.googleapis.com/execution_name"="{execution_id}"
             """
 
             is_done = False
@@ -182,7 +186,27 @@ class CloudRunBackend(ExecutionBackend):
                 yield sse_pack("status", "Cloud Job Completed Successfully.")
                 yield sse_pack("internal_run_finished", {"exit_code": 0, "duration_ms": 0})
             except Exception as job_error:
-                yield sse_pack("error", f"Job Failed: {str(job_error)}")
+                tail_lines = []
+                try:
+                    final_logs = await loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.logging_client.list_entries,
+                            filter_=filter_str,
+                            order_by=cloud_logging.DESCENDING,
+                            page_size=100,
+                        ),
+                    )
+                    for entry in sorted(final_logs, key=lambda x: x.timestamp)[-15:]:
+                        if isinstance(entry.payload, str) and entry.payload.strip():
+                            tail_lines.append(entry.payload.strip())
+                except Exception as log_err:
+                    logger.warning(f"Failed to fetch job log tail: {log_err}")
+                tail = "\n".join(tail_lines) if tail_lines else ""
+                err_msg = str(job_error)
+                if tail:
+                    err_msg = f"{err_msg}\n\nLast log lines from job:\n{tail}"
+                yield sse_pack("error", err_msg)
 
         except Exception as e:
             logger.exception("Cloud Run Error")
@@ -190,8 +214,12 @@ class CloudRunBackend(ExecutionBackend):
 
         finally:
             if job_name:
-                yield sse_pack("status", "Cleaning up resources...")
-                await self.cleanup(job_name)
+                skip_cleanup = os.environ.get("CHARM_KEEP_JOB_AFTER_RUN", "").lower() in ("1", "true", "yes")
+                if skip_cleanup:
+                    logger.info(f"[CloudRun] Keeping job for inspection: {job_name}")
+                else:
+                    yield sse_pack("status", "Cleaning up resources...")
+                    await self.cleanup(job_name)
 
     async def cleanup(self, job_name: str):
         try:

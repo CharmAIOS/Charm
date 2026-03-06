@@ -256,10 +256,15 @@ class CharmDockerExecutor:
         else:
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
-            curl -s -L -f -w "\\n%{{http_code}}" {shlex.quote(bundle_url)} -o bundle.tar.gz
+            set +e
+            curl -s -L -f -w "\\n%{{http_code}}" \\
+              -H "User-Agent: Charm-Runner/1.0" \\
+              -H "Accept: application/octet-stream" \\
+              {shlex.quote(bundle_url)} -o bundle.tar.gz
             CURL_EXIT=$?
+            set -e
             if [ $CURL_EXIT -ne 0 ]; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: curl exited with '"$CURL_EXIT"' (check URL and network)."}}'
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: curl exit '"$CURL_EXIT"' (HTTP error or network). Check signed URL expiry and Storage path."}}'
               rm -f bundle.tar.gz
               exit 1
             fi

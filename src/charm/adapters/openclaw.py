@@ -90,7 +90,7 @@ class CharmOpenClawAdapter(BaseAdapter):
         if os.path.exists(config_file):
             return
 
-        logger.info("🔧 Running OpenClaw onboarding (first boot)...")
+        logger.info("Running OpenClaw onboarding (first boot)...")
         try:
             result = subprocess.run(
                 [
@@ -105,7 +105,7 @@ class CharmOpenClawAdapter(BaseAdapter):
             )
             if result.returncode != 0:
                 logger.debug(f"Onboard stderr (non-fatal): {result.stderr.strip()}")
-            logger.info("✅ OpenClaw onboarding complete.")
+            logger.info("OpenClaw onboarding complete.")
         except Exception as e:
             logger.warning(f"Onboarding issue (may be non-fatal): {e}")
 
@@ -135,7 +135,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
             if is_local_path:
                 if not os.path.exists(target_path):
-                    logger.warning(f"⚠️ Skill path missing: {target_path}")
+                    logger.warning(f"Skill path missing: {target_path}")
                     continue
 
                 if not oc_config or oc_config.auto_install_dependencies:
@@ -225,7 +225,7 @@ class CharmOpenClawAdapter(BaseAdapter):
             os.makedirs(openclaw_home, exist_ok=True)
             with open(mcp_json_path, "w", encoding="utf-8") as f:
                 json.dump(mcp_servers, f, indent=2)
-            logger.info(f"📋 MCP config written: {mcp_json_path} ({len(mcp_servers)} servers)")
+            logger.info(f"MCP config written: {mcp_json_path} ({len(mcp_servers)} servers)")
         except Exception as e:
             logger.error(f"Failed to write .mcp.json: {e}")
             raise e
@@ -238,13 +238,13 @@ class CharmOpenClawAdapter(BaseAdapter):
                 model = f"google/{model}"
             else:
                 model = f"openai/{model}"
-            logger.info(f"🏷️ Auto-prefixed model to: {model}")
+            logger.info(f"Auto-prefixed model to: {model}")
         try:
             subprocess.run(
                 ["openclaw", "config", "set", "agents.defaults.model", model],
                 env=env, capture_output=True, text=True, timeout=10,
             )
-            logger.info(f"🤖 Model set to: {model}")
+            logger.info(f"Model set to: {model}")
         except Exception as e:
             logger.warning(f"Failed to set model config: {e}")
 

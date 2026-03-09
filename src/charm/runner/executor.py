@@ -301,7 +301,7 @@ class CharmDockerExecutor:
             echo "[Runner] Job container received CHARM_BUNDLE_URL (length=${{#CHARM_BUNDLE_URL}}): $CHARM_BUNDLE_URL"
             set +e
             BUNDLE_FILENAME="${{CHARM_BUNDLE_URL##*/}}"
-            BUNDLE_FILENAME="${{BUNDLE_FILENAME%%\?*}}"
+            BUNDLE_FILENAME="${{BUNDLE_FILENAME%%\\?*}}"
             echo "[Runner] Downloading bundle file: $BUNDLE_FILENAME -> bundle.tar.gz"
             HTTP_CODE=$(curl -s -L -w "%{{http_code}}" -o bundle.tar.gz \\
               "$CHARM_BUNDLE_URL")

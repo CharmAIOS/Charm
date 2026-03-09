@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import re
 import time
 import os
 import tempfile
@@ -20,6 +21,12 @@ from .base import ExecutionBackend, RunConfig
 
 logger = logging.getLogger("charm.runner.docker")
 
+# Match Supabase storage signed URL so we can redact it whole (avoids replacing UUID inside URL with [CHARM_USER_ID_REDACTED] which would show a broken URL)
+_SUPABASE_SIGNED_URL_RE = re.compile(
+    r"https://[a-zA-Z0-9.-]+\.supabase\.co/storage/v1/object/sign/[^\s]+",
+    re.ASCII,
+)
+
 
 class LogRedactor:
     def __init__(self, env_vars: Dict[str, str]):
@@ -31,6 +38,8 @@ class LogRedactor:
     def clean(self, text: str) -> str:
         if not text:
             return text
+        # Redact entire bundle/signed URLs first so we never show a partially redacted URL (e.g. UUID replaced inside URL)
+        text = _SUPABASE_SIGNED_URL_RE.sub("[CHARM_BUNDLE_URL_REDACTED]", text)
         for secret, replacement in self.patterns.items():
             if secret in text:
                 text = text.replace(secret, replacement)

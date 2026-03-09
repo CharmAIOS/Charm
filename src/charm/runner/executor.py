@@ -255,14 +255,16 @@ class CharmDockerExecutor:
             """
         else:
             # Use CHARM_BUNDLE_URL from env so URL is not mangled by script embedding; log it for debugging
+            # Write HTTP code to stdout and body only to file (no -w appending to file) so the archive is never corrupted
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
             echo "[Runner] Job container received CHARM_BUNDLE_URL (length=${{#CHARM_BUNDLE_URL}}): $CHARM_BUNDLE_URL"
             set +e
-            curl -s -L -f -w "\\n%{{http_code}}" \\
-              -H "User-Agent: Charm-Runner/1.0" \\
-              -H "Accept: application/octet-stream" \\
-              "$CHARM_BUNDLE_URL" -o bundle.tar.gz
+            BUNDLE_FILENAME="${{CHARM_BUNDLE_URL##*/}}"
+            BUNDLE_FILENAME="${{BUNDLE_FILENAME%%\?*}}"
+            echo "[Runner] Downloading bundle file: $BUNDLE_FILENAME -> bundle.tar.gz"
+            HTTP_CODE=$(curl -s -L -w "%{{http_code}}" -o bundle.tar.gz \\
+              "$CHARM_BUNDLE_URL")
             CURL_EXIT=$?
             set -e
             if [ $CURL_EXIT -ne 0 ]; then
@@ -270,20 +272,34 @@ class CharmDockerExecutor:
               rm -f bundle.tar.gz
               exit 1
             fi
-            HTTP_CODE="$(tail -n 1 bundle.tar.gz 2>/dev/null)"
-            sed '$d' bundle.tar.gz > bundle.tar.gz.tmp 2>/dev/null && mv bundle.tar.gz.tmp bundle.tar.gz
             if [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
               echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: HTTP '"$HTTP_CODE"' (signed URL expired or path wrong)."}}'
               rm -f bundle.tar.gz
               exit 1
             fi
+            BUNDLE_SIZE=$(stat -c %s bundle.tar.gz 2>/dev/null || echo 0)
+            echo "[Runner] Downloaded bundle file: bundle.tar.gz ($BUNDLE_SIZE bytes)"
             if [ ! -s bundle.tar.gz ]; then
               echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: file empty (check signed URL and Storage path)."}}'
               rm -f bundle.tar.gz
               exit 1
             fi
+            # Fail fast if not gzip (magic 1f 8b); avoids "unexpected end of file" from tar
+            GZIP_MAGIC=$(head -c 2 bundle.tar.gz | xxd -p 2>/dev/null | tr -d '\\n')
+            if [ "$GZIP_MAGIC" != "1f8b" ]; then
+              FILE_TYPE=$(file -b bundle.tar.gz 2>/dev/null || echo "unknown")
+              PREVIEW=$(head -c 120 bundle.tar.gz 2>/dev/null | sed 's/[^[:print:]\t]/./g' || true)
+              if command -v gunzip >/dev/null 2>&1 && head -c 2 bundle.tar.gz | xxd -p 2>/dev/null | tr -d '\\n' | grep -q '^1f8b'; then
+                DECODED=$(gunzip -c bundle.tar.gz 2>/dev/null | head -c 200 | sed 's/[^[:print:]\t]/./g' || true)
+                echo "[Runner] Response was gzip-encoded but content is not .tar.gz. Decoded preview: $DECODED"
+              fi
+              echo "[Runner] Response is not gzip (magic=$GZIP_MAGIC, size=$BUNDLE_SIZE). file says: $FILE_TYPE. Preview: $PREVIEW"
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download invalid: file is not gzip (got '"$BUNDLE_SIZE"' bytes). Check signed URL and Storage object."}}'
+              rm -f bundle.tar.gz
+              exit 1
+            fi
             if ! tar -xzf bundle.tar.gz --no-same-owner; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download invalid (not gzip). Check signed URL expiry and Storage path."}}'
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle extract failed (truncated or corrupt gzip). Check Storage object and network."}}'
               rm -f bundle.tar.gz
               exit 1
             fi
@@ -505,10 +521,12 @@ class CharmDockerExecutor:
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         has_bundle_url = bool(bundle_url) and str(bundle_url).strip().startswith(("http://", "https://"))
+        force_bundle_download = os.environ.get("CHARM_FORCE_BUNDLE_DOWNLOAD", "").lower() in ("1", "true", "yes")
         should_mount_local = (
             bool(local_source_path)
             and isinstance(backend, DockerBackend)
             and not has_bundle_url
+            and not force_bundle_download
         )
 
         use_file_input = False

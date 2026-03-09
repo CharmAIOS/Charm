@@ -217,6 +217,8 @@ class CharmDockerExecutor:
         input_payload: Dict[str, Any],
         local_sdk_path: Optional[str] = None,
         use_local_mount: bool = False,
+        use_bundle_local: bool = False,
+        use_bundle_gcs: bool = False,
         use_file_input: bool = False,
         adapter_type: str = "python",
         skills: List[Dict[str, Any]] = [],
@@ -252,6 +254,44 @@ class CharmDockerExecutor:
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Source Code..."}}'
             [ ! -d "/app/local_source_mount" ] && exit 1
             cp -rT /app/local_source_mount/. .
+            """
+        elif use_bundle_local:
+            # Runner downloaded bundle and mounted it (local dev workaround when curl gets wrong response)
+            source_setup_block = f"""
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Using Runner-Downloaded Bundle..."}}'
+            if [ -z "$CHARM_BUNDLE_LOCAL_PATH" ] || [ ! -f "$CHARM_BUNDLE_LOCAL_PATH" ]; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle file not found at CHARM_BUNDLE_LOCAL_PATH."}}'
+              exit 1
+            fi
+            cp "$CHARM_BUNDLE_LOCAL_PATH" bundle.tar.gz
+            if ! tar -xzf bundle.tar.gz --no-same-owner; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle extract failed (corrupt or not gzip)."}}'
+              rm -f bundle.tar.gz
+              exit 1
+            fi
+            rm -f bundle.tar.gz
+            if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
+                cd "$(ls -A)" || true
+            fi
+            """
+        elif use_bundle_gcs:
+            # Staging/prod: Runner uploaded bundle to GCS; job reads from mount at /workspace
+            source_setup_block = f"""
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Using Runner-Uploaded Bundle (GCS)..."}}'
+            if [ -z "$CHARM_BUNDLE_GCS_PATH" ] || [ ! -f "$CHARM_BUNDLE_GCS_PATH" ]; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle file not found at CHARM_BUNDLE_GCS_PATH."}}'
+              exit 1
+            fi
+            cp "$CHARM_BUNDLE_GCS_PATH" bundle.tar.gz
+            if ! tar -xzf bundle.tar.gz --no-same-owner; then
+              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle extract failed (corrupt or not gzip)."}}'
+              rm -f bundle.tar.gz
+              exit 1
+            fi
+            rm -f bundle.tar.gz
+            if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
+                cd "$(ls -A)" || true
+            fi
             """
         else:
             # Use CHARM_BUNDLE_URL from env so URL is not mangled by script embedding; log it for debugging
@@ -470,6 +510,8 @@ class CharmDockerExecutor:
         state_snapshot: str = "",
         thread_id: Optional[str] = None,
         local_source_path: Optional[str] = None,
+        bundle_local_path: Optional[str] = None,
+        bundle_gcs_path: Optional[str] = None,
         supabase_client: Any = None,
         image: Optional[str] = None,
         adapter_type: str = "python",
@@ -493,6 +535,8 @@ class CharmDockerExecutor:
 
         if bundle_url and str(bundle_url).strip().startswith(("http://", "https://")):
             env_vars["CHARM_BUNDLE_URL"] = bundle_url
+        if bundle_local_path and os.path.isfile(bundle_local_path):
+            env_vars["CHARM_BUNDLE_LOCAL_PATH"] = "/app/bundle_mount/" + os.path.basename(bundle_local_path)
 
         # Dynamic backend dispatch based on environment and lifecycle
         if self.env in ["production", "staging"]:
@@ -519,6 +563,9 @@ class CharmDockerExecutor:
             # Local development always uses Docker
             backend = self.local_docker_backend
 
+        if bundle_gcs_path and not isinstance(backend, DockerBackend):
+            env_vars["CHARM_BUNDLE_GCS_PATH"] = "/workspace/" + bundle_gcs_path.lstrip("/")
+
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         has_bundle_url = bool(bundle_url) and str(bundle_url).strip().startswith(("http://", "https://"))
         force_bundle_download = os.environ.get("CHARM_FORCE_BUNDLE_DOWNLOAD", "").lower() in ("1", "true", "yes")
@@ -540,6 +587,11 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Failed to write input.json: {e}")
 
+        use_bundle_local = bool(bundle_local_path) and os.path.isfile(bundle_local_path) and isinstance(
+            backend, DockerBackend
+        )
+        use_bundle_gcs = bool(bundle_gcs_path) and not isinstance(backend, DockerBackend)
+
         script_content = self._generate_bash_script(
             bundle_url=bundle_url,
             env_vars=env_vars,
@@ -547,6 +599,8 @@ class CharmDockerExecutor:
             input_payload=input_payload,
             local_sdk_path=local_sdk_path,
             use_local_mount=should_mount_local,
+            use_bundle_local=use_bundle_local,
+            use_bundle_gcs=use_bundle_gcs,
             use_file_input=use_file_input,
             adapter_type=adapter_type,
             skills=skills,
@@ -563,6 +617,7 @@ class CharmDockerExecutor:
             host_artifact_path=host_artifact_path,
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
+            bundle_local_path=bundle_local_path if use_bundle_local else None,
             image=image,
             lifecycle=lifecycle,
         )

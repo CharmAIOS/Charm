@@ -90,6 +90,10 @@ class DockerBackend(ExecutionBackend):
                 "mode": "ro",
             }
 
+        if config.bundle_local_path:
+            _mount_dir = os.path.dirname(config.bundle_local_path)
+            volumes_config[_mount_dir] = {"bind": "/app/bundle_mount", "mode": "ro"}
+
         b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
         full_command = f'/bin/bash -c "echo {b64_script} | base64 -d | bash"'
 

@@ -15,6 +15,7 @@ class RunConfig(BaseModel):
     host_artifact_path: str
     host_cache_dir: str
     local_source_path: Optional[str] = None
+    bundle_local_path: Optional[str] = None  # When set (e.g. local dev), container uses file instead of curl
     image: Optional[str] = None
     lifecycle: str = "serverless"
 

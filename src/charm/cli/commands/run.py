@@ -47,9 +47,32 @@ async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Di
     executor = CharmDockerExecutor()
     abs_path = os.path.abspath(path)
 
+    # Detect adapter type and skills from charm.yaml for image selection
+    adapter_type = "python"
+    skills = []
+    try:
+        import yaml
+
+        charm_yaml_path = os.path.join(abs_path, "charm.yaml")
+        if os.path.exists(charm_yaml_path):
+            with open(charm_yaml_path, "r") as f:
+                uac = yaml.safe_load(f)
+            runtime = uac.get("runtime", {})
+            adapter_cfg = runtime.get("adapter", {})
+            adapter_type = adapter_cfg.get("type", "python")
+            skills = runtime.get("skills", [])
+    except Exception:
+        pass
+
+    # Select correct Docker image based on adapter type
+    image = None
+    if adapter_type in ("openclaw", "node"):
+        image = "ucmind/runner-full:latest"
+
     console.print(
         Panel(
-            f"Mounting: [cyan]{abs_path}[/cyan]\nEnvironment: [cyan]{len(env_vars)} variables[/cyan]",
+            f"Mounting: [cyan]{abs_path}[/cyan]\nEnvironment: [cyan]{len(env_vars)} variables[/cyan]"
+            + (f"\nImage: [cyan]{image or 'ucmind/runner-base:latest'}[/cyan]" if image else ""),
             title="[bold blue]🚀 Starting Docker Simulation[/bold blue]",
             border_style="blue",
         )
@@ -64,6 +87,9 @@ async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Di
             file_urls={},
             history=[],
             local_source_path=abs_path,  # Mount local path
+            image=image,
+            adapter_type=adapter_type,
+            skills=skills,
         ):
             parse_and_print_sse(sse_line)
 

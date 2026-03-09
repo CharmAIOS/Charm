@@ -166,9 +166,15 @@ class CloudRunBackend(ExecutionBackend):
                         line = payload.strip()
                         if EVENT_PREFIX in line:
                             try:
-                                json_part = line.split(EVENT_PREFIX)[1]
+                                json_part = line.split(EVENT_PREFIX)[1].strip()
                                 yield f"data: {json_part}\n\n"
-                            except:
+                            except Exception:
+                                pass
+                        elif "::CHARM_EVENT::" in line:
+                            try:
+                                json_part = line.split("::CHARM_EVENT::")[1].strip()
+                                yield f"data: {json_part}\n\n"
+                            except Exception:
                                 pass
                         else:
                             clean = clean_log_fallback(line)
@@ -180,6 +186,43 @@ class CloudRunBackend(ExecutionBackend):
 
                 if not is_done:
                     await asyncio.sleep(2)
+
+            # Drain trailing logs: Cloud Logging can delay a few seconds, so the "final" event
+            # may appear after operation.done(). Fetch a few more times before closing the stream.
+            for _ in range(3):
+                await asyncio.sleep(2)
+                try:
+                    tail_logs = await loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.logging_client.list_entries,
+                            filter_=filter_str,
+                            order_by=cloud_logging.DESCENDING,
+                            page_size=200,
+                        ),
+                    )
+                    tail_logs = sorted(list(tail_logs), key=lambda x: x.timestamp)
+                    for entry in tail_logs:
+                        if entry.insert_id in sent_event_ids:
+                            continue
+                        sent_event_ids.add(entry.insert_id)
+                        payload = entry.payload
+                        if isinstance(payload, str):
+                            line = payload.strip()
+                            if EVENT_PREFIX in line:
+                                try:
+                                    json_part = line.split(EVENT_PREFIX)[1].strip()
+                                    yield f"data: {json_part}\n\n"
+                                except Exception:
+                                    pass
+                            elif "::CHARM_EVENT::" in line:
+                                try:
+                                    json_part = line.split("::CHARM_EVENT::")[1].strip()
+                                    yield f"data: {json_part}\n\n"
+                                except Exception:
+                                    pass
+                except Exception as e:
+                    logger.debug("Trailing log fetch failed: %s", e)
 
             try:
                 await operation.result()

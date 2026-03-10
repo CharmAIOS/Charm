@@ -213,8 +213,10 @@ class CloudRunBackend(ExecutionBackend):
                 if not is_done:
                     await asyncio.sleep(1)
 
-            for _ in range(2):
-                await asyncio.sleep(1)
+            found_final = False
+            max_trailing_attempts = 8
+            for attempt in range(max_trailing_attempts):
+                await asyncio.sleep(2)
                 try:
                     tail_logs = await loop.run_in_executor(
                         None,
@@ -237,6 +239,10 @@ class CloudRunBackend(ExecutionBackend):
                                 try:
                                     json_part = line.split(EVENT_PREFIX)[1].strip()
                                     yield f"data: {json_part}\n\n"
+                                    if '"type": "final"' in json_part or '"type":"final"' in json_part:
+                                        found_final = True
+                                    if '"type": "error"' in json_part or '"type":"error"' in json_part:
+                                        found_final = True
                                 except Exception:
                                     pass
                             elif "::CHARM_EVENT::" in line:
@@ -247,6 +253,10 @@ class CloudRunBackend(ExecutionBackend):
                                     pass
                 except Exception as e:
                     logger.debug("Trailing log fetch failed: %s", e)
+
+                if found_final:
+                    logger.info("[CloudRun] Found final/error event on trailing attempt %d", attempt + 1)
+                    break
 
             try:
                 await operation.result()

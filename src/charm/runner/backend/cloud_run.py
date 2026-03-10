@@ -3,6 +3,8 @@ import base64
 import functools
 import logging
 import os
+import random
+import time
 from typing import AsyncGenerator, Dict
 
 try:
@@ -19,6 +21,28 @@ from ...runner.utils import clean_log_fallback
 from .base import ExecutionBackend, RunConfig
 
 logger = logging.getLogger("charm.runner.cloud_run")
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r. Falling back to %s.", name, raw, default)
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r. Falling back to %s.", name, raw, default)
+        return default
 
 
 class CloudRunBackend(ExecutionBackend):
@@ -41,6 +65,21 @@ class CloudRunBackend(ExecutionBackend):
         self.logging_client = cloud_logging.Client(project=self.project_id)
         self.parent = f"projects/{self.project_id}/locations/{self.region}"
         self.storage_bucket = os.getenv("CHARM_USER_BUCKET_NAME")
+        self.log_poll_base_seconds = max(
+            1.0, _env_float("CHARM_LOG_POLL_INTERVAL_SECONDS", 2.0)
+        )
+        self.log_poll_max_seconds = max(
+            self.log_poll_base_seconds,
+            _env_float("CHARM_LOG_POLL_MAX_INTERVAL_SECONDS", 15.0),
+        )
+        self.trailing_attempts = max(1, _env_int("CHARM_LOG_TRAILING_ATTEMPTS", 6))
+        self.log_read_concurrency = max(1, _env_int("CHARM_LOG_READ_CONCURRENCY", 2))
+        self.raw_log_echo = os.getenv("CHARM_CLOUD_RUN_RAW_LOG_ECHO", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        self._log_read_semaphore = asyncio.Semaphore(self.log_read_concurrency)
 
     def _make_job_id(self, agent_id: str) -> str:
         safe = agent_id.replace("_", "-").lower()[:40]
@@ -116,8 +155,29 @@ class CloudRunBackend(ExecutionBackend):
         )
         return sorted(list(entries), key=lambda x: x.timestamp)
 
+    @staticmethod
+    def _is_rate_limited(exc: Exception) -> bool:
+        text = str(exc).upper()
+        return "RATE_LIMIT_EXCEEDED" in text or " 429 " in text or "429" in text
+
+    async def _list_entries(
+        self, loop: asyncio.AbstractEventLoop, filter_str: str, page_size: int
+    ):
+        async with self._log_read_semaphore:
+            entries = await loop.run_in_executor(
+                None,
+                functools.partial(
+                    self.logging_client.list_entries,
+                    filter_=filter_str,
+                    order_by=cloud_logging.DESCENDING,
+                    page_size=page_size,
+                ),
+            )
+        return sorted(list(entries), key=lambda x: x.timestamp)
+
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
         job_name = ""
+        start_time = time.monotonic()
 
         try:
             yield sse_pack("status", "Provisioning Cloud Sandbox...")
@@ -159,24 +219,34 @@ class CloudRunBackend(ExecutionBackend):
             is_done = False
             sent_event_ids = set()
             loop = asyncio.get_running_loop()
+            poll_sleep_seconds = self.log_poll_base_seconds
 
             while not is_done:
                 if await operation.done():
                     is_done = True
 
+                sleep_seconds = poll_sleep_seconds
                 try:
-                    new_logs = await loop.run_in_executor(
-                        None,
-                        functools.partial(
-                            self.logging_client.list_entries,
-                            filter_=filter_str,
-                            order_by=cloud_logging.DESCENDING,
-                            page_size=200,
-                        ),
+                    new_logs = await self._list_entries(
+                        loop=loop,
+                        filter_str=filter_str,
+                        page_size=200,
                     )
-                    new_logs = sorted(list(new_logs), key=lambda x: x.timestamp)
+                    poll_sleep_seconds = self.log_poll_base_seconds
                 except Exception as e:
-                    logger.warning(f"Log fetch failed (transient): {e}")
+                    if self._is_rate_limited(e):
+                        poll_sleep_seconds = min(
+                            self.log_poll_max_seconds,
+                            max(self.log_poll_base_seconds, poll_sleep_seconds * 2),
+                        )
+                        sleep_seconds = poll_sleep_seconds + random.uniform(0.0, 0.75)
+                        logger.warning(
+                            "Log fetch rate-limited (429). Backing off %.2fs: %s",
+                            sleep_seconds,
+                            e,
+                        )
+                    else:
+                        logger.warning("Log fetch failed (transient): %s", e)
                     new_logs = []
 
                 for entry in new_logs:
@@ -186,7 +256,8 @@ class CloudRunBackend(ExecutionBackend):
                     sent_event_ids.add(entry.insert_id)
                     payload = entry.payload
 
-                    print(f"[RAW LOG] {payload}")
+                    if self.raw_log_echo:
+                        print(f"[RAW LOG] {payload}")
 
                     if isinstance(payload, str):
                         line = payload.strip()
@@ -211,23 +282,18 @@ class CloudRunBackend(ExecutionBackend):
                                     yield sse_pack("error", f"System: {line}\n")
 
                 if not is_done:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(sleep_seconds)
 
             found_final = False
-            max_trailing_attempts = 8
+            max_trailing_attempts = self.trailing_attempts
             for attempt in range(max_trailing_attempts):
                 await asyncio.sleep(2)
                 try:
-                    tail_logs = await loop.run_in_executor(
-                        None,
-                        functools.partial(
-                            self.logging_client.list_entries,
-                            filter_=filter_str,
-                            order_by=cloud_logging.DESCENDING,
-                            page_size=200,
-                        ),
+                    tail_logs = await self._list_entries(
+                        loop=loop,
+                        filter_str=filter_str,
+                        page_size=200,
                     )
-                    tail_logs = sorted(list(tail_logs), key=lambda x: x.timestamp)
                     for entry in tail_logs:
                         if entry.insert_id in sent_event_ids:
                             continue
@@ -252,7 +318,10 @@ class CloudRunBackend(ExecutionBackend):
                                 except Exception:
                                     pass
                 except Exception as e:
-                    logger.debug("Trailing log fetch failed: %s", e)
+                    if self._is_rate_limited(e):
+                        logger.debug("Trailing log fetch rate-limited: %s", e)
+                    else:
+                        logger.debug("Trailing log fetch failed: %s", e)
 
                 if found_final:
                     logger.info("[CloudRun] Found final/error event on trailing attempt %d", attempt + 1)
@@ -260,19 +329,18 @@ class CloudRunBackend(ExecutionBackend):
 
             try:
                 await operation.result()
+                duration_ms = int((time.monotonic() - start_time) * 1000)
                 yield sse_pack("status", "Cloud Job Completed Successfully.")
-                yield sse_pack("internal_run_finished", {"exit_code": 0, "duration_ms": 0})
+                yield sse_pack(
+                    "internal_run_finished", {"exit_code": 0, "duration_ms": duration_ms}
+                )
             except Exception as job_error:
                 tail_lines = []
                 try:
-                    final_logs = await loop.run_in_executor(
-                        None,
-                        functools.partial(
-                            self.logging_client.list_entries,
-                            filter_=filter_str,
-                            order_by=cloud_logging.DESCENDING,
-                            page_size=100,
-                        ),
+                    final_logs = await self._list_entries(
+                        loop=loop,
+                        filter_str=filter_str,
+                        page_size=100,
                     )
                     for entry in sorted(final_logs, key=lambda x: x.timestamp)[-15:]:
                         if isinstance(entry.payload, str) and entry.payload.strip():
@@ -284,6 +352,10 @@ class CloudRunBackend(ExecutionBackend):
                 if tail:
                     err_msg = f"{err_msg}\n\nLast log lines from job:\n{tail}"
                 yield sse_pack("error", err_msg)
+                duration_ms = int((time.monotonic() - start_time) * 1000)
+                yield sse_pack(
+                    "internal_run_finished", {"exit_code": 1, "duration_ms": duration_ms}
+                )
 
         except Exception as e:
             logger.exception("Cloud Run Error")

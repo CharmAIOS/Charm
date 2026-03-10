@@ -81,7 +81,6 @@ async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Di
     try:
         async for sse_line in executor.run(
             agent_id="local_sim",
-            bundle_url="local_override",  # Signal to use local mount if supported, or pass real URL
             input_payload=payload,
             env_vars=env_vars,
             file_urls={},

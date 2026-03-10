@@ -464,6 +464,7 @@ class CharmDockerExecutor:
         image: Optional[str] = None,
         adapter_type: str = "python",
         lifecycle: str = "serverless",
+        timeout_seconds: Optional[int] = None,
         skills: List[Dict[str, Any]] = [],
     ) -> AsyncGenerator[str, None]:
         run_timestamp = int(time.time())
@@ -563,6 +564,7 @@ class CharmDockerExecutor:
             bundle_local_path=bundle_local_path if use_bundle_local else None,
             image=image,
             lifecycle=lifecycle,
+            timeout_seconds=timeout_seconds,
         )
 
         try:

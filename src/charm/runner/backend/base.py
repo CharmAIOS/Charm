@@ -18,6 +18,7 @@ class RunConfig(BaseModel):
     bundle_local_path: Optional[str] = None  # When set (e.g. local dev), container uses file instead of curl
     image: Optional[str] = None
     lifecycle: str = "serverless"
+    timeout_seconds: Optional[int] = None
 
 
 class ExecutionBackend(ABC):

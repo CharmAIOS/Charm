@@ -385,6 +385,11 @@
         "budget_limit": {
           "type": "number",
           "description": "Max USD cost per run"
+        },
+        "execution_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional serverless execution timeout override in seconds."
         }
       }
     }

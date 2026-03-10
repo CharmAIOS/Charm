@@ -7,7 +7,6 @@ from pydantic import BaseModel
 class RunConfig(BaseModel):
     agent_id: str
     run_id: str
-    bundle_url: str
     input_payload: Dict[str, Any]
     env_vars: Dict[str, str]
     file_urls: Dict[str, str]

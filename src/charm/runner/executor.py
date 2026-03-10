@@ -211,7 +211,6 @@ class CharmDockerExecutor:
 
     def _generate_bash_script(
         self,
-        bundle_url: str,
         env_vars: Dict[str, str],
         file_urls: Dict[str, str],
         input_payload: Dict[str, Any],
@@ -277,7 +276,6 @@ class CharmDockerExecutor:
             fi
             """
         elif use_bundle_gcs:
-            # Staging/prod: Runner uploaded bundle to GCS; job reads from mount at /workspace
             source_setup_block = f"""
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Runner-Uploaded Bundle (GCS)..."}}'
             if [ -z "$CHARM_BUNDLE_GCS_PATH" ] || [ ! -f "$CHARM_BUNDLE_GCS_PATH" ]; then
@@ -296,60 +294,9 @@ class CharmDockerExecutor:
             fi
             """
         else:
-            # Use CHARM_BUNDLE_URL from env so URL is not mangled by script embedding; log it for debugging
-            # Write HTTP code to stdout and body only to file (no -w appending to file) so the archive is never corrupted
             source_setup_block = f"""
-            echo '{EVENT_PREFIX}{{"type":"status","content":"Downloading Bundle..."}}'
-            echo "[Runner] Job container received CHARM_BUNDLE_URL (length=${{#CHARM_BUNDLE_URL}}): $CHARM_BUNDLE_URL"
-            set +e
-            BUNDLE_FILENAME="${{CHARM_BUNDLE_URL##*/}}"
-            BUNDLE_FILENAME="${{BUNDLE_FILENAME%%\\?*}}"
-            echo "[Runner] Downloading bundle file: $BUNDLE_FILENAME -> bundle.tar.gz"
-            HTTP_CODE=$(curl -s -L -w "%{{http_code}}" -o bundle.tar.gz \\
-              "$CHARM_BUNDLE_URL")
-            CURL_EXIT=$?
-            set -e
-            if [ $CURL_EXIT -ne 0 ]; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: curl exit '"$CURL_EXIT"' (HTTP error or network). Check signed URL expiry and Storage path."}}'
-              rm -f bundle.tar.gz
-              exit 1
-            fi
-            if [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" -ge 400 ] 2>/dev/null; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: HTTP '"$HTTP_CODE"' (signed URL expired or path wrong)."}}'
-              rm -f bundle.tar.gz
-              exit 1
-            fi
-            BUNDLE_SIZE=$(stat -c %s bundle.tar.gz 2>/dev/null || echo 0)
-            echo "[Runner] Downloaded bundle file: bundle.tar.gz ($BUNDLE_SIZE bytes)"
-            if [ ! -s bundle.tar.gz ]; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download failed: file empty (check signed URL and Storage path)."}}'
-              rm -f bundle.tar.gz
-              exit 1
-            fi
-            # Fail fast if not gzip (magic 1f 8b); avoids "unexpected end of file" from tar
-            GZIP_MAGIC=$(head -c 2 bundle.tar.gz | xxd -p 2>/dev/null | tr -d '\\n')
-            if [ "$GZIP_MAGIC" != "1f8b" ]; then
-              FILE_TYPE=$(file -b bundle.tar.gz 2>/dev/null || echo "unknown")
-              PREVIEW=$(head -c 120 bundle.tar.gz 2>/dev/null | sed 's/[^[:print:]\t]/./g' || true)
-              if command -v gunzip >/dev/null 2>&1 && head -c 2 bundle.tar.gz | xxd -p 2>/dev/null | tr -d '\\n' | grep -q '^1f8b'; then
-                DECODED=$(gunzip -c bundle.tar.gz 2>/dev/null | head -c 200 | sed 's/[^[:print:]\t]/./g' || true)
-                echo "[Runner] Response was gzip-encoded but content is not .tar.gz. Decoded preview: $DECODED"
-              fi
-              echo "[Runner] Response is not gzip (magic=$GZIP_MAGIC, size=$BUNDLE_SIZE). file says: $FILE_TYPE. Preview: $PREVIEW"
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle download invalid: file is not gzip (got '"$BUNDLE_SIZE"' bytes). Check signed URL and Storage object."}}'
-              rm -f bundle.tar.gz
-              exit 1
-            fi
-            if ! tar -xzf bundle.tar.gz --no-same-owner; then
-              echo '{EVENT_PREFIX}{{"type":"thinking","content":"Bundle extract failed (truncated or corrupt gzip). Check Storage object and network."}}'
-              rm -f bundle.tar.gz
-              exit 1
-            fi
-            rm -f bundle.tar.gz
-            # If tarball had a single top-level dir (e.g. agent name), cd into it so charm.yaml is in .
-            if [ ! -f charm.yaml ] && [ $(ls -A | wc -l) -eq 1 ] && [ -d "$(ls -A)" ]; then
-                cd "$(ls -A)" || true
-            fi
+            echo '{EVENT_PREFIX}{{"type":"error","content":"No bundle source available. Ensure GCS bundle path is configured for staging/prod or bundle_local_path for local dev."}}'
+            exit 1
             """
 
         # Dependency Installation Logic (Polyglot)
@@ -365,7 +312,7 @@ class CharmDockerExecutor:
         fi
         """
 
-        install_python_deps_block = """
+        install_python_deps_block = f"""
         if [ -f pyproject.toml ]; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Installing Python dependencies..."}}'
             uv pip install -q -r pyproject.toml || uv pip install -q .
@@ -376,7 +323,7 @@ class CharmDockerExecutor:
         """
 
         # SDK Setup
-        sdk_install_block = """
+        sdk_install_block = f"""
         if python -c "import charm" 2>/dev/null; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Pre-installed Charm SDK."}}'
         else
@@ -504,7 +451,6 @@ class CharmDockerExecutor:
     async def run(
         self,
         agent_id: str,
-        bundle_url: str,
         input_payload: Dict[str, Any],
         env_vars: Dict[str, str],
         file_urls: Dict[str, str],
@@ -535,8 +481,6 @@ class CharmDockerExecutor:
         thread_id_val = thread_id or "default_thread"
         env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
 
-        if bundle_url and str(bundle_url).strip().startswith(("http://", "https://")):
-            env_vars["CHARM_BUNDLE_URL"] = bundle_url
         if bundle_local_path and os.path.isfile(bundle_local_path):
             env_vars["CHARM_BUNDLE_LOCAL_PATH"] = "/app/bundle_mount/" + os.path.basename(bundle_local_path)
 
@@ -569,12 +513,10 @@ class CharmDockerExecutor:
             env_vars["CHARM_BUNDLE_GCS_PATH"] = "/workspace/" + bundle_gcs_path.lstrip("/")
 
         local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
-        has_bundle_url = bool(bundle_url) and str(bundle_url).strip().startswith(("http://", "https://"))
         force_bundle_download = os.environ.get("CHARM_FORCE_BUNDLE_DOWNLOAD", "").lower() in ("1", "true", "yes")
         should_mount_local = (
             bool(local_source_path)
             and isinstance(backend, DockerBackend)
-            and not has_bundle_url
             and not force_bundle_download
         )
 
@@ -595,7 +537,6 @@ class CharmDockerExecutor:
         use_bundle_gcs = bool(bundle_gcs_path) and not isinstance(backend, DockerBackend)
 
         script_content = self._generate_bash_script(
-            bundle_url=bundle_url,
             env_vars=env_vars,
             file_urls=file_urls,
             input_payload=input_payload,
@@ -611,7 +552,6 @@ class CharmDockerExecutor:
         config = RunConfig(
             agent_id=agent_id,
             run_id=run_id,
-            bundle_url=bundle_url,
             input_payload=input_payload,
             env_vars=env_vars,
             file_urls=file_urls,

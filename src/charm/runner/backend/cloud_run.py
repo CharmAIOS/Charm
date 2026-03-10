@@ -1,12 +1,9 @@
 import asyncio
+import base64
+import functools
 import logging
 import os
-import json
-import time
-import base64
-import uuid
-import functools
-from typing import AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict
 
 try:
     from google.cloud import run_v2
@@ -18,13 +15,16 @@ except ImportError:
 
 from ...core.io import EVENT_PREFIX
 from ...runner.protocol import sse_pack
-from ...runner.utils import clean_log_fallback, is_duplicate_log
+from ...runner.utils import clean_log_fallback
 from .base import ExecutionBackend, RunConfig
 
 logger = logging.getLogger("charm.runner.cloud_run")
 
 
 class CloudRunBackend(ExecutionBackend):
+
+    _job_cache: Dict[str, str] = {}
+
     def __init__(self):
         if not run_v2 or not cloud_logging:
             raise RuntimeError(
@@ -42,41 +42,51 @@ class CloudRunBackend(ExecutionBackend):
         self.parent = f"projects/{self.project_id}/locations/{self.region}"
         self.storage_bucket = os.getenv("CHARM_USER_BUCKET_NAME")
 
-    async def _create_job(self, job_id: str, config: RunConfig) -> str:
-        b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
+    def _make_job_id(self, agent_id: str) -> str:
+        safe = agent_id.replace("_", "-").lower()[:40]
+        return f"charm-{safe}"
 
-        env_vars = [
-            {"name": "PYTHONUNBUFFERED", "value": "1"},
-            {"name": "CHARM_BOOTSTRAP_SCRIPT", "value": b64_script},
-            *[{"name": k, "value": str(v)} for k, v in config.env_vars.items() if v is not None],
-        ]
+    async def _get_or_create_job(self, config: RunConfig) -> str:
+        job_id = self._make_job_id(config.agent_id)
+        job_fqn = f"{self.parent}/jobs/{job_id}"
+
+        if job_fqn in self._job_cache:
+            logger.info(f"[CloudRun] Reusing cached job: {job_id}")
+            return self._job_cache[job_fqn]
+
+        try:
+            request = run_v2.GetJobRequest(name=job_fqn)
+            existing = await self.jobs_client.get_job(request=request)
+            logger.info(f"[CloudRun] Found existing job: {job_id}")
+            self._job_cache[job_fqn] = existing.name
+            return existing.name
+        except google_exceptions.NotFound:
+            logger.info(f"[CloudRun] Job {job_id} not found, creating...")
 
         default_fallback = (
             "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
         )
         worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
-
-        logger.info(f"[CloudRun] Target Image resolved to: {worker_image}")
-
-        logger.info(f"[CloudRun] Creating Serverless Task Job {job_id}")
+        logger.info(f"[CloudRun] Target Image: {worker_image}")
 
         container = {
             "image": worker_image,
             "command": ["/bin/bash", "-c"],
             "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
-            "env": env_vars,
+            "env": [
+                {"name": "PYTHONUNBUFFERED", "value": "1"},
+                {"name": "CHARM_BOOTSTRAP_SCRIPT", "value": "ZWNobyAncmVhZHkn"},
+            ],
             "resources": {
                 "limits": {
-                    "memory": "1Gi",
-                    "cpu": "1000m",
+                    "memory": "2Gi",
+                    "cpu": "2000m",
                 }
             },
         }
 
         job = run_v2.Job()
         job.template.template.max_retries = 0
-
-        # Serverless hard limit: 10 minutes (regardless of adapter type)
         job.template.template.timeout = "600s"
 
         if self.storage_bucket:
@@ -91,10 +101,11 @@ class CloudRunBackend(ExecutionBackend):
         job.template.template.containers = [container]
 
         request = run_v2.CreateJobRequest(parent=self.parent, job=job, job_id=job_id)
-
         operation = await self.jobs_client.create_job(request=request)
         logger.info(f"[CloudRun] Creating Job {job_id} using image {worker_image}...")
         result = await operation.result()
+
+        self._job_cache[job_fqn] = result.name
         return result.name
 
     async def _fetch_logs_sync(self, filter_str):
@@ -106,25 +117,40 @@ class CloudRunBackend(ExecutionBackend):
         return sorted(list(entries), key=lambda x: x.timestamp)
 
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
-        safe_agent_id = config.agent_id.replace("_", "-").lower()[:20]
-        job_id = f"charm-{safe_agent_id}-{uuid.uuid4().hex[:6]}"
         job_name = ""
 
         try:
             yield sse_pack("status", "Provisioning Cloud Sandbox...")
-            job_name = await self._create_job(job_id, config)
+            job_name = await self._get_or_create_job(config)
+
+            b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
+            env_overrides = [
+                run_v2.EnvVar(name="PYTHONUNBUFFERED", value="1"),
+                run_v2.EnvVar(name="CHARM_BOOTSTRAP_SCRIPT", value=b64_script),
+                *[
+                    run_v2.EnvVar(name=k, value=str(v))
+                    for k, v in config.env_vars.items()
+                    if v is not None
+                ],
+            ]
 
             yield sse_pack("status", "Starting Execution Environment...")
-            run_request = run_v2.RunJobRequest(name=job_name)
+            run_request = run_v2.RunJobRequest(
+                name=job_name,
+                overrides=run_v2.RunJobRequest.Overrides(
+                    container_overrides=[
+                        run_v2.RunJobRequest.Overrides.ContainerOverride(
+                            env=env_overrides,
+                        )
+                    ],
+                ),
+            )
             operation = await self.jobs_client.run_job(request=run_request)
 
             execution_name = operation.metadata.name
-            execution_id = execution_name.split("/")[-1]  # e.g. charm-2247afda-4665-4a01-b-0cba9b-cg7nt
+            execution_id = execution_name.split("/")[-1]
             logger.info(f"[CloudRun] Tailing logs for execution: {execution_name}")
 
-            # Fetch logs from the Job *container* (script stdout/stderr), not the Runner API.
-            # In GCP: Cloud Run > Jobs > <job> > Executions > <execution> > LOGS, or
-            # Logs Explorer: resource.type="cloud_run_job" + label run.googleapis.com/execution_name=<execution_id>
             filter_str = f"""
             resource.type="cloud_run_job"
             labels."run.googleapis.com/execution_name"="{execution_id}"
@@ -185,12 +211,10 @@ class CloudRunBackend(ExecutionBackend):
                                     yield sse_pack("error", f"System: {line}\n")
 
                 if not is_done:
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
 
-            # Drain trailing logs: Cloud Logging can delay a few seconds, so the "final" event
-            # may appear after operation.done(). Fetch a few more times before closing the stream.
-            for _ in range(3):
-                await asyncio.sleep(2)
+            for _ in range(2):
+                await asyncio.sleep(1)
                 try:
                     tail_logs = await loop.run_in_executor(
                         None,
@@ -257,17 +281,22 @@ class CloudRunBackend(ExecutionBackend):
 
         finally:
             if job_name:
-                skip_cleanup = os.environ.get("CHARM_KEEP_JOB_AFTER_RUN", "").lower() in ("1", "true", "yes")
-                if skip_cleanup:
-                    logger.info(f"[CloudRun] Keeping job for inspection: {job_name}")
-                else:
+                force_delete = os.environ.get("CHARM_DELETE_JOB_AFTER_RUN", "").lower() in ("1", "true", "yes")
+                if force_delete:
                     yield sse_pack("status", "Cleaning up resources...")
                     await self.cleanup(job_name)
+                else:
+                    logger.info(f"[CloudRun] Keeping job for reuse: {job_name}")
 
-    async def cleanup(self, job_name: str):
+    async def cleanup(self, job_name_or_run_id: str):
+        if "/jobs/" not in job_name_or_run_id:
+            logger.debug(f"[CloudRun] cleanup called with run_id {job_name_or_run_id}, skipping (job reuse)")
+            return
+
         try:
-            request = run_v2.DeleteJobRequest(name=job_name)
+            request = run_v2.DeleteJobRequest(name=job_name_or_run_id)
             await self.jobs_client.delete_job(request=request)
-            logger.info(f"[CloudRun] Deleted job {job_name}")
+            self._job_cache.pop(job_name_or_run_id, None)
+            logger.info(f"[CloudRun] Deleted job {job_name_or_run_id}")
         except Exception as e:
-            logger.warning(f"[CloudRun] Failed to delete job {job_name}: {e}")
+            logger.warning(f"[CloudRun] Failed to delete job {job_name_or_run_id}: {e}")

@@ -90,6 +90,13 @@ class DockerBackend(ExecutionBackend):
                 "mode": "ro",
             }
 
+        # Mount local SDK for dev installs (LOCAL_SDK_HOST_PATH)
+        if config.local_sdk_path and os.path.isdir(config.local_sdk_path):
+            volumes_config[config.local_sdk_path] = {
+                "bind": "/mnt/local_sdk",
+                "mode": "ro",
+            }
+
         if config.bundle_local_path:
             _mount_dir = os.path.dirname(config.bundle_local_path)
             volumes_config[_mount_dir] = {"bind": "/app/bundle_mount", "mode": "ro"}

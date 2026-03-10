@@ -244,7 +244,9 @@ class CharmDockerExecutor:
             install_local_sdk_cmd = f"""
             if [ -d "/mnt/local_sdk" ]; then
                 echo '{EVENT_PREFIX}{{"type":"status","content":"[DEV] Installing Local SDK..."}}'
-                uv pip install -e /mnt/local_sdk
+                cp -r /mnt/local_sdk /tmp/_local_sdk
+                uv pip install /tmp/_local_sdk
+                rm -rf /tmp/_local_sdk
             fi
             """
 
@@ -617,6 +619,7 @@ class CharmDockerExecutor:
             host_artifact_path=host_artifact_path,
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
+            local_sdk_path=local_sdk_path if should_mount_local else None,
             bundle_local_path=bundle_local_path if use_bundle_local else None,
             image=image,
             lifecycle=lifecycle,

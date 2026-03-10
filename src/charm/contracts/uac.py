@@ -146,6 +146,11 @@ class Policies(BaseModel):
     human_in_the_loop: Optional[HumanInTheLoop] = None
     max_steps: int = Field(20, description="Max execution steps")
     budget_limit: float = Field(0.0, description="Max USD cost per run")
+    execution_timeout_seconds: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Optional serverless execution timeout override in seconds.",
+    )
 
 
 # Auth Configuration

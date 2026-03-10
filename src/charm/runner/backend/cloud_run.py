@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import functools
+import hashlib
 import logging
 import os
 import random
@@ -74,6 +75,16 @@ class CloudRunBackend(ExecutionBackend):
         )
         self.trailing_attempts = max(1, _env_int("CHARM_LOG_TRAILING_ATTEMPTS", 6))
         self.log_read_concurrency = max(1, _env_int("CHARM_LOG_READ_CONCURRENCY", 2))
+        self.default_serverless_timeout_seconds = max(
+            1, _env_int("CHARM_DEFAULT_SERVERLESS_TIMEOUT_SECONDS", 600)
+        )
+        self.min_serverless_timeout_seconds = max(
+            1, _env_int("CHARM_MIN_SERVERLESS_TIMEOUT_SECONDS", 30)
+        )
+        self.max_serverless_timeout_seconds = max(
+            self.min_serverless_timeout_seconds,
+            _env_int("CHARM_MAX_SERVERLESS_TIMEOUT_SECONDS", 1800),
+        )
         self.raw_log_echo = os.getenv("CHARM_CLOUD_RUN_RAW_LOG_ECHO", "").lower() in (
             "1",
             "true",
@@ -81,12 +92,41 @@ class CloudRunBackend(ExecutionBackend):
         )
         self._log_read_semaphore = asyncio.Semaphore(self.log_read_concurrency)
 
-    def _make_job_id(self, agent_id: str) -> str:
-        safe = agent_id.replace("_", "-").lower()[:40]
-        return f"charm-{safe}"
+    def _resolve_timeout_seconds(self, config: RunConfig) -> int:
+        declared = (
+            config.timeout_seconds
+            if config.timeout_seconds is not None
+            else self.default_serverless_timeout_seconds
+        )
+        timeout = max(
+            self.min_serverless_timeout_seconds,
+            min(self.max_serverless_timeout_seconds, int(declared)),
+        )
+
+        if timeout != int(declared):
+            logger.warning(
+                "[CloudRun] Timeout clamped from %ss to %ss (allowed %ss-%ss)",
+                declared,
+                timeout,
+                self.min_serverless_timeout_seconds,
+                self.max_serverless_timeout_seconds,
+            )
+        return timeout
+
+    def _make_job_id(self, agent_id: str, spec_hash: str) -> str:
+        safe = agent_id.replace("_", "-").lower()[:32]
+        return f"charm-{safe}-{spec_hash[:8]}"
 
     async def _get_or_create_job(self, config: RunConfig) -> str:
-        job_id = self._make_job_id(config.agent_id)
+        default_fallback = (
+            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
+        )
+        worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
+        timeout_seconds = self._resolve_timeout_seconds(config)
+        spec_hash = hashlib.sha1(
+            f"{worker_image}|{timeout_seconds}".encode("utf-8")
+        ).hexdigest()
+        job_id = self._make_job_id(config.agent_id, spec_hash)
         job_fqn = f"{self.parent}/jobs/{job_id}"
 
         if job_fqn in self._job_cache:
@@ -102,11 +142,12 @@ class CloudRunBackend(ExecutionBackend):
         except google_exceptions.NotFound:
             logger.info(f"[CloudRun] Job {job_id} not found, creating...")
 
-        default_fallback = (
-            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
+        logger.info(
+            "[CloudRun] Target Image: %s | Timeout: %ss | JobId: %s",
+            worker_image,
+            timeout_seconds,
+            job_id,
         )
-        worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
-        logger.info(f"[CloudRun] Target Image: {worker_image}")
 
         container = {
             "image": worker_image,
@@ -126,7 +167,7 @@ class CloudRunBackend(ExecutionBackend):
 
         job = run_v2.Job()
         job.template.template.max_retries = 0
-        job.template.template.timeout = "600s"
+        job.template.template.timeout = f"{timeout_seconds}s"
 
         if self.storage_bucket:
             container["volume_mounts"] = [{"name": "gcs-persistence", "mount_path": "/workspace"}]

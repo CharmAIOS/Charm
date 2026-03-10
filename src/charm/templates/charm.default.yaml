@@ -99,3 +99,5 @@ auth:
 policies:
   allow_internet_access: true
   max_steps: 20
+  # Optional: Override serverless run timeout for this agent (seconds).
+  # execution_timeout_seconds: 600

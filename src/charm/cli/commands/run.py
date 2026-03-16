@@ -238,4 +238,4 @@ def run_command(
                 Panel(f"[bold]Error:[/bold] {error_msg}", title="Agent Failed", border_style="red")
             )
     else:
-        console.print("[DEBUG CHECK] Silent Mode Active. Panel suppressed.")
+        console.print(json.dumps(result))

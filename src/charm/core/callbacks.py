@@ -21,8 +21,6 @@ class CharmCallbackHandler(BaseCallbackHandler):
         # Shared state allows the wrapper to know if tokens were streamed.
         self.shared_state = shared_state if shared_state is not None else {}
 
-        print("[Charm] Loaded Local SDK Fix (Shared State + Attrs)")
-
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Triggered when a tool starts executing."""
         tool_name = serialized.get("name", "Unknown Tool")

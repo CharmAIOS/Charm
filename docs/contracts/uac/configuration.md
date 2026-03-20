@@ -60,18 +60,18 @@ version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
 # 1. Identity & Store Metadata
 # ------------------------------------------------------------------
 persona:
-  name: "Research Assistant" # Display Project Name (Max 50 chars)
+  name: "My Charm Agent" # Display Project Name (Max 50 chars)
   version: "0.1.0" # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
-  description: "Deep research on any topic." # Tagline (Card view, Max 100 chars)
+  description: "A short description of this agent." # Tagline (Card view, Max 100 chars)
   
   # Full description supports Markdown. Used for the Info Page.
   full_description: |
-    # Research Assistant
+    # My Charm Agent
     ...
   # Describe usage, available capabilities, and expected deliverables.
     
   authors: ["Brand, Company, or Individual Name"]
-  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others, and feel free to add any additional tags based on your preferences.
+  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others.
   license: "MIT"
   
   # Assets for the Storefront
@@ -83,7 +83,7 @@ pricing:
   type: "free"  # Options: free, usage_based, one_time, subscription. At this stage, please fill in free.
 
 # ------------------------------------------------------------------
-# 2. Interface (UI Generation)
+# 2. UI Generation
 # ------------------------------------------------------------------
 # Defines the input form shown to users.
 # It uses standard JSON Schema.
@@ -125,12 +125,12 @@ interface:
     description: "The structure of the final result."
 
 # ------------------------------------------------------------------
-# 3. Runtime (Execution Logic)
+# 3. Runtime Configuration
 # ------------------------------------------------------------------
 runtime:
   adapter:
     # - crewai / langchain / langgraph : Standard Python Frameworks
-    # - openclaw : Configuration-driven Agent (No code required)
+    # - openclaw : Configuration-driven Agent
     # - node : For JavaScript/TypeScript Agents
     # - custom : Pure Python functions
     type: "crewai"
@@ -183,16 +183,24 @@ runtime:
       source: "pip:mcp-server-time"
   
   # --------------------------------------------------------------
-  # RUNTIME MODE (Environment Selection)
+  # Environment Mode
   # --------------------------------------------------------------
-  # "standard": Lightweight Python environment. Fast boot time.
-  # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
+   # "standard": Lightweight Python environment. Fast boot time.
+   # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
   mode: "standard"
+
+  # --------------------------------------------------------------
+  # Execution Mode
+  # --------------------------------------------------------------
+   # "serverless": 
+   # "interactive":
+   # "daemon": 24/7 Always-on. Ideal for monitoring or long-running services.
+  lifecycle: "serverless"
 
 # ------------------------------------------------------------------
 # 4. Authentication
 # ------------------------------------------------------------------
-# Declare OAuth requirements.
+# Declare if your agent needs user's OAuth tokens.
 # NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
@@ -214,6 +222,8 @@ auth:
 policies:
   allow_internet_access: true
   max_steps: 20
+  # Optional: Override serverless run timeout for this agent (seconds).
+  # execution_timeout_seconds: 600
   ```
 
 ### Field Reference Table

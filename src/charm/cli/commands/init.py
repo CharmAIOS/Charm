@@ -13,10 +13,13 @@ console = Console()
 def init_command(
     name: str = typer.Argument(
         ...,
-        help="Agent directory path (e.g. 'my-agent' or 'agents/my-agent' to keep under agents/)",
+        help="Agent directory path (e.g. '.' for current directory, 'my-agent' for new folder)",
     ),
     template: str = typer.Option(
         "default", help="Template to use: 'default' (Python Code) or 'openclaw' (MCP Agent)"
+    ),
+    create: str = typer.Option(
+        None, "--create", help="Specifically create a single file from template (e.g. 'charm.yaml')"
     ),
 ):
     """
@@ -24,11 +27,35 @@ def init_command(
     """
     project_path = Path(name)
 
-    if project_path.exists():
-        console.print(f"[bold red]Error:[/bold red] Directory '{name}' already exists.")
-        raise typer.Exit(1)
+    if create:
+        if not project_path.exists():
+            project_path.mkdir(parents=True)
+            
+        target_file = project_path / create
+        if target_file.exists():
+            console.print(f"[bold red]Error:[/bold red] File '{target_file}' already exists.")
+            raise typer.Exit(1)
+            
+        try:
+            # We explicitly use the default yaml for the --create flag as per requested behavior
+            template_source = files("charm.templates").joinpath("charm.default.yaml")
+            yaml_content = template_source.read_text(encoding="utf-8")
+            target_file.write_text(yaml_content, encoding="utf-8")
+            console.print(f"[bold green]✔ Created file: {target_file}[/bold green]")
+        except Exception as e:
+            console.print(f"[bold red]Error creating file:[/bold red] {e}")
+            raise typer.Exit(1) from e
+        return
 
-    project_path.mkdir(parents=True)
+    if project_path.exists():
+        if not project_path.is_dir():
+            console.print(f"[bold red]Error:[/bold red] '{name}' already exists and is not a directory.")
+            raise typer.Exit(1)
+        if any(project_path.iterdir()):
+            console.print(f"[bold red]Error:[/bold red] Directory '{name}' already exists and is not empty.")
+            raise typer.Exit(1)
+    else:
+        project_path.mkdir(parents=True)
 
     try:
         # Load the base template content

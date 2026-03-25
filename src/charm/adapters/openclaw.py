@@ -204,6 +204,19 @@ class CharmOpenClawAdapter(BaseAdapter):
 
         return mcp_servers
 
+    def _inject_proxy_env(self, env: dict):
+        """Route all LLM calls through the Charm proxy if configured."""
+        proxy_base = os.environ.get("CHARM_LLM_PROXY_BASE")
+        proxy_key = os.environ.get("CHARM_LLM_PROXY_KEY")
+
+        if proxy_base and proxy_key:
+            env["OPENAI_API_BASE"] = proxy_base
+            env["OPENAI_BASE_URL"] = proxy_base
+            env["OPENAI_API_KEY"] = proxy_key
+            logger.info(f"🔀 LLM proxy active: {proxy_base}")
+        else:
+            logger.warning("CHARM_LLM_PROXY_BASE / CHARM_LLM_PROXY_KEY not set — LLM calls may hit provider directly")
+
     def _generate_openclaw_config(self, env: dict):
         """Configure OpenClaw for the current session."""
         oc_config = self.config.runtime.config
@@ -279,6 +292,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
         env = os.environ.copy()
         env["HOME"] = "/root"
+        self._inject_proxy_env(env)
 
         try:
             for item in os.listdir(self.work_dir):

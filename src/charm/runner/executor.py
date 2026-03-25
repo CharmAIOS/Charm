@@ -565,6 +565,7 @@ class CharmDockerExecutor:
             image=image,
             lifecycle=lifecycle,
             timeout_seconds=timeout_seconds,
+            supabase_client=supabase_client,
         )
 
         try:

@@ -205,17 +205,18 @@ class CharmOpenClawAdapter(BaseAdapter):
         return mcp_servers
 
     def _inject_proxy_env(self, env: dict):
-        """Route all LLM calls through the Charm proxy if configured."""
-        proxy_base = os.environ.get("CHARM_LLM_PROXY_BASE")
-        proxy_key = os.environ.get("CHARM_LLM_PROXY_KEY")
+        """Ensure both OPENAI_API_BASE and OPENAI_BASE_URL are set consistently.
 
-        if proxy_base and proxy_key:
-            env["OPENAI_API_BASE"] = proxy_base
+        resolve_dependencies (main.py) already maps CHARM_LLM_PROXY_BASE →
+        OPENAI_API_BASE before the container starts. We just make sure litellm's
+        alternate env var name is also populated so nothing falls through.
+        """
+        proxy_base = env.get("OPENAI_API_BASE", "").strip()
+        if proxy_base:
             env["OPENAI_BASE_URL"] = proxy_base
-            env["OPENAI_API_KEY"] = proxy_key
             logger.info(f"🔀 LLM proxy active: {proxy_base}")
         else:
-            logger.warning("CHARM_LLM_PROXY_BASE / CHARM_LLM_PROXY_KEY not set — LLM calls may hit provider directly")
+            logger.warning("OPENAI_API_BASE not set — LLM calls may hit provider directly")
 
     def _generate_openclaw_config(self, env: dict):
         """Configure OpenClaw for the current session."""
@@ -260,6 +261,25 @@ class CharmOpenClawAdapter(BaseAdapter):
             logger.info(f"Model set to: {model}")
         except Exception as e:
             logger.warning(f"Failed to set model config: {e}")
+
+        # Patch openclaw.json so the openai provider uses the Charm proxy base URL.
+        # OpenClaw reads provider baseUrl from its config file, not from env vars,
+        # so OPENAI_API_BASE alone is not enough.
+        proxy_base = env.get("OPENAI_API_BASE", "").strip()
+        if proxy_base:
+            config_path = os.path.join(openclaw_home, "openclaw.json")
+            try:
+                cfg = {}
+                if os.path.exists(config_path):
+                    with open(config_path, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                cfg.setdefault("models", {}).setdefault("providers", {}).setdefault("openai", {})
+                cfg["models"]["providers"]["openai"]["baseUrl"] = proxy_base
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2)
+                logger.info(f"Patched openclaw.json: openai provider → {proxy_base}")
+            except Exception as e:
+                logger.warning(f"Failed to patch openclaw.json provider baseUrl: {e}")
 
     def _parse_log(self, line: str):
         """Parse OpenClaw stdout to Charm Events."""

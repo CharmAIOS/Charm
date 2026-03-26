@@ -14,9 +14,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Trigger Runner Workflow
-              uses: peter-evans/repository-dispatch@v3
-              with:
-                  token: ${{ secrets.SDK_PAT_TOKEN }}
-                  repository: CharmAIOS/charm-cloud-runner
-                  event-type: sdk_updated
-                  client-payload: '{"ref": "${{ github.ref_name }}"}'
+              run: |
+                gh workflow run deploy-staging.yml \
+                  --repo CharmAIOS/charm-cloud-runner \
+                  --ref develop
+              env:
+                GH_TOKEN: ${{ secrets.SDK_PAT_TOKEN }}

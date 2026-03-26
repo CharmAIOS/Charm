@@ -244,42 +244,66 @@ class CharmOpenClawAdapter(BaseAdapter):
             logger.error(f"Failed to write .mcp.json: {e}")
             raise e
 
-        model = oc_config.model if oc_config else "gpt-4o"
-        if "/" not in model:
-            if os.environ.get("ANTHROPIC_API_KEY"):
-                model = f"anthropic/{model}"
-            elif os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
-                model = f"google/{model}"
-            else:
-                model = f"openai/{model}"
-            logger.info(f"Auto-prefixed model to: {model}")
-        try:
-            subprocess.run(
-                ["openclaw", "config", "set", "agents.defaults.model", model],
-                env=env, capture_output=True, text=True, timeout=10,
-            )
-            logger.info(f"Model set to: {model}")
-        except Exception as e:
-            logger.warning(f"Failed to set model config: {e}")
-
-        # Patch openclaw.json so the openai provider uses the Charm proxy base URL.
-        # OpenClaw reads provider baseUrl from its config file, not from env vars,
-        # so OPENAI_API_BASE alone is not enough.
+        # Resolve model and provider.
+        # When routing through the Charm LLM proxy (an OpenAI-compatible LiteLLM
+        # gateway), OpenClaw requires a custom provider named "litellm" rather than
+        # the built-in "openai" provider (which hardcodes api.openai.com as the base).
+        # The model must be referenced as "litellm/<model_id>" and the provider config
+        # must include api="openai-completions" plus an explicit models list.
+        # Reference: https://docs.litellm.ai/docs/tutorials/openclaw_integration
         proxy_base = env.get("OPENAI_API_BASE", "").strip()
+        proxy_key = env.get("OPENAI_API_KEY", "").strip()
+
+        raw_model = oc_config.model if oc_config else "gpt-4o"
+        # Strip any existing provider prefix to obtain the bare model id
+        model_id = raw_model.split("/", 1)[-1] if "/" in raw_model else raw_model
+
         if proxy_base:
-            config_path = os.path.join(openclaw_home, "openclaw.json")
-            try:
-                cfg = {}
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        cfg = json.load(f)
-                cfg.setdefault("models", {}).setdefault("providers", {}).setdefault("openai", {})
-                cfg["models"]["providers"]["openai"]["baseUrl"] = proxy_base
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(cfg, f, indent=2)
-                logger.info(f"Patched openclaw.json: openai provider → {proxy_base}")
-            except Exception as e:
-                logger.warning(f"Failed to patch openclaw.json provider baseUrl: {e}")
+            # Charm proxy (LiteLLM-compatible) — use "litellm" as the provider name
+            provider_name = "litellm"
+            full_model = f"litellm/{model_id}"
+            provider_cfg: dict = {
+                "baseUrl": proxy_base,
+                "api": "openai-completions",
+                "models": [{"id": model_id, "name": model_id}],
+            }
+            if proxy_key:
+                provider_cfg["apiKey"] = proxy_key
+            logger.info(f"✅ Proxy routing: {full_model} → {proxy_base}")
+        else:
+            # BYOK — fall back to the native provider for whichever key is present
+            logger.warning("OPENAI_API_BASE not set — LLM calls may hit provider directly")
+            if env.get("ANTHROPIC_API_KEY"):
+                provider_name = "anthropic"
+            elif env.get("GOOGLE_API_KEY") or env.get("GEMINI_API_KEY"):
+                provider_name = "google"
+            else:
+                provider_name = "openai"
+            full_model = f"{provider_name}/{model_id}"
+            provider_cfg = {}
+
+        # Write openclaw.json from scratch as standard JSON.
+        # OpenClaw writes JSON5 (comments / trailing commas) during onboarding,
+        # which Python's json.load cannot parse. We overwrite it entirely so the
+        # proxy baseUrl and correct model format are always applied on every start.
+        config_path = os.path.join(openclaw_home, "openclaw.json")
+        try:
+            os.makedirs(openclaw_home, exist_ok=True)
+            cfg: dict = {
+                "agents": {
+                    "defaults": {
+                        # Must be an object with "primary" key, not a plain string
+                        "model": {"primary": full_model},
+                    },
+                },
+            }
+            if provider_cfg:
+                cfg["models"] = {"providers": {provider_name: provider_cfg}}
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+            logger.info(f"openclaw.json written: model={full_model}")
+        except Exception as e:
+            logger.warning(f"Failed to write openclaw.json: {e}")
 
     def _parse_log(self, line: str):
         """Parse OpenClaw stdout to Charm Events."""

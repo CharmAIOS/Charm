@@ -244,42 +244,53 @@ class CharmOpenClawAdapter(BaseAdapter):
             logger.error(f"Failed to write .mcp.json: {e}")
             raise e
 
-        model = oc_config.model if oc_config else "gpt-4o"
-        if "/" not in model:
-            if os.environ.get("ANTHROPIC_API_KEY"):
-                model = f"anthropic/{model}"
-            elif os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
-                model = f"google/{model}"
-            else:
-                model = f"openai/{model}"
-            logger.info(f"Auto-prefixed model to: {model}")
-        try:
-            subprocess.run(
-                ["openclaw", "config", "set", "agents.defaults.model", model],
-                env=env, capture_output=True, text=True, timeout=10,
-            )
-            logger.info(f"Model set to: {model}")
-        except Exception as e:
-            logger.warning(f"Failed to set model config: {e}")
+        # Read proxy config directly from the runner's env vars.
+        # The runner sets CHARM_LLM_PROXY_BASE and CHARM_LLM_PROXY_KEY.
+        # env is os.environ.copy() so these are available directly.
+        proxy_base = env.get("CHARM_LLM_PROXY_BASE", "").strip()
+        proxy_key = env.get("CHARM_LLM_PROXY_KEY", "").strip()
 
-        # Patch openclaw.json so the openai provider uses the Charm proxy base URL.
-        # OpenClaw reads provider baseUrl from its config file, not from env vars,
-        # so OPENAI_API_BASE alone is not enough.
-        proxy_base = env.get("OPENAI_API_BASE", "").strip()
-        if proxy_base:
-            config_path = os.path.join(openclaw_home, "openclaw.json")
-            try:
-                cfg = {}
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        cfg = json.load(f)
-                cfg.setdefault("models", {}).setdefault("providers", {}).setdefault("openai", {})
-                cfg["models"]["providers"]["openai"]["baseUrl"] = proxy_base
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(cfg, f, indent=2)
-                logger.info(f"Patched openclaw.json: openai provider → {proxy_base}")
-            except Exception as e:
-                logger.warning(f"Failed to patch openclaw.json provider baseUrl: {e}")
+        raw_model = oc_config.model if oc_config else "gpt-4o"
+        # Strip any existing provider prefix to obtain the bare model id
+        model_id = raw_model.split("/", 1)[-1] if "/" in raw_model else raw_model
+
+        if not proxy_base or not proxy_key:
+            logger.warning("CHARM_LLM_PROXY_BASE or CHARM_LLM_PROXY_KEY not set — LLM calls may fail")
+
+        # Write openclaw.json from scratch as standard JSON.
+        # OpenClaw writes JSON5 (comments / trailing commas) during onboarding,
+        # which Python's json.load cannot parse. We overwrite it entirely so the
+        # proxy baseUrl and correct model format are always applied on every start.
+        #
+        # Use the "litellm" provider so OpenClaw routes to our proxy instead of
+        # hardcoding api.openai.com (which the built-in "openai" provider does).
+        # Reference: https://docs.litellm.ai/docs/tutorials/openclaw_integration
+        config_path = os.path.join(openclaw_home, "openclaw.json")
+        try:
+            os.makedirs(openclaw_home, exist_ok=True)
+            cfg: dict = {
+                "agents": {
+                    "defaults": {
+                        # Must be an object with "primary" key, not a plain string
+                        "model": {"primary": f"litellm/{model_id}"},
+                    },
+                },
+                "models": {
+                    "providers": {
+                        "litellm": {
+                            "baseUrl": proxy_base,
+                            "apiKey": proxy_key,
+                            "api": "openai-completions",
+                            "models": [{"id": model_id, "name": model_id}],
+                        }
+                    }
+                },
+            }
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+            logger.info(f"✅ openclaw.json written: model=litellm/{model_id} → {proxy_base}")
+        except Exception as e:
+            logger.warning(f"Failed to write openclaw.json: {e}")
 
     def _parse_log(self, line: str):
         """Parse OpenClaw stdout to Charm Events."""

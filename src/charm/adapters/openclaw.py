@@ -372,6 +372,7 @@ class CharmOpenClawAdapter(BaseAdapter):
             "openclaw", "agent",
             "--local",
             "--agent", "main",
+            "--workspace", self.workspace_dir,
             "--message", user_input,
             "--json",
         ]

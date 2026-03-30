@@ -130,8 +130,8 @@ class FlyIoBackend(ExecutionBackend):
                         except Exception as e:
                             emit(json.dumps({"type":"error","content":"Bundle setup failed: "+str(e)}))
                             return
-                    env={**os.environ,**xenv}
-                    cmd=["openclaw","agent","--local","--agent",agent,"--workspace",ws,"--message",msg,"--json"]
+                    env={**os.environ,**xenv,"CHARM_WORKSPACE_DIR":ws}
+                    cmd=["openclaw","agent","--local","--agent",agent,"--message",msg,"--json"]
                     try:
                         proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,env=env)
                         for line in proc.stdout:

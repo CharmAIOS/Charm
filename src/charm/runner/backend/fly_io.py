@@ -181,17 +181,18 @@ class FlyIoBackend(ExecutionBackend):
                 return False
         return False
 
-    async def _create_volume(self, session: aiohttp.ClientSession, agent_id: str) -> Optional[str]:
+    async def _create_volume(self, session: aiohttp.ClientSession, agent_id: str) -> Tuple[Optional[str], Optional[str]]:
+        """Returns (volume_id, error_message). One of the two will be None."""
         url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes"
         vol_name = f"charm_{agent_id.replace('-', '')[:20]}"
         payload = {"name": vol_name, "region": self.region, "size_gb": 1}
         async with session.post(url, headers=self._headers(), json=payload) as resp:
             if resp.status not in (200, 201):
                 text = await resp.text()
-                logger.error("[Fly.io] Volume creation failed: %s", text)
-                return None
+                logger.error("[Fly.io] Volume creation failed (HTTP %s): %s", resp.status, text)
+                return None, f"HTTP {resp.status}: {text}"
             data = await resp.json()
-            return data.get("id")
+            return data.get("id"), None
 
     async def _create_machine(
         self, session: aiohttp.ClientSession, config: RunConfig, volume_id: Optional[str]
@@ -276,9 +277,9 @@ class FlyIoBackend(ExecutionBackend):
             if not machine_id:
                 if not volume_id:
                     yield sse_pack("status", "Allocating persistent storage volume...")
-                    volume_id = await self._create_volume(session, config.agent_id)
+                    volume_id, vol_err = await self._create_volume(session, config.agent_id)
                     if not volume_id:
-                        yield sse_pack("error", "Failed to allocate storage volume.")
+                        yield sse_pack("error", f"Failed to allocate storage volume. {vol_err or ''}".strip())
                         return
                     logger.info("[Fly.io] Created volume: %s", volume_id)
 

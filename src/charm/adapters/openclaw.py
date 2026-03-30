@@ -427,7 +427,17 @@ class CharmOpenClawAdapter(BaseAdapter):
             raw_output = "".join(stdout_lines).strip()
             try:
                 result_json = json.loads(raw_output)
-                final_output = result_json.get("reply", result_json.get("output", raw_output))
+                # OpenClaw --json output: {"payloads": [{"text": "..."}], "meta": {...}, ...}
+                if isinstance(result_json.get("payloads"), list):
+                    texts = [
+                        p.get("text", "")
+                        for p in result_json["payloads"]
+                        if p.get("text")
+                    ]
+                    final_output = "\n".join(texts)
+                else:
+                    # Fallback for other potential JSON shapes
+                    final_output = result_json.get("reply", result_json.get("output", ""))
             except (json.JSONDecodeError, TypeError):
                 clean_output = [
                     line for line in stdout_lines

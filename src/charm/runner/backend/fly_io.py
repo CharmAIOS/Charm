@@ -11,8 +11,8 @@ from ...runner.protocol import sse_pack
 logger = logging.getLogger("charm.runner.fly_io")
 
 FLY_API_BASE = "https://api.machines.dev/v1"
-MACHINE_POLL_INTERVAL = 2
-MACHINE_POLL_MAX_ATTEMPTS = 15
+MACHINE_POLL_INTERVAL = 3
+MACHINE_POLL_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — image pull can take ~45-60s on first boot
 MACHINE_HEALTH_POLL_INTERVAL = 3
 MACHINE_HEALTH_MAX_ATTEMPTS = 20
 DAEMON_AGENT_PORT = 8000

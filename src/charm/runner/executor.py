@@ -376,6 +376,28 @@ class CharmDockerExecutor:
             charm run . --json "$INPUT_JSON"
             """
 
+        # Pre-upgrade workspace snapshot block (Agentic OTA Rollback — Gap 3)
+        # This block is a no-op on normal runs.  When CHARM_UPGRADE_SNAPSHOT_VERSION is
+        # set (injected by the /v1/upgrade runner path) the workspace is tarred into
+        # $CHARM_WORKSPACE_DIR/.snapshots/<old_version>.tar.gz before the merge begins,
+        # giving operators a one-command rollback path.
+        snapshot_block = """        # Pre-upgrade workspace snapshot (Agentic OTA)
+        if [ -n "$CHARM_UPGRADE_SNAPSHOT_VERSION" ]; then
+            echo '::CHARM_EVENT::{"type":"status","content":"Creating workspace snapshot..."}'
+            SNAPSHOT_DIR="$CHARM_WORKSPACE_DIR/.snapshots"
+            mkdir -p "$SNAPSHOT_DIR"
+            SNAPSHOT_ARCHIVE="$SNAPSHOT_DIR/${CHARM_UPGRADE_SNAPSHOT_VERSION}.tar.gz"
+            # Only compress if the workspace has content beyond the .snapshots dir itself.
+            if [ -n "$(ls -A "$CHARM_WORKSPACE_DIR" 2>/dev/null | grep -v '^\\.snapshots$')" ]; then
+                tar -czf "$SNAPSHOT_ARCHIVE" \\
+                    --exclude='.snapshots' \\
+                    -C "$CHARM_WORKSPACE_DIR" . 2>/dev/null || true
+                echo '::CHARM_EVENT::{"type":"status","content":"Workspace snapshot saved."}'
+            else
+                echo '::CHARM_EVENT::{"type":"status","content":"Workspace empty — snapshot skipped."}'
+            fi
+        fi"""
+
         # Cleanup & Persistence Logic
         cleanup_function = f"""
         function cleanup {{
@@ -421,6 +443,8 @@ class CharmDockerExecutor:
 
         mkdir -p "$CHARM_WORKSPACE_DIR"
         mkdir -p /app/artifacts_mount
+
+        {snapshot_block}
 
         {install_local_sdk_cmd}
 

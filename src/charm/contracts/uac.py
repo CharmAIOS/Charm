@@ -124,9 +124,9 @@ class RuntimeConfig(BaseModel):
         description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime.",
     )
 
-    lifecycle: Literal["serverless", "daemon"] = Field(
+    lifecycle: Literal["serverless", "daemon", "interactive"] = Field(
         "serverless",
-        description="Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on).",
+        description="Execution mode: 'serverless' (max 10 mins), 'daemon' (24/7 always-on), or 'interactive' (real-time streaming).",
     )
 
 

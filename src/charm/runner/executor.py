@@ -360,6 +360,28 @@ class CharmDockerExecutor:
             charm run . --json "$INPUT_JSON"
             """
 
+        # Rollback restore block (Agentic OTA — CHARM_ROLLBACK_SNAPSHOT_PATH)
+        # This block is a no-op on normal and upgrade runs.  When the /v1/rollback
+        # runner path injects CHARM_ROLLBACK_SNAPSHOT_PATH, the container extracts
+        # the snapshot tarball back into the workspace and exits 0 — the cleanup trap
+        # emits internal_run_finished so the runner knows the restore succeeded.
+        # The block runs before source setup so no bundle download is required.
+        rollback_block = """        # Rollback workspace restore (Agentic OTA)
+        if [ -n "$CHARM_ROLLBACK_SNAPSHOT_PATH" ]; then
+            echo '::CHARM_EVENT::{"type":"status","content":"Restoring workspace from snapshot..."}'
+            mkdir -p "$CHARM_WORKSPACE_DIR"
+            # Clear current workspace contents while preserving the .snapshots directory.
+            find "$CHARM_WORKSPACE_DIR" -mindepth 1 -maxdepth 1 ! -name '.snapshots' -exec rm -rf {} +
+            if [ -f "$CHARM_ROLLBACK_SNAPSHOT_PATH" ]; then
+                tar -xzf "$CHARM_ROLLBACK_SNAPSHOT_PATH" -C "$CHARM_WORKSPACE_DIR"
+                echo '::CHARM_EVENT::{"type":"status","content":"Workspace restored successfully."}'
+                exit 0
+            else
+                echo '::CHARM_EVENT::{"type":"error","content":"Snapshot not found: $CHARM_ROLLBACK_SNAPSHOT_PATH"}'
+                exit 1
+            fi
+        fi"""
+
         # Pre-upgrade workspace snapshot block (Agentic OTA Rollback — Gap 3)
         # This block is a no-op on normal runs.  When CHARM_UPGRADE_SNAPSHOT_VERSION is
         # set (injected by the /v1/upgrade runner path) the workspace is tarred into
@@ -419,6 +441,8 @@ class CharmDockerExecutor:
         trap "kill $HEARTBEAT_PID 2>/dev/null; cleanup" EXIT
 
         mkdir -p agent_code && cd agent_code
+
+        {rollback_block}
 
         {source_setup_block}
 

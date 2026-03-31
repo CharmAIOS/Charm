@@ -214,7 +214,6 @@ class CharmDockerExecutor:
         env_vars: Dict[str, str],
         file_urls: Dict[str, str],
         input_payload: Dict[str, Any],
-        local_sdk_path: Optional[str] = None,
         use_local_mount: bool = False,
         use_bundle_local: bool = False,
         use_bundle_gcs: bool = False,
@@ -236,21 +235,6 @@ class CharmDockerExecutor:
             for f, u in file_urls.items():
                 dl_cmds.append(f"curl -s -L {shlex.quote(u)} -o {shlex.quote(os.path.basename(f))}")
         dl_block = "\n".join(dl_cmds) if dl_cmds else "true"
-
-        # Local SDK Install (Dev Only)
-        # Mount and install the local SDK whenever LOCAL_SDK_HOST_PATH is set,
-        # regardless of whether source code is also mounted locally.
-        # This allows testing SDK changes without rebuilding the Docker image.
-        install_local_sdk_cmd = ""
-        if local_sdk_path:
-            install_local_sdk_cmd = f"""
-            if [ -d "/mnt/local_sdk" ]; then
-                echo '{EVENT_PREFIX}{{"type":"status","content":"[DEV] Installing Local SDK (override)..."}}'
-                cp -r /mnt/local_sdk /tmp/_local_sdk
-                uv pip install --upgrade /tmp/_local_sdk
-                rm -rf /tmp/_local_sdk
-            fi
-            """
 
         # Source Code Setup
         if use_local_mount:
@@ -446,8 +430,6 @@ class CharmDockerExecutor:
 
         {snapshot_block}
 
-        {install_local_sdk_cmd}
-
         # Install Dependencies
         {install_node_deps_block}
         {install_python_deps_block}
@@ -534,21 +516,23 @@ class CharmDockerExecutor:
                     )
                     return
         else:
-            # Local development always uses Docker
-            backend = self.local_docker_backend
+            # Local development: respect lifecycle so dev mirrors staging exactly.
+            # daemon → Fly.io backend (same as staging); everything else → Docker.
+            if lifecycle == "daemon" and self.daemon_backend:
+                logger.info(f"[{run_id}] [Local] Dispatching to Daemon Infrastructure (Fly.io)")
+                backend = self.daemon_backend
+            else:
+                backend = self.local_docker_backend
 
         if bundle_gcs_path and not isinstance(backend, DockerBackend):
             env_vars["CHARM_BUNDLE_GCS_PATH"] = "/workspace/" + bundle_gcs_path.lstrip("/")
 
-        local_sdk_path = os.getenv("LOCAL_SDK_HOST_PATH")
         force_bundle_download = os.environ.get("CHARM_FORCE_BUNDLE_DOWNLOAD", "").lower() in ("1", "true", "yes")
         should_mount_local = (
             bool(local_source_path)
             and isinstance(backend, DockerBackend)
             and not force_bundle_download
         )
-        # SDK mount is independent of source mount — always override when LOCAL_SDK_HOST_PATH is set.
-        should_mount_local_sdk = bool(local_sdk_path) and isinstance(backend, DockerBackend)
 
         use_file_input = False
         if isinstance(backend, DockerBackend):
@@ -570,7 +554,6 @@ class CharmDockerExecutor:
             env_vars=env_vars,
             file_urls=file_urls,
             input_payload=input_payload,
-            local_sdk_path=local_sdk_path if should_mount_local_sdk else None,
             use_local_mount=should_mount_local,
             use_bundle_local=use_bundle_local,
             use_bundle_gcs=use_bundle_gcs,
@@ -589,7 +572,6 @@ class CharmDockerExecutor:
             host_artifact_path=host_artifact_path,
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
-            local_sdk_path=local_sdk_path if should_mount_local_sdk else None,
             bundle_local_path=bundle_local_path if use_bundle_local else None,
             image=image,
             lifecycle=lifecycle,

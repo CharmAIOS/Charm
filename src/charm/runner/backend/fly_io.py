@@ -131,13 +131,51 @@ class FlyIoBackend(ExecutionBackend):
                             emit(json.dumps({"type":"error","content":"Bundle setup failed: "+str(e)}))
                             return
                     env={**os.environ,**xenv,"CHARM_WORKSPACE_DIR":ws}
+                    # Write openclaw.json so openclaw routes LLM calls through the Charm proxy.
+                    # CHARM_LLM_PROXY_BASE and CHARM_LLM_PROXY_KEY are forwarded in xenv.
+                    proxy_base=env.get("CHARM_LLM_PROXY_BASE","").strip()
+                    proxy_key=env.get("CHARM_LLM_PROXY_KEY","").strip()
+                    model_id=env.get("CHARM_LLM_MODEL","gpt-4o").strip()
+                    if proxy_base and proxy_key:
+                        import pathlib
+                        oc_home=os.path.join(os.path.expanduser("~"),".openclaw")
+                        pathlib.Path(oc_home).mkdir(parents=True,exist_ok=True)
+                        oc_cfg={
+                            "agents":{"defaults":{"model":{"primary":"litellm/"+model_id}}},
+                            "models":{"providers":{"litellm":{"baseUrl":proxy_base,"apiKey":proxy_key,"api":"openai-completions","models":[{"id":model_id,"name":model_id}]}}}
+                        }
+                        with open(os.path.join(oc_home,"openclaw.json"),"w") as f:
+                            json.dump(oc_cfg,f)
+                        emit(json.dumps({"type":"status","content":"LLM proxy configured: "+proxy_base}))
+                    else:
+                        emit(json.dumps({"type":"status","content":"Warning: CHARM_LLM_PROXY_BASE not set, LLM calls may fail"}))
                     cmd=["openclaw","agent","--local","--agent",agent,"--message",msg,"--json"]
                     try:
-                        proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,env=env)
-                        for line in proc.stdout:
-                            emit(line.decode("utf-8","replace").rstrip())
-                        proc.wait()
-                        emit(json.dumps({"type":"internal_run_finished","exit_code":proc.returncode}))
+                        import re as _re
+                        # Capture both stdout and stderr: openclaw --json writes output to stderr
+                        proc=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+                        stdout_data,stderr_data=proc.communicate()
+                        # Parse the complete --json output and emit a final event
+                        if proc.returncode==0:
+                            parsed=False
+                            # Try stderr first (openclaw --json output), then stdout as fallback
+                            for raw in [stderr_data,stdout_data]:
+                                clean=_re.sub(r"\x1b\[[0-9;]*[mA-Za-z]","",raw.decode("utf-8","replace"))
+                                # Find the start of the JSON object, skipping any log lines before it
+                                json_start=clean.find("{")
+                                if json_start<0:continue
+                                try:
+                                    result_json=json.loads(clean[json_start:])
+                                    texts=[p.get("text","") for p in result_json.get("payloads",[]) if p.get("text")]
+                                    final_text="\n".join(texts).strip()
+                                    if final_text:
+                                        emit(json.dumps({"type":"final","content":final_text}))
+                                    parsed=True
+                                    break
+                                except Exception:pass
+                            if not parsed:
+                                emit(json.dumps({"type":"error","content":"Could not parse agent JSON output"}))
+                        emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":proc.returncode}}))
                     except BrokenPipeError:pass
                     except Exception as e:
                         emit(json.dumps({"type":"error","content":str(e)}))
@@ -337,7 +375,21 @@ class FlyIoBackend(ExecutionBackend):
         if secret:
             headers["X-Daemon-Secret"] = secret
 
-        message = config.input_payload.get("message", "")
+        # Extract the user message from the input payload.
+        # Agents may use different keys ("message", "input", "task", etc.) depending
+        # on how their charm.yaml interface is defined.  Mirror the same key-priority
+        # logic used by openclaw.py's invoke() method so the daemon always gets a
+        # non-empty message regardless of which key the UI sends.
+        _SKIP_KEYS = {"__charm_thread_id__", "__charm_state__"}
+        message = (
+            config.input_payload.get("message")
+            or config.input_payload.get("input", "")
+        )
+        for _k, _v in config.input_payload.items():
+            if _k not in _SKIP_KEYS and _k not in ("message", "input") and isinstance(_v, str) and _v:
+                message += f"\n\n[{_k}]: {_v}"
+        message = message.strip()
+
         workspace = config.env_vars.get("CHARM_WORKSPACE_DIR", "/workspace/agent_code")
         bundle_url = config.env_vars.get("CHARM_BUNDLE_SUPABASE_URL", "")
 

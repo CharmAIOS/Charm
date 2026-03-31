@@ -96,7 +96,6 @@ class CharmOpenClawAdapter(BaseAdapter):
                 [
                     "openclaw", "onboard",
                     "--non-interactive", "--accept-risk",
-                    "--workspace", self.workspace_dir,
                 ],
                 env=env,
                 capture_output=True,
@@ -368,11 +367,11 @@ class CharmOpenClawAdapter(BaseAdapter):
                 if k not in ["input", "__charm_thread_id__", "__charm_state__"]:
                     user_input += f"\n\n[{k}]: {v}"
 
+        env["CHARM_WORKSPACE_DIR"] = self.workspace_dir
         cmd = [
             "openclaw", "agent",
             "--local",
             "--agent", "main",
-            "--workspace", self.workspace_dir,
             "--message", user_input,
             "--json",
         ]

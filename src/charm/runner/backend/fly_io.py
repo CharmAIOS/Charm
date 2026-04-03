@@ -217,7 +217,15 @@ class FlyIoBackend(ExecutionBackend):
         """Stop the machine (saves cost while paused)."""
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/stop"
         async with session.post(url, headers=self._headers()) as resp:
-            return resp.status in (200, 201)
+            if resp.status not in (200, 201):
+                return False
+            # Wait for machine to actually stop (poll for up to 30 seconds)
+            for _ in range(10):
+                await asyncio.sleep(3)
+                state = await self._get_machine_state(session, machine_id)
+                if state == "stopped":
+                    return True
+            return True  # Return True even if still transitioning, as stop was triggered
 
     async def _delete_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         """Delete the machine permanently."""
@@ -284,6 +292,14 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": started, "action": "restarted"}
 
                 elif action == "terminate":
+                    # Check current state - must be stopped first
+                    current_state = await self._get_machine_state(session, machine_id)
+                    if current_state != "stopped":
+                        return {
+                            "success": False,
+                            "error": f"Machine must be stopped first. Current state: {current_state}",
+                            "requires_stop": True
+                        }
                     # Delete the machine
                     deleted = await self._delete_machine(session, machine_id)
                     if deleted:

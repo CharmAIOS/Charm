@@ -4,6 +4,7 @@ import inspect
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict, List
 
 import typer
 import yaml  # type: ignore
@@ -11,8 +12,15 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ...contracts.uac import CharmConfig
+from ... import __version__ as CHARM_SDK_VERSION
 
 console = Console()
+
+# Valid adapter types (from UAC contract)
+VALID_ADAPTER_TYPES = ["crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+
+# Latest supported version
+LATEST_VERSION = "0.4"
 
 
 def _check_absolute_paths(project_path: Path) -> list:
@@ -51,7 +59,7 @@ def _check_absolute_paths(project_path: Path) -> list:
     return warnings
 
 
-def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> list:
+def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> List[str]:
     """
     Validates that the entry point function accepts the correct arguments.
     """
@@ -110,6 +118,141 @@ def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> li
     return errors
 
 
+def _validate_auth_providers(config: CharmConfig) -> List[str]:
+    """Validate auth providers configuration."""
+    errors = []
+
+    if not config.auth:
+        return errors
+
+    valid_provider_names = ["google", "github", "notion", "slack", "intercom", "custom"]
+
+    for provider in config.auth.providers:
+        # Check provider name
+        if provider.name not in valid_provider_names and not provider.name.startswith("custom:"):
+            errors.append(f"Auth provider '{provider.name}' may not be recognized. Consider: {', '.join(valid_provider_names)}")
+
+    return errors
+
+
+def _validate_runtime_skills(config: CharmConfig) -> List[str]:
+    """Validate runtime skills configuration."""
+    warnings = []
+
+    if not config.runtime or not config.runtime.skills:
+        return warnings
+
+    valid_sources = ["git:", "https://", "npm:", "pip:", "smithery:", "local:"]
+
+    for skill in config.runtime.skills:
+        source = skill.source
+        if not any(source.startswith(prefix) for prefix in valid_sources):
+            warnings.append(f"Skill '{skill.name}' has unusual source: '{source}'. Valid prefixes: {', '.join(valid_sources)}")
+
+    return warnings
+
+
+def _validate_policies(config: CharmConfig) -> List[str]:
+    """Validate policies configuration."""
+    warnings = []
+
+    if not config.policies:
+        return warnings
+
+    # Check execution timeout
+    if hasattr(config.policies, 'execution_timeout_seconds'):
+        timeout = config.policies.execution_timeout_seconds
+        if timeout and timeout > 3600:  # > 1 hour
+            warnings.append(f"Execution timeout of {timeout}s is very long. Consider using daemon lifecycle for long-running agents.")
+        elif timeout and timeout < 10:
+            warnings.append(f"Execution timeout of {timeout}s is very short. Agent may not complete tasks.")
+
+    # Check max steps
+    if hasattr(config.policies, 'max_steps'):
+        max_steps = config.policies.max_steps
+        if max_steps and max_steps > 200:
+            warnings.append(f"Max steps of {max_steps} is high. This may result in long execution times and high costs.")
+
+    return warnings
+
+
+def _validate_pricing(config: CharmConfig) -> List[str]:
+    """Validate pricing configuration."""
+    warnings = []
+
+    if not config.pricing:
+        return warnings
+
+    pricing = config.pricing
+
+    # Check pricing type
+    valid_types = ["free", "usage_based", "one_time", "subscription"]
+    if pricing.type not in valid_types:
+        warnings.append(f"Pricing type '{pricing.type}' is not standard. Valid types: {', '.join(valid_types)}")
+
+    return warnings
+
+
+def _validate_adapter_type(config: CharmConfig) -> List[str]:
+    """Validate adapter type and required fields."""
+    errors = []
+
+    adapter_type = config.runtime.adapter.type
+
+    # Check if adapter type is valid
+    if adapter_type not in VALID_ADAPTER_TYPES:
+        errors.append(f"Adapter type '{adapter_type}' is not recognized. Valid types: {', '.join(VALID_ADAPTER_TYPES)}")
+        return errors
+
+    # Type-specific validation
+    if adapter_type == "node":
+        if not config.runtime.adapter.entry_point or not config.runtime.adapter.entry_point.strip():
+            errors.append("Node adapter requires a non-empty 'entry_point' (e.g., 'npm start')")
+
+    elif adapter_type == "openclaw":
+        # OpenClaw should have config with system_prompt
+        if not config.runtime.config:
+            errors.append("OpenClaw adapter requires 'runtime.config' with 'system_prompt'")
+        elif not config.runtime.config.system_prompt:
+            errors.append("OpenClaw adapter requires 'system_prompt' in runtime.config")
+
+    elif adapter_type in ("custom", "crewai", "langchain", "langgraph"):
+        if not config.runtime.adapter.entry_point or not config.runtime.adapter.entry_point.strip():
+            errors.append(f"{adapter_type} adapter requires a non-empty 'entry_point' (e.g., 'src.main:agent')")
+
+    return errors
+
+
+def _check_version_compatibility(config: CharmConfig) -> Dict[str, Any]:
+    """Check if charm.yaml version is compatible with SDK."""
+    yaml_version = config.version
+
+    # Extract major.minor from version
+    try:
+        version_parts = yaml_version.split(".")
+        if len(version_parts) >= 2:
+            yaml_major_minor = f"{version_parts[0]}.{version_parts[1]}"
+        else:
+            yaml_major_minor = yaml_version
+    except Exception:
+        yaml_major_minor = yaml_version
+
+    sdk_parts = CHARM_SDK_VERSION.split(".")
+    if len(sdk_parts) >= 2:
+        sdk_major_minor = f"{sdk_parts[0]}.{sdk_parts[1]}"
+    else:
+        sdk_major_minor = CHARM_SDK_VERSION
+
+    is_compatible = yaml_major_minor == sdk_major_minor
+
+    return {
+        "yaml_version": yaml_version,
+        "sdk_version": CHARM_SDK_VERSION,
+        "is_compatible": is_compatible,
+        "warning": not is_compatible
+    }
+
+
 def validate_command(path: str = typer.Argument(".", help="Path to the Charm project root")):
     """
     Validate the charm.yaml configuration and check code integrity.
@@ -140,6 +283,61 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
         )
     )
 
+    # Version Compatibility Check
+    version_info = _check_version_compatibility(config)
+    if version_info["warning"]:
+        console.print(f"[yellow]⚠ Warning: Using charm.yaml version '{version_info['yaml_version']}'[/yellow]")
+        console.print(f"[yellow]   SDK version is '{version_info['sdk_version']}'. Consider upgrading to latest '0.4.x'.[/yellow]")
+    else:
+        console.print(f"[dim]Version: charm.yaml {version_info['yaml_version']} (compatible with SDK {version_info['sdk_version']})[/dim]")
+
+    # New UAC Field Validations
+    console.print("\n[bold]Validating UAC Fields...[/bold]")
+
+    # Auth Providers
+    auth_errors = _validate_auth_providers(config)
+    if auth_errors:
+        console.print("[yellow]⚠ Auth Providers:[/yellow]")
+        for err in auth_errors:
+            console.print(f"  - {err}")
+    else:
+        console.print("[green]✔ Auth providers configured correctly.[/green]")
+
+    # Runtime Skills
+    skill_warnings = _validate_runtime_skills(config)
+    if skill_warnings:
+        console.print("[yellow]⚠ Runtime Skills:[/yellow]")
+        for w in skill_warnings:
+            console.print(f"  - {w}")
+    else:
+        console.print("[green]✔ Runtime skills configured correctly.[/green]")
+
+    # Policies
+    policy_warnings = _validate_policies(config)
+    if policy_warnings:
+        console.print("[yellow]⚠ Policies:[/yellow]")
+        for w in policy_warnings:
+            console.print(f"  - {w}")
+    else:
+        console.print("[green]✔ Policies configured correctly.[/green]")
+
+    # Pricing
+    pricing_warnings = _validate_pricing(config)
+    if pricing_warnings:
+        console.print("[yellow]⚠ Pricing:[/yellow]")
+        for w in pricing_warnings:
+            console.print(f"  - {w}")
+    else:
+        console.print("[green]✔ Pricing configured correctly.[/green]")
+
+    # Adapter Type Validation (improved)
+    adapter_errors = _validate_adapter_type(config)
+    if adapter_errors:
+        console.print("[bold red]✖ Adapter Configuration Errors:[/bold red]")
+        for err in adapter_errors:
+            console.print(f"  - {err}")
+        raise typer.Exit(code=1)
+
     # Code Static Analysis
     console.print("\n[bold]Running Code Analysis...[/bold]")
     issues_found = False
@@ -157,7 +355,7 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
             issues_found = True
             console.print("[bold red]✖ Entry point command cannot be empty.[/bold red]")
 
-    elif config.runtime.adapter.type == "custom":
+    elif config.runtime.adapter.type in ("custom", "crewai", "langchain", "langgraph"):
         # Python checks
         ep_errors = _check_entry_point_signature(project_path, config.runtime.adapter.entry_point)
         if ep_errors:
@@ -181,6 +379,9 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
                 console.print(f"  - ... and {len(path_warnings) - 5} more.")
         else:
             console.print("[green]✔ No hardcoded absolute paths detected.[/green]")
+
+    elif config.runtime.adapter.type == "openclaw":
+        console.print("[green]✔ OpenClaw adapter configured correctly.[/green]")
 
     if issues_found:
         console.print("\n[bold red]Validation Failed due to code issues.[/bold red]")

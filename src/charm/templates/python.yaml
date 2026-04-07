@@ -1,0 +1,35 @@
+# Python Code-based Agent Template
+
+version: "0.4.1"
+
+persona:
+  name: "My Python Agent"
+  description: "A Python-based agent using custom code."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["assistant"]
+
+interface:
+  input:
+    type: "object"
+    required: ["input"]
+    properties:
+      input:
+        type: "string"
+        title: "Input"
+        x-ui-widget: "textarea"
+
+  output:
+    type: "string"
+
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+
+  mode: "standard"
+  lifecycle: "serverless"
+
+policies:
+  allow_internet_access: true
+  max_steps: 20

@@ -1,0 +1,50 @@
+# OpenClaw MCP-powered Agent Template
+
+version: "0.4.1"
+
+persona:
+  name: "My OpenClaw Agent"
+  description: "A persistent, stateful MCP-powered agent."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["assistant"]
+
+interface:
+  input:
+    type: "object"
+    required: ["input"]
+    properties:
+      input:
+        type: "string"
+        title: "Instruction"
+        x-ui-widget: "textarea"
+
+  output:
+    type: "string"
+
+runtime:
+  adapter:
+    type: "openclaw"
+    # Optional: custom entry_point for OpenClaw
+    entry_point: ""
+
+  config:
+    model: "gpt-4o"
+    temperature: 0.5
+    # This becomes your agent's long-term identity
+    system_prompt: |
+      You are a helpful assistant living in the cloud.
+      You have access to a persistent workspace.
+      Always check your memory file before answering.
+
+  mode: "full"
+  lifecycle: "serverless"
+
+  skills:
+    # Example: Google Search MCP skill
+    - name: "google-search"
+      source: "smithery:@mcp/google-search"
+
+policies:
+  allow_internet_access: true
+  max_steps: 20

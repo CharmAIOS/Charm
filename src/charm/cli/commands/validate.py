@@ -17,7 +17,7 @@ from ... import __version__ as CHARM_SDK_VERSION
 console = Console()
 
 # Valid adapter types (from UAC contract)
-VALID_ADAPTER_TYPES = ["crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+VALID_ADAPTER_TYPES = ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
 
 # Latest supported version
 LATEST_VERSION = "0.4"

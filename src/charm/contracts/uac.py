@@ -94,7 +94,7 @@ class OpenClawConfig(BaseModel):
 class RuntimeAdapter(BaseModel):
     """Instructs the Loader how to bootstrap this agent."""
 
-    type: Literal["langchain", "crewai", "langgraph", "custom", "node", "openclaw"] = Field(
+    type: Literal["python", "langchain", "crewai", "langgraph", "custom", "node", "openclaw"] = Field(
         ..., description="The specific SDK adapter to use"
     )
     entry_point: Optional[str] = Field(

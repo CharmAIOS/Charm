@@ -194,8 +194,9 @@ def create_project_from_template(project_path: Path, template: str, name: str = 
     (project_path / ".charmignore").write_text(ignore_content, encoding="utf-8")
 
     if template == "python":
-        # Create src directory with main.py
+        # Create src directory with main.py and __init__.py
         (project_path / "src").mkdir(exist_ok=True)
+        (project_path / "src" / "__init__.py").touch()
         (project_path / "src" / "main.py").write_text(
             "# Define your agent logic here.\n"
             "# The object must be named 'agent' to match charm.yaml entry_point.\n\n"
@@ -206,7 +207,9 @@ def create_project_from_template(project_path: Path, template: str, name: str = 
         console.print(f"[bold green]✔ Created Python Agent project: {project_path.name}[/bold green]")
         console.print("  ├── charm.yaml")
         console.print("  ├── .charmignore")
-        console.print("  └── src/main.py")
+        console.print("  └── src/")
+        console.print("      ├── __init__.py")
+        console.print("      └── main.py")
 
     elif template == "openclaw":
         # Create skills directory
@@ -238,6 +241,7 @@ def create_project_from_template(project_path: Path, template: str, name: str = 
     elif template == "code-review-agent":
         # Custom Python adapter — scaffold src/main.py with a starter reviewer
         (project_path / "src").mkdir(exist_ok=True)
+        (project_path / "src" / "__init__.py").touch()
         (project_path / "src" / "main.py").write_text(
             "# Code Review Agent\n"
             "# Receives code + focus area, returns a structured review.\n\n"
@@ -268,6 +272,7 @@ def create_project_from_template(project_path: Path, template: str, name: str = 
     elif template == "data-pipeline-agent":
         # Custom Python adapter — scaffold src/main.py with input routing
         (project_path / "src").mkdir(exist_ok=True)
+        (project_path / "src" / "__init__.py").touch()
         (project_path / "src" / "main.py").write_text(
             "# Data Pipeline Agent\n"
             "# Routes data through clean / summarise / transform / analyse tasks.\n\n"

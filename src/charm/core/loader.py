@@ -67,7 +67,7 @@ class CharmLoader:
                 adapter = CharmLangChainAdapter(agent_instance)
             elif adapter_type == "langgraph":
                 adapter = CharmLangGraphAdapter(agent_instance)
-            elif adapter_type == "custom":
+            elif adapter_type in ("custom", "python"):
                 adapter = CharmCustomAdapter(agent_instance)
             else:
                 raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")

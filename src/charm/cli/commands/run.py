@@ -138,7 +138,6 @@ async def run_docker_simulation(
             image=image,
             adapter_type=adapter_type,
             skills=skills if not mock_skills else [],  # Empty if mocking
-            mock_skills=mock_skills,
         ):
             # Track metrics from SSE events
             if sse_line.startswith("data: "):

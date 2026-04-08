@@ -193,6 +193,72 @@ def _validate_pricing(config: CharmConfig) -> List[str]:
     return warnings
 
 
+def _validate_interface_state(config: CharmConfig) -> List[str]:
+    """Validate interface.state definition (spec item 3.3).
+
+    interface.state is parsed by Pydantic into an InterfaceState model:
+        format: "json" | "binary" | "pydantic_model"
+        schema:  <JSON Schema dict describing the state object>
+
+    We validate the inner schema dict for correctness.
+    """
+    warnings = []
+
+    if not config.interface:
+        return warnings
+
+    state = config.interface.state
+    if state is None:
+        return warnings  # Optional — absence is fine
+
+    # state is an InterfaceState pydantic model; validate its inner schema dict
+    schema = state.schema_  # aliased from "schema:" in YAML
+
+    if not schema:
+        warnings.append(
+            "interface.state.schema is empty — "
+            "define the structure of your state object (e.g. type: object, properties: ...)"
+        )
+        return warnings
+
+    # Schema should describe an object (state is always a key-value mapping at runtime)
+    if schema.get("type") != "object":
+        warnings.append(
+            "interface.state.schema should have 'type: object' — "
+            "state is always a key-value mapping at runtime"
+        )
+
+    # Must declare properties so the platform knows what fields to expose
+    if "properties" not in schema:
+        warnings.append(
+            "interface.state.schema is missing 'properties' — "
+            "declare named state fields so the platform can surface them"
+        )
+    else:
+        props = schema["properties"]
+        if not isinstance(props, dict):
+            warnings.append("interface.state.schema.properties must be a mapping of field names to schemas")
+        else:
+            for field_name, field_schema in props.items():
+                if not isinstance(field_schema, dict):
+                    warnings.append(
+                        f"interface.state.schema.properties.{field_name} must be a JSON Schema object"
+                    )
+                elif "type" not in field_schema:
+                    warnings.append(
+                        f"interface.state.schema.properties.{field_name} is missing a 'type' field"
+                    )
+
+    # additionalProperties should be explicit to avoid silent key sprawl
+    if "additionalProperties" not in schema:
+        warnings.append(
+            "interface.state.schema has no 'additionalProperties' — "
+            "consider setting it to false to prevent undeclared keys"
+        )
+
+    return warnings
+
+
 def _validate_adapter_type(config: CharmConfig) -> List[str]:
     """Validate adapter type and required fields."""
     errors = []
@@ -216,7 +282,7 @@ def _validate_adapter_type(config: CharmConfig) -> List[str]:
         elif not config.runtime.config.system_prompt:
             errors.append("OpenClaw adapter requires 'system_prompt' in runtime.config")
 
-    elif adapter_type in ("custom", "crewai", "langchain", "langgraph"):
+    elif adapter_type in ("python", "custom", "crewai", "langchain", "langgraph"):
         if not config.runtime.adapter.entry_point or not config.runtime.adapter.entry_point.strip():
             errors.append(f"{adapter_type} adapter requires a non-empty 'entry_point' (e.g., 'src.main:agent')")
 
@@ -330,6 +396,15 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
     else:
         console.print("[green]✔ Pricing configured correctly.[/green]")
 
+    # Interface State Schema
+    state_warnings = _validate_interface_state(config)
+    if state_warnings:
+        console.print("[yellow]⚠ Interface State:[/yellow]")
+        for w in state_warnings:
+            console.print(f"  - {w}")
+    elif getattr(getattr(config, "interface", None), "state", None) is not None:
+        console.print("[green]✔ Interface state schema is valid.[/green]")
+
     # Adapter Type Validation (improved)
     adapter_errors = _validate_adapter_type(config)
     if adapter_errors:
@@ -355,7 +430,7 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
             issues_found = True
             console.print("[bold red]✖ Entry point command cannot be empty.[/bold red]")
 
-    elif config.runtime.adapter.type in ("custom", "crewai", "langchain", "langgraph"):
+    elif config.runtime.adapter.type in ("python", "custom", "crewai", "langchain", "langgraph"):
         # Python checks
         ep_errors = _check_entry_point_signature(project_path, config.runtime.adapter.entry_point)
         if ep_errors:

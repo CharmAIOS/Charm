@@ -10,7 +10,25 @@ app = typer.Typer(help="Initialize a new Charm agent")
 console = Console()
 
 # Valid templates
-VALID_TEMPLATES = ["python", "openclaw"]
+VALID_TEMPLATES = [
+    "python",
+    "openclaw",
+    "research-agent",
+    "code-review-agent",
+    "customer-support-agent",
+    "data-pipeline-agent",
+    "slack-bot",
+]
+
+_TEMPLATE_DESCRIPTIONS = {
+    "python":                 "Custom Python agent (code-based)",
+    "openclaw":               "MCP-powered OpenClaw agent",
+    "research-agent":         "Web research & report generation",
+    "code-review-agent":      "Code review for bugs, security, style",
+    "customer-support-agent": "Always-on customer support daemon",
+    "data-pipeline-agent":    "Data processing & ETL pipeline",
+    "slack-bot":              "Persistent Slack workspace bot",
+}
 
 
 @app.command("init")
@@ -20,7 +38,11 @@ def init_command(
         help="Agent directory path (e.g. '.' for current directory, 'my-agent' for new folder)",
     ),
     template: str = typer.Option(
-        "python", help="Template to use: 'python' (Python Code) or 'openclaw' (MCP Agent)"
+        "python",
+        help=(
+            "Template to use. Options: "
+            + ", ".join(f"'{t}'" for t in VALID_TEMPLATES)
+        ),
     ),
     create: Optional[str] = typer.Option(
         None, "--create", help="Specifically create a single file from template (e.g. 'charm.yaml')"
@@ -64,7 +86,12 @@ def run_interactive(project_path: Path):
         project_path.mkdir(parents=True)
 
     try:
-        # Prompt for template
+        # Show template menu
+        console.print("\n[bold]Available templates:[/bold]")
+        for t, desc in _TEMPLATE_DESCRIPTIONS.items():
+            console.print(f"  [cyan]{t:<26}[/cyan] {desc}")
+        console.print()
+
         template_choice = Prompt.ask(
             "[bold]Select template[/bold]",
             choices=VALID_TEMPLATES,
@@ -200,3 +227,78 @@ def create_project_from_template(project_path: Path, template: str, name: str = 
         console.print("  ├── .charmignore")
         console.print("  └── skills/")
         console.print("      └── my_tool/  <-- Example custom skill")
+
+    elif template == "research-agent":
+        # OpenClaw-based — no extra source files needed (system_prompt drives it)
+        console.print(f"[bold green]✔ Created Research Agent project: {project_path.name}[/bold green]")
+        console.print("  ├── charm.yaml  ← system_prompt & web-search skill pre-configured")
+        console.print("  └── .charmignore")
+        console.print("\n[dim]Next:[/dim] edit [cyan]charm.yaml[/cyan] to refine the system_prompt, then [cyan]charm push[/cyan]")
+
+    elif template == "code-review-agent":
+        # Custom Python adapter — scaffold src/main.py with a starter reviewer
+        (project_path / "src").mkdir(exist_ok=True)
+        (project_path / "src" / "main.py").write_text(
+            "# Code Review Agent\n"
+            "# Receives code + focus area, returns a structured review.\n\n"
+            "def agent(inputs):\n"
+            "    code = inputs.get('code', '')\n"
+            "    language = inputs.get('language', 'auto-detect') or 'auto-detect'\n"
+            "    focus = inputs.get('focus', 'general')\n\n"
+            "    # TODO: call your preferred LLM here\n"
+            "    # Example (pseudo-code):\n"
+            "    # prompt = build_review_prompt(code, language, focus)\n"
+            "    # return llm.complete(prompt)\n\n"
+            "    return f'[Code Review — {focus}]\\n\\nLanguage: {language}\\n\\n{code[:80]}...\\n\\n(Implement your review logic above)'\n",
+            encoding="utf-8",
+        )
+        console.print(f"[bold green]✔ Created Code Review Agent project: {project_path.name}[/bold green]")
+        console.print("  ├── charm.yaml")
+        console.print("  ├── .charmignore")
+        console.print("  └── src/main.py  ← add your LLM call here")
+
+    elif template == "customer-support-agent":
+        # OpenClaw daemon — system_prompt drives the support behaviour
+        console.print(f"[bold green]✔ Created Customer Support Agent project: {project_path.name}[/bold green]")
+        console.print("  ├── charm.yaml  ← daemon lifecycle, knowledge-base skill pre-configured")
+        console.print("  └── .charmignore")
+        console.print("\n[dim]Tip:[/dim] this agent runs as a [bold]daemon[/bold] — it stays alive between requests.")
+        console.print("Edit the system_prompt in [cyan]charm.yaml[/cyan] with your product knowledge, then [cyan]charm push[/cyan]")
+
+    elif template == "data-pipeline-agent":
+        # Custom Python adapter — scaffold src/main.py with input routing
+        (project_path / "src").mkdir(exist_ok=True)
+        (project_path / "src" / "main.py").write_text(
+            "# Data Pipeline Agent\n"
+            "# Routes data through clean / summarise / transform / analyse tasks.\n\n"
+            "def agent(inputs):\n"
+            "    data = inputs.get('data', '')\n"
+            "    task = inputs.get('task', 'analyse')\n"
+            "    output_format = inputs.get('output_format', 'markdown')\n\n"
+            "    # TODO: implement each task branch\n"
+            "    if task == 'clean':\n"
+            "        result = data.strip()  # replace with real cleaning logic\n"
+            "    elif task == 'summarise':\n"
+            "        result = data[:200] + '...'  # replace with LLM summarisation\n"
+            "    elif task == 'transform':\n"
+            "        result = data  # replace with transformation logic\n"
+            "    else:  # analyse\n"
+            "        result = f'Analysis of {len(data)} chars of data.'  # replace with LLM analysis\n\n"
+            "    if output_format == 'json':\n"
+            "        import json\n"
+            "        return json.dumps({'result': result})\n"
+            "    return result\n",
+            encoding="utf-8",
+        )
+        console.print(f"[bold green]✔ Created Data Pipeline Agent project: {project_path.name}[/bold green]")
+        console.print("  ├── charm.yaml")
+        console.print("  ├── .charmignore")
+        console.print("  └── src/main.py  ← implement your pipeline tasks here")
+
+    elif template == "slack-bot":
+        # OpenClaw daemon with Slack MCP skill
+        console.print(f"[bold green]✔ Created Slack Bot Agent project: {project_path.name}[/bold green]")
+        console.print("  ├── charm.yaml  ← daemon lifecycle, Slack MCP skill pre-configured")
+        console.print("  └── .charmignore")
+        console.print("\n[dim]Tip:[/dim] this agent runs as a [bold]daemon[/bold] — it persists across Slack events.")
+        console.print("Add your Slack API credentials as secrets, then [cyan]charm push[/cyan]")

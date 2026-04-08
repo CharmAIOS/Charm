@@ -1,0 +1,66 @@
+# Research Agent Template
+# Searches the web, synthesises sources, and compiles structured reports.
+
+version: "0.4.1"
+
+persona:
+  name: "Research Agent"
+  description: "Searches the web, synthesises findings, and compiles structured reports on any topic."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["research", "web-search", "summarisation"]
+
+interface:
+  input:
+    type: "object"
+    required: ["query"]
+    properties:
+      query:
+        type: "string"
+        title: "Research Query"
+        description: "What would you like me to research?"
+        x-ui-widget: "textarea"
+      depth:
+        type: "string"
+        title: "Research Depth"
+        enum: ["brief", "detailed", "comprehensive"]
+        default: "detailed"
+
+  output:
+    type: "string"
+
+runtime:
+  adapter:
+    type: "openclaw"
+    entry_point: ""
+
+  config:
+    model: "gpt-4o"
+    temperature: 0.3
+    system_prompt: |
+      You are a thorough research assistant. Given a research query, you will:
+      1. Search the web for authoritative, up-to-date sources
+      2. Read and synthesise information from multiple sources
+      3. Identify key facts, statistics, and expert opinions
+      4. Present findings in a clear, structured report with citations
+
+      Always cite your sources. Distinguish between established facts and emerging views.
+
+      Depth guide:
+      - "brief"         → 2–3 paragraph summary
+      - "detailed"      → sections with headings and bullet points
+      - "comprehensive" → full report with introduction, body, and conclusion
+
+  mode: "full"
+  lifecycle: "serverless"
+
+  skills:
+    - name: "web-search"
+      source: "smithery:@mcp/web-search"
+    - name: "fetch"
+      source: "smithery:@mcp/fetch"
+
+policies:
+  allow_internet_access: true
+  max_steps: 30
+  execution_timeout_seconds: 180

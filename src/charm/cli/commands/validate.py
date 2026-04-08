@@ -193,6 +193,60 @@ def _validate_pricing(config: CharmConfig) -> List[str]:
     return warnings
 
 
+def _validate_interface_state(config: CharmConfig) -> List[str]:
+    """Validate interface.state JSON Schema definition (spec item 3.3)."""
+    warnings = []
+
+    if not config.interface:
+        return warnings
+
+    state = getattr(config.interface, "state", None)
+    if state is None:
+        return warnings  # Optional field — absence is fine
+
+    if not isinstance(state, dict):
+        warnings.append("interface.state must be a JSON Schema object (a YAML mapping)")
+        return warnings
+
+    # State must be typed as an object — it maps keys to values at runtime
+    if state.get("type") != "object":
+        warnings.append(
+            "interface.state should have 'type: object' — "
+            "state is always a key-value mapping at runtime"
+        )
+
+    # Must declare properties so the platform knows what fields to expose
+    if "properties" not in state:
+        warnings.append(
+            "interface.state is missing 'properties' — "
+            "define named state fields so the platform can surface them"
+        )
+    else:
+        props = state["properties"]
+        if not isinstance(props, dict):
+            warnings.append("interface.state.properties must be a mapping of field names to schemas")
+        else:
+            for field_name, field_schema in props.items():
+                if not isinstance(field_schema, dict):
+                    warnings.append(
+                        f"interface.state.properties.{field_name} must be a JSON Schema object"
+                    )
+                elif "type" not in field_schema:
+                    warnings.append(
+                        f"interface.state.properties.{field_name} is missing a 'type' field "
+                        f"(e.g. 'type: string')"
+                    )
+
+    # additionalProperties should be explicit to avoid silent key sprawl
+    if "additionalProperties" not in state:
+        warnings.append(
+            "interface.state has no 'additionalProperties' field — "
+            "consider setting it to 'false' to prevent undeclared keys"
+        )
+
+    return warnings
+
+
 def _validate_adapter_type(config: CharmConfig) -> List[str]:
     """Validate adapter type and required fields."""
     errors = []
@@ -329,6 +383,15 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
             console.print(f"  - {w}")
     else:
         console.print("[green]✔ Pricing configured correctly.[/green]")
+
+    # Interface State Schema
+    state_warnings = _validate_interface_state(config)
+    if state_warnings:
+        console.print("[yellow]⚠ Interface State:[/yellow]")
+        for w in state_warnings:
+            console.print(f"  - {w}")
+    elif getattr(getattr(config, "interface", None), "state", None) is not None:
+        console.print("[green]✔ Interface state schema is valid.[/green]")
 
     # Adapter Type Validation (improved)
     adapter_errors = _validate_adapter_type(config)

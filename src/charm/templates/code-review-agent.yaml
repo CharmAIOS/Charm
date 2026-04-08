@@ -1,0 +1,48 @@
+# Code Review Agent Template
+# Reviews code for bugs, security issues, and style improvements.
+
+version: "0.4.1"
+
+persona:
+  name: "Code Review Agent"
+  description: "Reviews code for bugs, security vulnerabilities, performance issues, and style improvements."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["code-review", "developer-tools", "quality", "security"]
+
+interface:
+  input:
+    type: "object"
+    required: ["code"]
+    properties:
+      code:
+        type: "string"
+        title: "Code to Review"
+        description: "Paste the code snippet or file you'd like reviewed."
+        x-ui-widget: "textarea"
+      language:
+        type: "string"
+        title: "Programming Language"
+        description: "Leave blank to auto-detect."
+        default: ""
+      focus:
+        type: "string"
+        title: "Review Focus"
+        enum: ["general", "security", "performance", "style"]
+        default: "general"
+
+  output:
+    type: "string"
+
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+
+  mode: "standard"
+  lifecycle: "serverless"
+
+policies:
+  allow_internet_access: false
+  max_steps: 15
+  execution_timeout_seconds: 60

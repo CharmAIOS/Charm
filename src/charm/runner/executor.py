@@ -344,14 +344,61 @@ class CharmDockerExecutor:
         elif adapter_type == "openclaw":
             # OpenClaw Execution Path
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()
+
+            # Python script that patches ~/.openclaw/openclaw.json to route LLM calls
+            # through the Charm proxy.  We embed it base64-encoded so it can be piped
+            # to `python3` inside the container without heredoc quoting issues.
+            # This runs *before* `charm run` so it is SDK-version-independent.
+            _oc_proxy_patch_py = """\
+import json, os, pathlib, sys
+home = os.environ.get("HOME", "/root")
+cfg_path = pathlib.Path(home) / ".openclaw" / "openclaw.json"
+try:
+    cfg = json.loads(cfg_path.read_text()) if cfg_path.exists() else {}
+except Exception:
+    cfg = {}
+proxy_base = os.environ.get("CHARM_LLM_PROXY_BASE", "")
+proxy_key  = os.environ.get("CHARM_LLM_PROXY_KEY", "")
+if not proxy_base or not proxy_key:
+    sys.exit(0)
+try:
+    raw = cfg.get("agents", {}).get("defaults", {}).get("model", {}).get("primary", "openai/gpt-4o")
+    model_id = raw.split("/", 1)[-1] if "/" in raw else raw
+except Exception:
+    model_id = "gpt-4o"
+cfg.setdefault("agents", {}).setdefault("defaults", {})["model"] = {"primary": "openai/" + model_id}
+cfg.setdefault("models", {}).setdefault("providers", {})["openai"] = {
+    "baseUrl": proxy_base, "apiKey": proxy_key,
+    "models": [{"id": model_id, "name": model_id}],
+}
+cfg_path.parent.mkdir(parents=True, exist_ok=True)
+cfg_path.write_text(json.dumps(cfg, indent=2))
+auth_dir = pathlib.Path(home) / ".openclaw" / "agents" / "main" / "agent"
+auth_dir.mkdir(parents=True, exist_ok=True)
+(auth_dir / "auth-profiles.json").write_text(json.dumps({
+    "version": 1,
+    "profiles": {"openai:api": {"type": "api_key", "provider": "openai", "key": proxy_key}},
+}, indent=2))
+print("OpenClaw LLM proxy configured:", proxy_base)
+"""
+            b64_oc_proxy_patch = base64.b64encode(_oc_proxy_patch_py.encode()).decode()
+
             execution_cmd = f"""
             echo '::CHARM_EVENT::{{"type":"status","content":"Booting OpenClaw Host..."}}'
-            # Set UAC_SKILLS environment variable implied by charm.yaml mount logic
             INPUT_JSON="$(echo {b64_payload} | base64 -d)"
-            
-            # [Important] Ensure OpenClawAdapter knows it is now in Session Mode
             export CHARM_SESSION_MODE="true"
-            
+
+            # Ensure openclaw is onboarded (creates ~/.openclaw/openclaw.json)
+            OPENCLAW_HOME="${{HOME:-/root}}/.openclaw"
+            if [ ! -f "$OPENCLAW_HOME/openclaw.json" ]; then
+                openclaw onboard --non-interactive --accept-risk 2>/dev/null || true
+            fi
+
+            # Patch openclaw.json with Charm LLM proxy config.
+            # Runs before `charm run` so it is independent of the Charm SDK version
+            # installed in the image — the proxy baseUrl is always applied.
+            echo '{b64_oc_proxy_patch}' | base64 -d | python3
+
             # Launch using Charm SDK to load OpenClawAdapter.
             charm run . --json "$INPUT_JSON"
             """

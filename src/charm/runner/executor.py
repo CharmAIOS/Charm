@@ -310,8 +310,18 @@ class CharmDockerExecutor:
         """
 
         # SDK Setup
+        # When LOCAL_SDK_HOST_PATH is set (dev mode), the Docker backend mounts the
+        # local Charm SDK source tree at /mnt/local_sdk.  Prefer it via PYTHONPATH so
+        # code changes are reflected immediately without rebuilding the image or running
+        # pip (which fails on read-only mounts due to .egg-info write attempts).
         sdk_install_block = f"""
-        if python -c "import charm" 2>/dev/null; then
+        if [ -d "/mnt/local_sdk/src" ]; then
+            export PYTHONPATH="/mnt/local_sdk/src:$PYTHONPATH"
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Charm SDK (dev override)."}}'
+        elif [ -d "/mnt/local_sdk" ]; then
+            export PYTHONPATH="/mnt/local_sdk:$PYTHONPATH"
+            echo '{EVENT_PREFIX}{{"type":"status","content":"Using Local Charm SDK (dev override)."}}'
+        elif python -c "import charm" 2>/dev/null; then
             echo '{EVENT_PREFIX}{{"type":"status","content":"Using Pre-installed Charm SDK."}}'
         else
             echo '{EVENT_PREFIX}{{"type":"status","content":"SDK not found. Installing from PyPI..."}}'
@@ -586,6 +596,13 @@ class CharmDockerExecutor:
             skills=skills,
         )
 
+        # Local SDK override for dev: mount the host SDK source tree so container
+        # picks up code changes without requiring an image rebuild.
+        local_sdk_host_path = os.environ.get("LOCAL_SDK_HOST_PATH", "").strip() or None
+        if local_sdk_host_path and not os.path.isdir(local_sdk_host_path):
+            logger.warning("[Executor] LOCAL_SDK_HOST_PATH=%s is not a directory; ignoring", local_sdk_host_path)
+            local_sdk_host_path = None
+
         config = RunConfig(
             agent_id=agent_id,
             run_id=run_id,
@@ -596,6 +613,7 @@ class CharmDockerExecutor:
             host_artifact_path=host_artifact_path,
             host_cache_dir=HOST_CACHE_DIR,
             local_source_path=local_source_path if should_mount_local else None,
+            local_sdk_path=local_sdk_host_path if isinstance(backend, DockerBackend) else None,
             bundle_local_path=bundle_local_path if use_bundle_local else None,
             image=image,
             lifecycle=lifecycle,

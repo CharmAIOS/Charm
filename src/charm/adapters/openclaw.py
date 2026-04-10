@@ -256,40 +256,72 @@ class CharmOpenClawAdapter(BaseAdapter):
         if not proxy_base or not proxy_key:
             logger.warning("CHARM_LLM_PROXY_BASE or CHARM_LLM_PROXY_KEY not set — LLM calls may fail")
 
-        # Write openclaw.json from scratch as standard JSON.
-        # OpenClaw writes JSON5 (comments / trailing commas) during onboarding,
-        # which Python's json.load cannot parse. We overwrite it entirely so the
-        # proxy baseUrl and correct model format are always applied on every start.
+        # Patch openclaw.json to route LLM calls through the Charm proxy.
         #
-        # Use the "litellm" provider so OpenClaw routes to our proxy instead of
-        # hardcoding api.openai.com (which the built-in "openai" provider does).
-        # Reference: https://docs.litellm.ai/docs/tutorials/openclaw_integration
+        # Strategy: load the onboard-generated config (which has all required gateway/
+        # session fields), then merge our provider override so the "openai" provider
+        # sends requests to proxy_base instead of api.openai.com.
+        #
+        # The config MUST include models.providers.openai.models (array) or OpenClaw
+        # rejects the entire config as invalid. The proxy_key stored here is NOT used
+        # for auth — auth-profiles.json is the authoritative credential store. Having
+        # it here prevents OpenClaw's schema validation from rejecting the section.
         config_path = os.path.join(openclaw_home, "openclaw.json")
         try:
             os.makedirs(openclaw_home, exist_ok=True)
-            cfg: dict = {
-                "agents": {
-                    "defaults": {
-                        # Must be an object with "primary" key, not a plain string
-                        "model": {"primary": f"litellm/{model_id}"},
-                    },
-                },
-                "models": {
-                    "providers": {
-                        "litellm": {
-                            "baseUrl": proxy_base,
-                            "apiKey": proxy_key,
-                            "api": "openai-completions",
-                            "models": [{"id": model_id, "name": model_id}],
-                        }
+
+            # Load the onboard-generated config (standard JSON written by _onboard_openclaw)
+            base_cfg: dict = {}
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    base_cfg = json.load(f)
+            except Exception:
+                pass  # File absent or JSON5 — start fresh, will be minimal but valid
+
+            # Deep-merge our proxy overrides into the base config
+            base_cfg.setdefault("agents", {}).setdefault("defaults", {})["model"] = {
+                "primary": f"openai/{model_id}"
+            }
+            base_cfg.setdefault("models", {}).setdefault("providers", {})["openai"] = {
+                "baseUrl": proxy_base,
+                "apiKey": proxy_key,
+                "models": [{"id": model_id, "name": model_id}],
+            }
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(base_cfg, f, indent=2)
+            logger.info(f"✅ openclaw.json patched: model=openai/{model_id} → {proxy_base}")
+        except Exception as e:
+            logger.warning(f"Failed to patch openclaw.json: {e}")
+
+        # Write auth-profiles.json for the 'main' agent so OpenClaw's per-agent
+        # auth store is pre-populated.
+        #
+        # Correct AuthProfileStore format (from OpenClaw SDK types):
+        #   version: 1 (required)
+        #   profiles.<profileId>.type: "api_key"
+        #   profiles.<profileId>.provider: "<provider>"
+        #   profiles.<profileId>.key: "<raw api key>"  ← "key" NOT "apiKey"
+        # Profile ID convention: "<provider>:api" (e.g. "openai:api")
+        auth_dir = os.path.join(openclaw_home, "agents", "main", "agent")
+        auth_path = os.path.join(auth_dir, "auth-profiles.json")
+        try:
+            os.makedirs(auth_dir, exist_ok=True)
+            auth_profiles: dict = {
+                "version": 1,
+                "profiles": {
+                    "openai:api": {
+                        "type": "api_key",
+                        "provider": "openai",
+                        "key": proxy_key,
                     }
                 },
             }
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(cfg, f, indent=2)
-            logger.info(f"✅ openclaw.json written: model=litellm/{model_id} → {proxy_base}")
+            with open(auth_path, "w", encoding="utf-8") as f:
+                json.dump(auth_profiles, f, indent=2)
+            logger.info(f"✅ auth-profiles.json written: {auth_path}")
         except Exception as e:
-            logger.warning(f"Failed to write openclaw.json: {e}")
+            logger.warning(f"Failed to write auth-profiles.json: {e}")
 
     def _parse_log(self, line: str):
         """Parse OpenClaw stdout to Charm Events."""
@@ -324,28 +356,44 @@ class CharmOpenClawAdapter(BaseAdapter):
         env["HOME"] = "/root"
         self._inject_proxy_env(env)
 
-        try:
-            for item in os.listdir(self.work_dir):
-                if item in ["openclaw_runtime_config.json", "input.json"]:
-                    continue
+        # During upgrades, the workspace should contain the user's customized files
+        # from the PREVIOUS version (old bundle).  Seeding from agent_code/ (which
+        # holds the NEW bundle) would cause the agentic merge to fail because the
+        # diff expects the OLD content but the file already has the NEW content.
+        #
+        # In production the workspace is persisted (GCS Fuse), so old-version files
+        # are already there.  For local Docker tests (no persistence) the workspace
+        # starts empty — the agent uses the diff to create/update files from scratch.
+        #
+        # We only seed from bundle for normal (non-upgrade) runs where the workspace
+        # is genuinely empty and needs bootstrapping.
+        is_upgrade = "__charm_upgrade_diff__" in inputs
 
-                if item.endswith(".md") or item.endswith(".txt") or item.endswith(".json"):
-                    src_path = os.path.join(self.work_dir, item)
-                    dst_path = os.path.join(self.workspace_dir, item)
+        if not is_upgrade:
+            try:
+                for item in os.listdir(self.work_dir):
+                    if item in ["openclaw_runtime_config.json", "input.json"]:
+                        continue
 
-                    if os.path.isfile(src_path):
-                        if not os.path.exists(dst_path):
-                            shutil.copy2(src_path, dst_path)
-                            logger.info(f"📄 Initialized asset in workspace: {item}")
-                        else:
-                            logger.debug(f"📄 Asset {item} already exists, skipping overwrite.")
-        except Exception as e:
-            logger.error(f"Failed to sync static assets: {e}")
+                    if item.endswith(".md") or item.endswith(".txt") or item.endswith(".json"):
+                        src_path = os.path.join(self.work_dir, item)
+                        dst_path = os.path.join(self.workspace_dir, item)
+
+                        if os.path.isfile(src_path):
+                            if not os.path.exists(dst_path):
+                                shutil.copy2(src_path, dst_path)
+                                logger.info(f"📄 Initialized asset in workspace: {item}")
+                            else:
+                                logger.debug(f"📄 Asset {item} already exists, skipping overwrite.")
+            except Exception as e:
+                logger.error(f"Failed to sync static assets: {e}")
+        else:
+            logger.info("🔄 Upgrade mode: skipping workspace seed from bundle (workspace retains user's prior-version files).")
 
         self._onboard_openclaw(env)
         self._generate_openclaw_config(env)
 
-        if "__charm_upgrade_diff__" in inputs:
+        if is_upgrade:
             upgrade_diff = inputs.pop("__charm_upgrade_diff__")
 
             try:

@@ -181,12 +181,20 @@ class CloudRunBackend(ExecutionBackend):
         job.template.template.containers = [container]
 
         request = run_v2.CreateJobRequest(parent=self.parent, job=job, job_id=job_id)
-        operation = await self.jobs_client.create_job(request=request)
         logger.info(f"[CloudRun] Creating Job {job_id} using image {worker_image}...")
-        result = await operation.result()
-
-        self._job_cache[job_fqn] = result.name
-        return result.name
+        try:
+            operation = await self.jobs_client.create_job(request=request)
+            result = await operation.result()
+            self._job_cache[job_fqn] = result.name
+            return result.name
+        except google_exceptions.AlreadyExists:
+            # Race condition: two concurrent requests tried to create the same job
+            # simultaneously (e.g. auto-upgrade firing for multiple users of one agent).
+            # The job was created by the other request — just fetch and use it.
+            logger.info(f"[CloudRun] Job {job_id} already exists (race), fetching existing...")
+            existing = await self.jobs_client.get_job(run_v2.GetJobRequest(name=job_fqn))
+            self._job_cache[job_fqn] = existing.name
+            return existing.name
 
     async def _fetch_logs_sync(self, filter_str):
         entries = self.logging_client.list_entries(

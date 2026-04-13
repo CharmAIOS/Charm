@@ -569,8 +569,14 @@ print("OpenClaw LLM proxy configured:", proxy_base)
             input_payload["__charm_state__"] = state_snapshot
 
         user_id = env_vars.get("CHARM_USER_ID", "local_dev")
-        thread_id_val = thread_id or "default_thread"
-        env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
+        # Daemon agents share a single workspace across all threads so OpenClaw
+        # memory persists regardless of which conversation the user is in.
+        # Serverless/interactive agents keep per-thread isolation.
+        if lifecycle == "daemon":
+            env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/daemon_shared"
+        else:
+            thread_id_val = thread_id or "default_thread"
+            env_vars["CHARM_WORKSPACE_DIR"] = f"/workspace/{user_id}/{agent_id}/{thread_id_val}"
 
         if bundle_local_path and os.path.isfile(bundle_local_path):
             env_vars["CHARM_BUNDLE_LOCAL_PATH"] = "/app/bundle_mount/" + os.path.basename(bundle_local_path)

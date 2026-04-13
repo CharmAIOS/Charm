@@ -418,8 +418,21 @@ class FlyIoBackend(ExecutionBackend):
                     if not await self._wait_for_started(session, machine_id):
                         yield sse_pack("error", "Daemon machine did not reach started state in time.")
                         return
+                elif state in ("stopping", "restarting", "replacing"):
+                    # Machine is mid-transition (e.g. just finished an upgrade run).
+                    # Wait for it to settle rather than treating it as gone and
+                    # trying to create a new machine — which would fail with AlreadyExists.
+                    yield sse_pack("status", "Waiting for daemon machine to finish transitioning...")
+                    logger.info("[Fly.io] Machine %s is %s — waiting for it to settle.", machine_id, state)
+                    if not await self._wait_for_started(session, machine_id):
+                        # If it doesn't reach started, try an explicit start
+                        yield sse_pack("status", "Restarting daemon machine...")
+                        await self._start_machine(session, machine_id)
+                        if not await self._wait_for_started(session, machine_id):
+                            yield sse_pack("error", "Daemon machine did not reach started state in time.")
+                            return
                 else:
-                    # Machine is gone — clear it and re-provision below
+                    # Machine is truly gone (destroyed/unknown) — clear and re-provision
                     logger.warning("[Fly.io] Machine %s is %s, re-provisioning.", machine_id, state)
                     machine_id = None
 

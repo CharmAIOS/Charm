@@ -31,13 +31,14 @@ class FlyIoBackend(ExecutionBackend):
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
 
-    def _load_daemon_record(self, supabase_client, agent_id: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    def _load_daemon_record(self, supabase_client, agent_id: str, user_id: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """Returns (machine_id, volume_id, status)."""
         try:
             result = (
                 supabase_client.table("daemon_machines")
                 .select("fly_machine_id,fly_volume_id,status")
                 .eq("agent_id", agent_id)
+                .eq("user_id", user_id)
                 .maybe_single()
                 .execute()
             )
@@ -51,11 +52,12 @@ class FlyIoBackend(ExecutionBackend):
             logger.warning("Failed to load daemon record: %s", e)
         return None, None, None
 
-    def _save_daemon_record(self, supabase_client, agent_id: str, machine_id: str, volume_id: Optional[str]):
+    def _save_daemon_record(self, supabase_client, agent_id: str, user_id: str, machine_id: str, volume_id: Optional[str]):
         try:
             supabase_client.table("daemon_machines").upsert(
                 {
                     "agent_id": agent_id,
+                    "user_id": user_id,
                     "fly_machine_id": machine_id,
                     "fly_volume_id": volume_id,
                     "status": "running",
@@ -233,12 +235,12 @@ class FlyIoBackend(ExecutionBackend):
         async with session.delete(url, headers=self._headers()) as resp:
             return resp.status in (200, 201)
 
-    async def get_machine_status(self, supabase_client, agent_id: str) -> dict:
+    async def get_machine_status(self, supabase_client, agent_id: str, user_id: str) -> dict:
         """Get current daemon machine status. Returns machine_id, state, and status."""
         if not self.api_token or not self.app_name:
             return {"available": False, "error": "Fly.io not configured"}
 
-        machine_id, volume_id, db_status = self._load_daemon_record(supabase_client, agent_id)
+        machine_id, volume_id, db_status = self._load_daemon_record(supabase_client, agent_id, user_id)
         if not machine_id:
             return {"available": True, "exists": False, "status": "not_created"}
 
@@ -258,7 +260,7 @@ class FlyIoBackend(ExecutionBackend):
             return {"available": True, "exists": True, "error": str(e)}
 
     async def control_machine(
-        self, supabase_client, agent_id: str, action: str
+        self, supabase_client, agent_id: str, user_id: str, action: str
     ) -> dict:
         """
         Control daemon machine: pause, restart, terminate.
@@ -267,7 +269,7 @@ class FlyIoBackend(ExecutionBackend):
         if not self.api_token or not self.app_name:
             return {"success": False, "error": "Fly.io not configured"}
 
-        machine_id, volume_id, db_status = self._load_daemon_record(supabase_client, agent_id)
+        machine_id, volume_id, db_status = self._load_daemon_record(supabase_client, agent_id, user_id)
         if not machine_id:
             return {"success": False, "error": "Machine not found, run agent first to create daemon"}
 
@@ -279,7 +281,7 @@ class FlyIoBackend(ExecutionBackend):
                     if stopped:
                         supabase_client.table("daemon_machines").update(
                             {"status": "paused", "updated_at": "now()"}
-                        ).eq("agent_id", agent_id).execute()
+                        ).eq("agent_id", agent_id).eq("user_id", user_id).execute()
                     return {"success": stopped, "action": "paused"}
 
                 elif action == "restart":
@@ -288,7 +290,7 @@ class FlyIoBackend(ExecutionBackend):
                     if started:
                         supabase_client.table("daemon_machines").update(
                             {"status": "running", "updated_at": "now()"}
-                        ).eq("agent_id", agent_id).execute()
+                        ).eq("agent_id", agent_id).eq("user_id", user_id).execute()
                     return {"success": started, "action": "restarted"}
 
                 elif action == "terminate":
@@ -309,7 +311,7 @@ class FlyIoBackend(ExecutionBackend):
                             async with session.delete(vol_url, headers=self._headers()) as resp:
                                 logger.info(f"Volume deletion: {resp.status}")
                         # Remove from tracking table
-                        supabase_client.table("daemon_machines").delete().eq("agent_id", agent_id).execute()
+                        supabase_client.table("daemon_machines").delete().eq("agent_id", agent_id).eq("user_id", user_id).execute()
                     return {"success": deleted, "action": "terminated"}
 
                 else:
@@ -330,10 +332,12 @@ class FlyIoBackend(ExecutionBackend):
                 return False
         return False
 
-    async def _create_volume(self, session: aiohttp.ClientSession, agent_id: str) -> Tuple[Optional[str], Optional[str]]:
+    async def _create_volume(self, session: aiohttp.ClientSession, agent_id: str, user_id: str) -> Tuple[Optional[str], Optional[str]]:
         """Returns (volume_id, error_message). One of the two will be None."""
         url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes"
-        vol_name = f"charm_{agent_id.replace('-', '')[:20]}"
+        clean_user = user_id.replace('-', '')[:10]
+        clean_agent = agent_id.replace('-', '')[:10]
+        vol_name = f"c_{clean_user}_{clean_agent}"
         payload = {"name": vol_name, "region": self.region, "size_gb": 1}
         async with session.post(url, headers=self._headers(), json=payload) as resp:
             if resp.status not in (200, 201):
@@ -347,7 +351,10 @@ class FlyIoBackend(ExecutionBackend):
         self, session: aiohttp.ClientSession, config: RunConfig, volume_id: Optional[str]
     ) -> Optional[str]:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines"
-        machine_name = f"charm-{config.agent_id[:8]}"
+        user_id = config.env_vars.get("CHARM_USER_ID", "local")
+        clean_user = user_id.replace('-', '')[:8]
+        clean_agent = config.agent_id.replace('-', '')[:8]
+        machine_name = f"c-{clean_user}-{clean_agent}"
         mounts = [{"volume": volume_id, "path": "/workspace"}] if volume_id else []
         payload = {
             "name": machine_name,
@@ -392,13 +399,14 @@ class FlyIoBackend(ExecutionBackend):
             yield sse_pack("error", "Fly.io is not configured. Set FLY_API_TOKEN and FLY_APP_NAME.")
             return
 
+        user_id = config.env_vars.get("CHARM_USER_ID", "local")
         yield sse_pack("status", "Checking daemon agent status...")
 
         machine_id: Optional[str] = None
         volume_id: Optional[str] = None
 
         if config.supabase_client:
-            machine_id, volume_id, _ = self._load_daemon_record(config.supabase_client, config.agent_id)
+            machine_id, volume_id, _ = self._load_daemon_record(config.supabase_client, config.agent_id, user_id)
             logger.info("[Fly.io] Loaded daemon record: machine=%s volume=%s", machine_id, volume_id)
 
         async with aiohttp.ClientSession() as session:
@@ -426,7 +434,7 @@ class FlyIoBackend(ExecutionBackend):
             if not machine_id:
                 if not volume_id:
                     yield sse_pack("status", "Allocating persistent storage volume...")
-                    volume_id, vol_err = await self._create_volume(session, config.agent_id)
+                    volume_id, vol_err = await self._create_volume(session, config.agent_id, user_id)
                     if not volume_id:
                         yield sse_pack("error", f"Failed to allocate storage volume. {vol_err or ''}".strip())
                         return
@@ -439,7 +447,7 @@ class FlyIoBackend(ExecutionBackend):
                     return
 
                 if config.supabase_client:
-                    self._save_daemon_record(config.supabase_client, config.agent_id, machine_id, volume_id)
+                    self._save_daemon_record(config.supabase_client, config.agent_id, user_id, machine_id, volume_id)
 
                 yield sse_pack("status", "Waiting for daemon machine to boot...")
                 if not await self._wait_for_started(session, machine_id):

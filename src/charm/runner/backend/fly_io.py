@@ -276,7 +276,6 @@ class FlyIoBackend(ExecutionBackend):
         try:
             async with aiohttp.ClientSession() as session:
                 if action == "pause":
-                    # Stop the machine (saves cost)
                     stopped = await self._stop_machine(session, machine_id)
                     if stopped:
                         supabase_client.table("daemon_machines").update(
@@ -285,7 +284,6 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": stopped, "action": "paused"}
 
                 elif action == "restart":
-                    # Start the stopped machine
                     started = await self._start_machine(session, machine_id)
                     if started:
                         supabase_client.table("daemon_machines").update(
@@ -294,7 +292,6 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": started, "action": "restarted"}
 
                 elif action == "terminate":
-                    # Check current state - must be stopped first
                     current_state = await self._get_machine_state(session, machine_id)
                     if current_state != "stopped":
                         return {
@@ -302,10 +299,8 @@ class FlyIoBackend(ExecutionBackend):
                             "error": f"Machine must be stopped first. Current state: {current_state}",
                             "requires_stop": True
                         }
-                    # Delete the machine
                     deleted = await self._delete_machine(session, machine_id)
                     if deleted:
-                        # Also delete the volume if exists
                         if volume_id and self.app_name:
                             vol_url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes/{volume_id}"
                             async with session.delete(vol_url, headers=self._headers()) as resp:
@@ -406,6 +401,7 @@ class FlyIoBackend(ExecutionBackend):
         volume_id: Optional[str] = None
 
         if config.supabase_client:
+            user_id = config.env_vars.get("CHARM_USER_ID", "local")
             machine_id, volume_id, _ = self._load_daemon_record(config.supabase_client, config.agent_id, user_id)
             logger.info("[Fly.io] Loaded daemon record: machine=%s volume=%s", machine_id, volume_id)
 
@@ -460,6 +456,7 @@ class FlyIoBackend(ExecutionBackend):
                     return
 
                 if config.supabase_client:
+                    user_id = config.env_vars.get("CHARM_USER_ID", "local")
                     self._save_daemon_record(config.supabase_client, config.agent_id, user_id, machine_id, volume_id)
 
                 yield sse_pack("status", "Waiting for daemon machine to boot...")

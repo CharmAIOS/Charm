@@ -10,15 +10,16 @@
         "light": "#FAF7F0",
         "dark": "#0A0A0A"
     },
-    "navigation": [
-        {
-            "group": "Getting Started",
-            "pages": [
-                "getting-started",
-                "configuration",
-                "charm-store",
-                "ui-protocol"
-            ]
-        }
-    ]
+    "navigation": {
+        "groups": [
+            {
+                "group": "Getting Started",
+                "pages": [
+                    "getting-started",
+                    "configuration",
+                    "ui-protocol"
+                ]
+            }
+        ]
+    }
 }

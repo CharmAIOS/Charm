@@ -15,7 +15,7 @@
             {
                 "group": "Getting Started",
                 "pages": [
-                    "getting-started",
+                    "getting-started/charm-store",
                     "configuration",
                     "ui-protocol"
                 ]

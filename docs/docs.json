@@ -3,8 +3,8 @@
     "name": "Charm Docs",
     "favicon": "/assets/logo.png",
     "logo": {
-        "light": "/assets/banner bg.png",
-        "dark": "/assets/banner bg.png"
+        "light": "/assets/logo.png",
+        "dark": "/assets/logo.png"
     },
     "colors": {
         "primary": "#E8A694",

@@ -1,9 +1,10 @@
 {
     "theme": "mint",
     "name": "Charm Docs",
+    "favicon": "/assets/logo.png",
     "logo": {
-        "light": "/assets/logo.png",
-        "dark": "/assets/logo.png"
+        "light": "/assets/banner bg.png",
+        "dark": "/assets/banner bg.png"
     },
     "colors": {
         "primary": "#E8A694",

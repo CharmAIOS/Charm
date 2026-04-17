@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - 'src/**'
+      - 'Dockerfile*'
 
 env:
   PROJECT_ID: charm-cloud-runner

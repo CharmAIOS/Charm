@@ -11,13 +11,30 @@
         "light": "#FFFCF2",
         "dark": "#0A0A0A"
     },
+    "anchors": [
+        {
+            "name": "Changelog",
+            "icon": "timeline",
+            "url": ""
+        },
+        {
+            "name": "Discord",
+            "icon": "discord",
+            "url": "https://discord.gg/gdakynHUEb"
+        },
+        {
+            "name": "GitHub",
+            "icon": "github",
+            "url": "https://github.com/CharmAIOS/Charm"
+        }
+    ],
     "navigation": {
         "groups": [
             {
                 "group": "Getting Started",
                 "pages": [
                     "index",
-                    "getting-started/charm-store",
+                    "charm-store",
                     "configuration",
                     "ui-protocol"
                 ]

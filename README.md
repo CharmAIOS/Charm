@@ -2,11 +2,15 @@
   <img src="assets/charm-banner.png" alt="Charm Banner" width="100%" />
 </p>
 
-<p align="center">
-  <a href="https://charmos.io/">Homepage</a> .
-  <a href="https://store.charmos.io/">Store</a> .
-  <a href="https://discord.gg/gdakynHUEb">Discord</a>
-</p>
+![Build Status](https://img.shields.io/github/actions/workflow/status/CharmAIOS/charm/build.yml?branch=main&style=for-the-badge)
+
+![License](https://img.shields.io/github/license/CharmAIOS/charm?style=for-the-badge)
+
+![Release](https://img.shields.io/github/v/release/CharmAIOS/charm?style=for-the-badge)
+
+![Discord](https://img.shields.io/discord/1428309008679575562?style=for-the-badge)
+
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/charmos_io?style=for-the-badge)
 
 # Charm: The Unified Platform for Agentic Intelligence
 

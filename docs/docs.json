@@ -31,7 +31,7 @@
     "navigation": {
         "groups": [
             {
-                "group": "Getting Started",
+                "group": "Overview",
                 "pages": [
                     "index",
                     "charm-store",

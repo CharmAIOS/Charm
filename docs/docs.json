@@ -14,7 +14,8 @@
     "navbar": {
         "links": [
             {
-                "type": "github",
+                "label": "GitHub",
+                "icon": "github",
                 "href": "https://github.com/CharmAIOS/charm"
             },
             {
@@ -26,6 +27,11 @@
                 "label": "Discord",
                 "icon": "discord",
                 "href": "https://discord.gg/gdakynHUEb"
+            },
+            {
+                "label": "Charm Store",
+                "href": "https://store.charmos.io/",
+                "primary": true
             }
         ]
     },

@@ -1,5 +1,5 @@
 {
-    "theme": "luma",
+    "theme": "mint",
     "name": "Charm Docs",
     "favicon": "/assets/logo.png",
     "logo": {
@@ -27,13 +27,13 @@
                 "label": "Discord",
                 "icon": "discord",
                 "href": "https://discord.gg/gdakynHUEb"
-            },
-            {
-                "label": "Charm Store",
-                "href": "https://store.charmos.io/",
-                "primary": true
             }
-        ]
+        ],
+        "primary": {
+            "type": "button",
+            "label": "Charm Store",
+            "href": "https://store.charmos.io"
+        }
     },
     "tabs": [
         {

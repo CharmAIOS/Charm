@@ -9,7 +9,7 @@
     "colors": {
         "primary": "#E8A694",
         "light": "#FFFCF2",
-        "dark": "#0A0A0A"
+        "dark": "#E8A694"
     },
     "navbar": {
         "links": [

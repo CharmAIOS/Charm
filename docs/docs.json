@@ -35,15 +35,59 @@
             }
         ]
     },
+    "tabs": [
+        {
+            "name": "Get Started",
+            "url": "Charm"
+        },
+        {
+            "name": "Platforms",
+            "url": "Platforms"
+        },
+        {
+            "name": "Community & Resources",
+            "url": "Community"
+        }
+    ],
     "navigation": {
-        "groups": [
+        "tabs": [
             {
-                "group": "Overview",
-                "pages": [
-                    "Charm",
-                    "charm-store",
-                    "configuration",
-                    "ui-protocol"
+                "tab": "Get Started",
+                "groups": [
+                    {
+                        "group": "Overview",
+                        "pages": [
+                            "Charm",
+                            "charm-store",
+                            "configuration",
+                            "ui-protocol"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Platforms",
+                "groups": [
+                    {
+                        "group": "Integrations",
+                        "pages": [
+                            "1",
+                            "2",
+                            "3",
+                            "4"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Community & Resources",
+                "groups": [
+                    {
+                        "group": "Community",
+                        "pages": [
+                            "Community"
+                        ]
+                    }
                 ]
             }
         ]

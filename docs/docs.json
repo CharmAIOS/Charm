@@ -9,27 +9,23 @@
     "colors": {
         "primary": "#E8A694",
         "light": "#FFFCF2",
-        "dark": "#0A0A0A",
-        "background": {
-            "light": "#FFFCF2",
-            "dark": "#0A0A0A"
-        }
+        "dark": "#0A0A0A"
     },
     "anchors": [
         {
-            "name": "Changelog",
-            "icon": "timeline",
-            "url": ""
+            "name": "GitHub",
+            "icon": "github",
+            "url": "https://github.com/CharmAIOS/Charm"
+        },
+        {
+            "name": "Releases",
+            "icon": "box",
+            "url": "https://github.com/CharmAIOS/Charm/releases"
         },
         {
             "name": "Discord",
             "icon": "discord",
             "url": "https://discord.gg/gdakynHUEb"
-        },
-        {
-            "name": "GitHub",
-            "icon": "github",
-            "url": "https://github.com/CharmAIOS/Charm"
         }
     ],
     "navigation": {

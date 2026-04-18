@@ -7,7 +7,10 @@
         "dark": "/assets/logo.png"
     },
     "colors": {
-        "primary": "#E8A694",
+        "primary": {
+            "light": "#E8A694",
+            "dark": "#F59A6E"
+        },
         "light": "#FFFCF2",
         "dark": "#0A0A0A"
     },

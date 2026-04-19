@@ -276,18 +276,8 @@ def push_command(
             except ImportError:
                 pass
 
-            success_ascii = r"""[bold magenta]
-   _____ _                          
-  / ____| |                         
- | |    | |__   __ _ _ __ _ __ ___  
- | |    | '_ \ / _` | '__| '_ ` _ \ 
- | |____| | | | (_| | |  | | | | | |
-  \_____|_| |_|\__,_|_|  |_| |_| |_|
-[/bold magenta]"""
-
             console.print(
                 Panel(
-                    f"{success_ascii}\n"
                     f"[bold]Agent:[/bold] {agent_name}\n"
                     f"[bold]Version:[/bold] {agent_version}\n"
                     f"[bold]Size:[/bold] {bundle_size_mb:.2f} MB\n\n"

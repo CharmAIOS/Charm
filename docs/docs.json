@@ -9,7 +9,7 @@
     "colors": {
         "primary": "#E8A694",
         "light": "#FFFCF2",
-        "dark": "#F29D86"
+        "dark": "#E8A694"
     },
     "navbar": {
         "links": [
@@ -21,7 +21,7 @@
             {
                 "label": "Changelog",
                 "icon": "box",
-                "href": "https://github.com/CharmAIOS/charm/releases"
+                "href": "https://charmos.io/changelog"
             },
             {
                 "label": "Discord",

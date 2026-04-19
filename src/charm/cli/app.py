@@ -4,9 +4,12 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import logging
+
 import typer
 
-from .commands import auth, config, init, push, run, validate
+from .commands import auth, config, init, logs, push, run, validate
+from . import state
 
 # Initialize the main Typer application with help text.
 app = typer.Typer(
@@ -25,6 +28,7 @@ app.command(name="init")(init.init_command)
 app.command(name="run")(run.run_command)
 app.command(name="validate")(validate.validate_command)
 app.command(name="push")(push.push_command)
+app.command(name="logs")(logs.logs_command)
 
 
 def version_callback(value: bool):
@@ -90,10 +94,19 @@ def main(
         callback=version_callback,
         is_eager=True,
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable debug mode with detailed logs and stack traces.",
+    ),
 ):
     """
-    Main callback for handling global options like --version.
+    Main callback for handling global options like --version and --debug.
     """
+    if debug:
+        state.DEBUG_MODE = True
+        logging.basicConfig(level=logging.DEBUG)
+        
     check_for_updates()
 
 

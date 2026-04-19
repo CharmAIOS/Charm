@@ -12,8 +12,10 @@ import yaml  # type: ignore
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
+import traceback
 
 from ...contracts.uac import CharmConfig
+from .. import state
 from ..config import get_token, load_config
 from ..git import GitError, get_repo_info
 
@@ -265,12 +267,31 @@ def push_command(
             resp_data = reg_resp.json()
             agent_url = resp_data.get("url", "N/A")
 
+            # Try auto-copy to clipboard
+            clipboard_msg = ""
+            try:
+                import pyperclip
+                pyperclip.copy(agent_url)
+                clipboard_msg = "\n[bold cyan](Copied to clipboard!)[/bold cyan]"
+            except ImportError:
+                pass
+
+            success_ascii = r"""[bold magenta]
+   _____ _                          
+  / ____| |                         
+ | |    | |__   __ _ _ __ _ __ ___  
+ | |    | '_ \ / _` | '__| '_ ` _ \ 
+ | |____| | | | (_| | |  | | | | | |
+  \_____|_| |_|\__,_|_|  |_| |_| |_|
+[/bold magenta]"""
+
             console.print(
                 Panel(
+                    f"{success_ascii}\n"
                     f"[bold]Agent:[/bold] {agent_name}\n"
                     f"[bold]Version:[/bold] {agent_version}\n"
                     f"[bold]Size:[/bold] {bundle_size_mb:.2f} MB\n\n"
-                    f"🔗 [link={agent_url}]{agent_url}[/link]",
+                    f"🔗 [link={agent_url}]{agent_url}[/link]{clipboard_msg}",
                     title="[bold green]✔ Successfully Published[/bold green]",
                     border_style="green",
                 )
@@ -282,8 +303,15 @@ def push_command(
                 console.print(f"[red]{err_msg}[/red]")
             except Exception:
                 console.print(reg_resp.text)
+            
+            if state.DEBUG_MODE:
+                console.print("[dim]Debug Server Response:[/dim]")
+                console.print(reg_resp.text)
+                
             raise typer.Exit(code=1)
 
     except Exception as e:
         console.print(f"[bold red]Connection Error:[/bold red] {e}")
+        if state.DEBUG_MODE:
+            console.print_exception()
         raise typer.Exit(code=1) from e

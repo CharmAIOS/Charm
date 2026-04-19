@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://charm.ai/contracts/uac.v0.4.1.schema.json",
-  "title": "Unified Agent Contract (UAC) v0.4.1",
+  "$id": "https://charm.ai/contracts/uac.v0.4.2.schema.json",
+  "title": "Unified Agent Contract (UAC) v0.4.2",
   "description": "The definitive definition for Charm Agents. Combines Runtime Execution specs with Store Presentation metadata.",
   "type": "object",
   "required": [
@@ -274,11 +274,21 @@
               "description": "Python import path (e.g., 'src.agent:my_crew') OR Shell command. Optional for openclaw."
             },
             "environment_variables": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "type": "object",
+              "description": "Environment variables required by the Agent.",
+              "properties": {
+                "models": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "List of required LLM API keys (e.g., OPENAI_API_KEY)."
+                },
+                "tools": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "List of required Tool API keys (e.g., SERPER_API_KEY)."
+                }
               },
-              "description": "List of required environment variables (e.g., OPENAI_API_KEY) that Runtime must inject."
+              "additionalProperties": false
             }
           }
         },

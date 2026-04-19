@@ -60,7 +60,8 @@
                             "Charm",
                             "charm-store",
                             "configuration",
-                            "ui-protocol"
+                            "ui-protocol",
+                            "tool-keys"
                         ]
                     }
                 ]

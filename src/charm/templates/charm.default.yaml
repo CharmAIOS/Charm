@@ -2,7 +2,7 @@
 # Charm Agent Manifest (Annotated Reference)
 # ==================================================================
 
-version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
+version: "0.4.2"  # [System] The UAC Spec version (Do not change manually).
 
 # ------------------------------------------------------------------
 # 1. Identity & Store Metadata
@@ -105,8 +105,10 @@ runtime:
     # DO NOT put values here. The Runner injects them securely.
     # --------------------------------------------------------------
     environment_variables:
-      - "OPENAI_API_KEY"
-      - "SERPER_API_KEY"
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
   # SKILLS & MCP TOOLS

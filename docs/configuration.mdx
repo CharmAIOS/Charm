@@ -44,7 +44,7 @@ By configuring your editor, you get auto-completion and error checking. This is 
 ```json
 {
   "yaml.schemas": {
-    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.1.schema.json": "charm.yaml"
+    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.2.schema.json": "charm.yaml"
   }
 }
 ```
@@ -59,7 +59,7 @@ This is a fully annotated example to understand specific capabilities or customi
 # Charm Agent Manifest (Annotated Reference)
 # ==================================================================
 
-version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
+version: "0.4.2"  # [System] The UAC Spec version (Do not change manually).
 
 # ------------------------------------------------------------------
 # 1. Identity & Store Metadata
@@ -162,8 +162,10 @@ runtime:
     # DO NOT put values here. The Runner injects them securely.
     # --------------------------------------------------------------
     environment_variables:
-      - "OPENAI_API_KEY"
-      - "SERPER_API_KEY"
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
   # SKILLS & MCP TOOLS
@@ -243,7 +245,7 @@ policies:
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
 |Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|
 | |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
-| |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
+| |environment_variables |Object |Map of 'models' and 'tools' requiring Env keys (e.g., OPENAI_API_KEY).|
 | |skills |List |List of MCP Skills to mount.|
 | |mode |Enum |standard (Default), full. Selects the container environment.|
 | Auth|providers |List |List of OAuth providers.|

@@ -52,7 +52,8 @@ class CharmOpenClawAdapter(BaseAdapter):
 
         # 1. Python Requirements
         req_file = os.path.join(skill_path, "requirements.txt")
-        if os.path.exists(req_file):
+        marker_file = os.path.join(skill_path, ".charm_installed")
+        if os.path.exists(req_file) and not os.path.exists(marker_file):
             logger.info(f"📦 [{skill_name}] Installing Python dependencies...")
             try:
                 subprocess.check_call(
@@ -60,6 +61,8 @@ class CharmOpenClawAdapter(BaseAdapter):
                     stdout=subprocess.DEVNULL,  # Keep logs clean
                     stderr=subprocess.STDOUT,
                 )
+                with open(marker_file, "w") as f:
+                    f.write("installed")
             except subprocess.CalledProcessError:
                 logger.error(f"❌ [{skill_name}] Failed to install requirements.txt")
 
@@ -94,8 +97,10 @@ class CharmOpenClawAdapter(BaseAdapter):
         try:
             result = subprocess.run(
                 [
-                    "openclaw", "onboard",
-                    "--non-interactive", "--accept-risk",
+                    "openclaw",
+                    "onboard",
+                    "--non-interactive",
+                    "--accept-risk",
                 ],
                 env=env,
                 capture_output=True,
@@ -254,7 +259,9 @@ class CharmOpenClawAdapter(BaseAdapter):
         model_id = raw_model.split("/", 1)[-1] if "/" in raw_model else raw_model
 
         if not proxy_base or not proxy_key:
-            logger.warning("CHARM_LLM_PROXY_BASE or CHARM_LLM_PROXY_KEY not set — LLM calls may fail")
+            logger.warning(
+                "CHARM_LLM_PROXY_BASE or CHARM_LLM_PROXY_KEY not set — LLM calls may fail"
+            )
 
         # Patch openclaw.json to route LLM calls through the Charm proxy.
         #
@@ -388,7 +395,9 @@ class CharmOpenClawAdapter(BaseAdapter):
             except Exception as e:
                 logger.error(f"Failed to sync static assets: {e}")
         else:
-            logger.info("🔄 Upgrade mode: skipping workspace seed from bundle (workspace retains user's prior-version files).")
+            logger.info(
+                "🔄 Upgrade mode: skipping workspace seed from bundle (workspace retains user's prior-version files)."
+            )
 
         self._onboard_openclaw(env)
         self._generate_openclaw_config(env)
@@ -412,15 +421,24 @@ class CharmOpenClawAdapter(BaseAdapter):
         else:
             user_input = inputs.get("input", "")
             for k, v in inputs.items():
-                if k not in ["input", "__charm_thread_id__", "__charm_state__"]:
+                if k not in [
+                    "input",
+                    "__charm_thread_id__",
+                    "__charm_state__",
+                    "history",
+                    "messages",
+                ]:
                     user_input += f"\n\n[{k}]: {v}"
 
         env["CHARM_WORKSPACE_DIR"] = self.workspace_dir
         cmd = [
-            "openclaw", "agent",
+            "openclaw",
+            "agent",
             "--local",
-            "--agent", "main",
-            "--message", user_input,
+            "--agent",
+            "main",
+            "--message",
+            user_input,
             "--json",
         ]
 
@@ -469,7 +487,10 @@ class CharmOpenClawAdapter(BaseAdapter):
         if process.returncode != 0:
             err_detail = "\n".join(stderr_lines[-20:]) if stderr_lines else "No stderr captured."
             logger.error(f"OpenClaw stderr:\n{err_detail}")
-            return {"status": "error", "message": f"OpenClaw exited with code {process.returncode}\n{err_detail}"}
+            return {
+                "status": "error",
+                "message": f"OpenClaw exited with code {process.returncode}\n{err_detail}",
+            }
 
         if not final_output and stdout_lines:
             raw_output = "".join(stdout_lines).strip()
@@ -477,18 +498,15 @@ class CharmOpenClawAdapter(BaseAdapter):
                 result_json = json.loads(raw_output)
                 # OpenClaw --json output: {"payloads": [{"text": "..."}], "meta": {...}, ...}
                 if isinstance(result_json.get("payloads"), list):
-                    texts = [
-                        p.get("text", "")
-                        for p in result_json["payloads"]
-                        if p.get("text")
-                    ]
+                    texts = [p.get("text", "") for p in result_json["payloads"] if p.get("text")]
                     final_output = "\n".join(texts)
                 else:
                     # Fallback for other potential JSON shapes
                     final_output = result_json.get("reply", result_json.get("output", ""))
             except (json.JSONDecodeError, TypeError):
                 clean_output = [
-                    line for line in stdout_lines
+                    line
+                    for line in stdout_lines
                     if not line.startswith("[") and "Thought:" not in line
                 ]
                 if clean_output:

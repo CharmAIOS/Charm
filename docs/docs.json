@@ -61,7 +61,8 @@
                             "charm-store",
                             "configuration",
                             "ui-protocol",
-                            "tool-keys"
+                            "tool-keys",
+                            "cli-reference"
                         ]
                     }
                 ]
@@ -70,23 +71,42 @@
                 "tab": "Platforms",
                 "groups": [
                     {
+                        "group": "",
+                        "pages": [
+                            "overview"
+                        ]
+                    },
+                    {
                         "group": "Integrations",
                         "pages": [
-                            "1",
-                            "2",
-                            "3",
-                            "4"
+                            "LangChain",
+                            "OpenClaw",
+                            "CrewAI"
                         ]
                     }
                 ]
             },
             {
-                "tab": "Community & Resources",
+                "tab": "Open Source",
                 "groups": [
                     {
-                        "group": "Community",
+                        "group": "",
                         "pages": [
-                            "Community"
+                            "overview"
+                        ]
+                    },
+                    {
+                        "group": "Contribute",
+                        "pages": [
+                            "contribute/documentation",
+                            "contribute/code",
+                            {
+                                "group": "Integrations",
+                                "pages": [
+                                    "contribute/integrations/guide",
+                                    "contribute/integrations/publish"
+                                ]
+                            }
                         ]
                     }
                 ]

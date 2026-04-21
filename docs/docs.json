@@ -59,10 +59,18 @@
                         "pages": [
                             "Charm",
                             "charm-store",
-                            "configuration",
                             "ui-protocol",
                             "tool-keys",
-                            "cli-reference"
+                            "cli-list"
+                        ]
+                    },
+                    {
+                        "group": "Publishing",
+                        "pages": [
+                            "init",
+                            "local-run",
+                            "manifest",
+                            "push"
                         ]
                     }
                 ]
@@ -78,6 +86,14 @@
                     },
                     {
                         "group": "Integrations",
+                        "pages": [
+                            "LangChain",
+                            "OpenClaw",
+                            "CrewAI"
+                        ]
+                    },
+                    {
+                        "group": "Runti1mes",
                         "pages": [
                             "LangChain",
                             "OpenClaw",

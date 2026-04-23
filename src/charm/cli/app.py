@@ -34,9 +34,11 @@ app.command(name="logs")(logs.logs_command)
 def version_callback(value: bool):
     """Callback to display the current CLI version."""
     if value:
+        # Check for updates first
+        check_for_updates()
         try:
             version = importlib.metadata.version("charmos")
-        except importlib.metadata.PackageNotFoundError:
+        except importlib.metadata.version.PackageNotFoundError:
             version = "dev"
         typer.echo(f"Charm CLI Version: {version}")
         raise typer.Exit()
@@ -92,7 +94,6 @@ def main(
         "-v",
         help="Show the CLI version and exit.",
         callback=version_callback,
-        is_eager=True,
     ),
     debug: bool = typer.Option(
         False,

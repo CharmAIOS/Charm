@@ -12,6 +12,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
+from .. import state
+
 # Import Core Components
 from ...core.errors import CharmError
 from ...core.loader import CharmLoader
@@ -260,7 +262,10 @@ def run_command(
     mock_skills: bool = typer.Option(
         False, "--mock-skills", help="Use mock skills (skip actual MCP connections)"
     ),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug mode"),
 ):
+    if debug:
+        state.DEBUG_MODE = True
     """
     Run a Charm Agent locally.
     Supports both interactive mode, headless (JSON/Text) mode, and Docker Simulation.

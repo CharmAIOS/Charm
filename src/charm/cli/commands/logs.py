@@ -19,7 +19,10 @@ def logs_command(
     path: str = typer.Option(".", "--path", help="Path to the Charm project root"),
     limit: int = typer.Option(50, "--limit", "-l", help="Number of logs to fetch (max 500)"),
     api_base_override: str = typer.Option(None, "--api-base", help="Override API base URL"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug mode"),
 ):
+    if debug:
+        state.DEBUG_MODE = True
     """
     Fetch remote execution logs for the current agent.
     """

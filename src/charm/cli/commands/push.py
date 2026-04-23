@@ -154,7 +154,10 @@ def push_command(
     path: str = typer.Argument(".", help="Path to the Charm project root"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview payload without sending"),
     api_base_override: str = typer.Option(None, "--api-base", help="Override API base URL"),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug mode"),
 ):
+    if debug:
+        state.DEBUG_MODE = True
     project_path = Path(path).resolve()
 
     token = get_token()

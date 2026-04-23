@@ -92,25 +92,52 @@
     },
     "pricing": {
       "type": "object",
-      "description": "Commercial model for the Charm Store.",
+      "description": "Commercial model for the Charm Store. Controls agent access billing (separate from platform usage quota).",
       "properties": {
-        "type": {
+        "model": {
           "type": "string",
           "enum": [
             "free",
-            "usage_based",
             "subscription",
             "one_time"
           ],
-          "default": "free"
+          "default": "free",
+          "description": "Pricing model. 'free' = open access, 'subscription' = recurring payment, 'one_time' = single purchase."
         },
         "amount": {
           "type": "number",
-          "description": "Price value in the specified currency."
+          "description": "Price in USD. Ignored when model is 'free'."
+        },
+        "billing_period": {
+          "type": "string",
+          "enum": [
+            "monthly",
+            "annual"
+          ],
+          "description": "Billing cycle for subscriptions. Only used when model is 'subscription'."
+        },
+        "trial": {
+          "type": "object",
+          "description": "Free trial configuration. Card is required upfront; if not cancelled, billing starts automatically after the trial period.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether a free trial is offered before the first charge."
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30,
+              "default": 7,
+              "description": "Number of trial days."
+            }
+          }
         },
         "currency": {
           "type": "string",
-          "default": "USD"
+          "default": "USD",
+          "description": "Currency code. Currently only USD is supported."
         }
       }
     },

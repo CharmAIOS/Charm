@@ -96,34 +96,35 @@ def logs_command(
     table.add_column("Details")
 
     for log in logs:
-        # e.g., "2026-04-19T23:55:31.123456"
-        ts_raw = log.get("timestamp", "")
-        # Safe parse
+        # Endpoint returns: created_at, status, input_payload, error_message
+        ts_raw = log.get("created_at", "")
         try:
             dt = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
             ts = dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
-            ts = ts_raw[:19]
+            ts = ts_raw[:19] if ts_raw else "N/A"
 
-        e_type = log.get("event_type", "unknown")
-        e_data = log.get("event_data", {})
-        
-        # Determine styling based on event severity
+        status = log.get("status", "unknown")
+        error_msg = log.get("error_message", "")
+        input_payload = log.get("input_payload", {})
+
+        # Determine styling based on status
         type_style = "cyan"
-        if e_type == "error":
+        if status == "error":
             type_style = "bold red"
-        elif e_type == "warning":
-            type_style = "bold yellow"
-        elif e_type == "final":
+        elif status == "success":
             type_style = "bold green"
-            
-        detail_text = str(e_data)
-        if "message" in e_data:
-            detail_text = e_data["message"]
-        elif "output" in e_data:
-            detail_text = str(e_data["output"])
+        elif status == "running":
+            type_style = "bold yellow"
 
-        table.add_row(ts, f"[{type_style}]{e_type}[/{type_style}]", detail_text)
+        detail_text = ""
+        if error_msg:
+            detail_text = error_msg[:100] + "..." if len(str(error_msg)) > 100 else str(error_msg)
+        elif input_payload:
+            msg = input_payload.get("message", str(input_payload))
+            detail_text = msg[:100] + "..." if len(msg) > 100 else msg
+
+        table.add_row(ts, f"[{type_style}]{status}[/{type_style}]", detail_text)
 
     console.print(table)
     console.print(f"\n[dim]Showing last {len(logs)} execution events.[/dim]")

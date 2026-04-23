@@ -28,7 +28,13 @@ persona:
     banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
 pricing:
-  type: "free"  # Options: free, usage_based, one_time, subscription. At this stage, please fill in free.
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
+
 
 # ------------------------------------------------------------------
 # 2. UI Generation

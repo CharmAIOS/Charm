@@ -1,6 +1,6 @@
 # Python Code-based Agent Template
 
-version: "0.4.1"
+version: "0.4.2"
 
 persona:
   name: "My Python Agent"
@@ -8,6 +8,14 @@ persona:
   version: "0.1.0"
   authors: ["You"]
   tags: ["assistant"]
+
+pricing:
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
 
 interface:
   input:

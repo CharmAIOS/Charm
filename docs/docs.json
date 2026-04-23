@@ -93,11 +93,11 @@
                         ]
                     },
                     {
-                        "group": "Runti1mes",
+                        "group": "Pricing",
                         "pages": [
-                            "LangChain",
-                            "OpenClaw",
-                            "CrewAI"
+                            "App",
+                            "Platform",
+                            "Revenue sharing"
                         ]
                     }
                 ]

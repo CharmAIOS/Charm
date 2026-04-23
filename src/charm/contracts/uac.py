@@ -28,12 +28,18 @@ class Persona(BaseModel):
     assets: Optional[StoreAssets] = None
 
 
+class TrialConfig(BaseModel):
+    enabled: bool = False
+    days: Optional[int] = Field(None, ge=1)
+
+
 class Pricing(BaseModel):
     """Commercial model for the Charm Store."""
 
-    type: Literal["free", "usage_based", "subscription", "one_time"] = Field("free")
-    amount: float = Field(0.0, description="Price value")
-    currency: str = Field("USD", description="Currency code")
+    model: Literal["free", "subscription", "one_time"] = Field("free")
+    amount: float = Field(0.0, description="Price in USD")
+    billing_period: Optional[Literal["monthly", "annual"]] = None
+    trial: Optional[TrialConfig] = None
 
 
 class InterfaceState(BaseModel):

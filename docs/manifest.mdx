@@ -85,7 +85,12 @@ persona:
     banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
 pricing:
-  type: "free"  # Options: free, usage_based, one_time, subscription. At this stage, please fill in free.
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
 
 # ------------------------------------------------------------------
 # 2. UI Generation
@@ -241,6 +246,11 @@ policies:
 |  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
 |  |  description  | String |Short tagline for search results and cards. |
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
+| Pricing   | model | Enum | free, subscription, one_time. |
+|  |  amount | Number | Price in USD. Ignored if free. |
+|  |  billing_period | Enum | monthly, annual (for subscription). |
+|  |  trial.enabled | Boolean | Whether trial is offered. |
+|  |  trial.days | Integer | Number of trial days. |
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
 |Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|

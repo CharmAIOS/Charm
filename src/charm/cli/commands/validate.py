@@ -185,10 +185,10 @@ def _validate_pricing(config: CharmConfig) -> List[str]:
 
     pricing = config.pricing
 
-    # Check pricing type
-    valid_types = ["free", "usage_based", "one_time", "subscription"]
-    if pricing.type not in valid_types:
-        warnings.append(f"Pricing type '{pricing.type}' is not standard. Valid types: {', '.join(valid_types)}")
+    # Check pricing model
+    valid_models = ["free", "usage_based", "one_time", "subscription"]
+    if pricing.model not in valid_models:
+        warnings.append(f"Pricing model '{pricing.model}' is not standard. Valid models: {', '.join(valid_models)}")
 
     return warnings
 

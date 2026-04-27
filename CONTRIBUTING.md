@@ -2,14 +2,11 @@
 
 Thanks for your interest in Charm!
 
-Contributions are highly welcome. We’d love to gather any feedback you have on our feature modules, for example:
+Contributions are always welcome. We’d love to build the future with you, whether through new features, improved infrastructure, better documentation, or bug fixes.
 
-- Does the contract cover your agent’s configuration needs?
-- Are there specific agents you’d like to see adapted next?
+## Join the Conversation
 
-Let us know what you think.
-
-If you’re interested in contributing to the core features and architecture of Charm, we’re actively looking for team members, feel free to [email us](mailto:uc@charmos.io) to chat.
+We’re active on [Discord](https://discord.gg/gdakynHUEb). Jump in to share ideas, ask questions, and connect with others.
 
 ## How to Contribute
 

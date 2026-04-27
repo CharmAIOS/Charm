@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Read the Contributing Guidelines
+  - name: Contributing Guidelines
     url: https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md
     about: Please review this before submitting an issue.
-  - name: Join our Discord
+  - name: Get Help
     url: https://discord.gg/gdakynHUEb
-    about: Ask questions and chat with the team.
+    about: Ask questions and chat with the team & community.

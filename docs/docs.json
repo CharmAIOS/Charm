@@ -59,9 +59,10 @@
                         "pages": [
                             "Charm",
                             "charm-store",
-                            "ui-protocol",
+                            "oauth",
+                            "Models",
                             "tool-keys",
-                            "cli-list"
+                            "ui-protocol"
                         ]
                     },
                     {
@@ -70,7 +71,8 @@
                             "init",
                             "local-run",
                             "manifest",
-                            "push"
+                            "push",
+                            "cli"
                         ]
                     }
                 ]
@@ -88,8 +90,9 @@
                         "group": "Integrations",
                         "pages": [
                             "LangChain",
-                            "OpenClaw",
-                            "CrewAI"
+                            "CrewAI",
+                            "Custom",
+                            "OpenClaw"
                         ]
                     },
                     {
@@ -97,7 +100,7 @@
                         "pages": [
                             "App",
                             "Platform",
-                            "Revenue sharing"
+                            "Earn as you go"
                         ]
                     }
                 ]
@@ -119,8 +122,9 @@
                             {
                                 "group": "Integrations",
                                 "pages": [
-                                    "contribute/integrations/guide",
-                                    "contribute/integrations/publish"
+                                    "Adapter",
+                                    "Base Imagd",
+                                    "Docs"
                                 ]
                             }
                         ]

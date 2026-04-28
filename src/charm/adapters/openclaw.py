@@ -512,6 +512,10 @@ class CharmOpenClawAdapter(BaseAdapter):
                 if clean_output:
                     final_output = "\n".join(clean_output[-10:])
 
+        # Emit upgrade sentinel to trigger version bump in runner
+        if is_upgrade:
+            final_output = f"UPGRADE_COMPLETE: {final_output}"
+
         return {
             "status": "success",
             "output": final_output or "Task completed successfully.",

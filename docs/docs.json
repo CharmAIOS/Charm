@@ -59,9 +59,11 @@
                         "pages": [
                             "Charm",
                             "charm-store",
+                            "studio",
                             "oauth",
-                            "Models",
+                            "models",
                             "tool-keys",
+                            "execution",
                             "ui-protocol"
                         ]
                     },

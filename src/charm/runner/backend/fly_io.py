@@ -7,10 +7,11 @@ import textwrap
 from typing import AsyncGenerator, Optional, Tuple
 from .base import ExecutionBackend, RunConfig
 from ...runner.protocol import sse_pack
+from .fly_api_client import FlyApiClient
 
 logger = logging.getLogger("charm.runner.fly_io")
 
-FLY_API_BASE = "https://api.machines.dev/v1"
+
 MACHINE_POLL_INTERVAL = 3
 MACHINE_POLL_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — image pull can take ~45-60s on first boot
 MACHINE_HEALTH_POLL_INTERVAL = 3
@@ -24,12 +25,16 @@ class FlyIoBackend(ExecutionBackend):
         self.api_token = os.getenv("FLY_API_TOKEN")
         self.app_name = os.getenv("FLY_APP_NAME")
         self.region = os.getenv("FLY_REGION", "sjc")
+        
+        if self.api_token and self.app_name:
+            self.api = FlyApiClient(self.api_token, self.app_name, self.region)
+        else:
+            self.api = None
 
         if not self.app_name:
             logger.warning("FLY_APP_NAME is not set. Daemon mode will fail.")
 
-    def _headers(self) -> dict:
-        return {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
+
 
     def _load_daemon_record(self, supabase_client, agent_id: str, user_id: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """Returns (machine_id, volume_id, status)."""
@@ -198,43 +203,6 @@ class FlyIoBackend(ExecutionBackend):
         )
         return base64.b64encode(bash_script.encode()).decode()
 
-    async def _get_machine_state(self, session: aiohttp.ClientSession, machine_id: str) -> Optional[str]:
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
-        try:
-            async with session.get(url, headers=self._headers()) as resp:
-                if resp.status == 404:
-                    return "destroyed"
-                data = await resp.json()
-                return data.get("state")
-        except Exception as e:
-            logger.error("Error fetching machine state for %s: %s", machine_id, e)
-            return None
-
-    async def _start_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/start"
-        async with session.post(url, headers=self._headers()) as resp:
-            return resp.status in (200, 201)
-
-    async def _stop_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
-        """Stop the machine (saves cost while paused)."""
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/stop"
-        async with session.post(url, headers=self._headers()) as resp:
-            if resp.status not in (200, 201):
-                return False
-            # Wait for machine to actually stop (poll for up to 30 seconds)
-            for _ in range(10):
-                await asyncio.sleep(3)
-                state = await self._get_machine_state(session, machine_id)
-                if state == "stopped":
-                    return True
-            return True  # Return True even if still transitioning, as stop was triggered
-
-    async def _delete_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
-        """Delete the machine permanently."""
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
-        async with session.delete(url, headers=self._headers()) as resp:
-            return resp.status in (200, 201)
-
     async def get_machine_status(self, supabase_client, agent_id: str, user_id: str) -> dict:
         """Get current daemon machine status. Returns machine_id, state, and status."""
         if not self.api_token or not self.app_name:
@@ -246,7 +214,7 @@ class FlyIoBackend(ExecutionBackend):
 
         try:
             async with aiohttp.ClientSession() as session:
-                state = await self._get_machine_state(session, machine_id)
+                state = await self.api.get_machine_state(session, machine_id)
                 return {
                     "available": True,
                     "exists": True,
@@ -276,7 +244,14 @@ class FlyIoBackend(ExecutionBackend):
         try:
             async with aiohttp.ClientSession() as session:
                 if action == "pause":
-                    stopped = await self._stop_machine(session, machine_id)
+                    stopped = await self.api.stop_machine(session, machine_id)
+                    if stopped:
+                        import asyncio
+                        for _ in range(10):
+                            await asyncio.sleep(3)
+                            state = await self.api.get_machine_state(session, machine_id)
+                            if state == "stopped":
+                                break
                     if stopped:
                         supabase_client.table("daemon_machines").update(
                             {"status": "paused", "updated_at": "now()"}
@@ -284,7 +259,7 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": stopped, "action": "paused"}
 
                 elif action == "restart":
-                    started = await self._start_machine(session, machine_id)
+                    started = await self.api.start_machine(session, machine_id)
                     if started:
                         supabase_client.table("daemon_machines").update(
                             {"status": "running", "updated_at": "now()"}
@@ -292,19 +267,18 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": started, "action": "restarted"}
 
                 elif action == "terminate":
-                    current_state = await self._get_machine_state(session, machine_id)
+                    current_state = await self.api.get_machine_state(session, machine_id)
                     if current_state != "stopped":
                         return {
                             "success": False,
                             "error": f"Machine must be stopped first. Current state: {current_state}",
                             "requires_stop": True
                         }
-                    deleted = await self._delete_machine(session, machine_id)
+                    deleted = await self.api.delete_machine(session, machine_id)
                     if deleted:
                         if volume_id and self.app_name:
-                            vol_url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes/{volume_id}"
-                            async with session.delete(vol_url, headers=self._headers()) as resp:
-                                logger.info(f"Volume deletion: {resp.status}")
+                            deleted_vol = await self.api.delete_volume(session, volume_id)
+                            logger.info(f"Volume deletion: {deleted_vol}")
                         # Remove from tracking table
                         supabase_client.table("daemon_machines").delete().eq("agent_id", agent_id).eq("user_id", user_id).execute()
                     return {"success": deleted, "action": "terminated"}
@@ -319,75 +293,13 @@ class FlyIoBackend(ExecutionBackend):
     async def _wait_for_started(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
             await asyncio.sleep(MACHINE_POLL_INTERVAL)
-            state = await self._get_machine_state(session, machine_id)
+            state = await self.api.get_machine_state(session, machine_id)
             logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
             if state == "started":
                 return True
             if state in ("destroyed", None):
                 return False
         return False
-
-    async def _create_volume(self, session: aiohttp.ClientSession, agent_id: str, user_id: str) -> Tuple[Optional[str], Optional[str]]:
-        """Returns (volume_id, error_message). One of the two will be None."""
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes"
-        clean_user = user_id.replace('-', '')[:10]
-        clean_agent = agent_id.replace('-', '')[:10]
-        vol_name = f"c_{clean_user}_{clean_agent}"
-        payload = {"name": vol_name, "region": self.region, "size_gb": 1}
-        async with session.post(url, headers=self._headers(), json=payload) as resp:
-            if resp.status not in (200, 201):
-                text = await resp.text()
-                logger.error("[Fly.io] Volume creation failed (HTTP %s): %s", resp.status, text)
-                return None, f"HTTP {resp.status}: {text}"
-            data = await resp.json()
-            return data.get("id"), None
-
-    async def _create_machine(
-        self, session: aiohttp.ClientSession, config: RunConfig, volume_id: Optional[str]
-    ) -> Optional[str]:
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines"
-        user_id = config.env_vars.get("CHARM_USER_ID", "local")
-        clean_user = user_id.replace('-', '')[:8]
-        clean_agent = config.agent_id.replace('-', '')[:8]
-        machine_name = f"c-{clean_user}-{clean_agent}"
-        mounts = [{"volume": volume_id, "path": "/workspace"}] if volume_id else []
-        payload = {
-            "name": machine_name,
-            "region": self.region,
-            "config": {
-                "image": config.image or "ucmind/runner-base:latest",
-                "env": {
-                        **config.env_vars,
-                        "CHARM_DAEMON_MODE": "true",
-                        "CHARM_BOOTSTRAP_SCRIPT": self._generate_bootstrap_script(),
-                    },
-                "init": {
-                    "cmd": ["/bin/bash", "-c", "echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"]
-                },
-                "guest": {"cpu_kind": "shared", "cpus": 1, "memory_mb": 1024},
-                "mounts": mounts,
-                "services": [
-                    {
-                        "protocol": "tcp",
-                        "internal_port": 8000,
-                        "ports": [
-                            {"port": 80, "handlers": ["http"]},
-                            {"port": 443, "handlers": ["tls", "http"]},
-                        ],
-                    }
-                ],
-                "restart": {"policy": "always"},
-            },
-        }
-        async with session.post(url, headers=self._headers(), json=payload) as resp:
-            if resp.status not in (200, 201):
-                text = await resp.text()
-                logger.error("[Fly.io] Machine creation failed: %s", text)
-                return None
-            data = await resp.json()
-            machine_id = data.get("id")
-            logger.info("[Fly.io] Created machine %s (%s)", machine_id, machine_name)
-            return machine_id
 
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
         if not self.api_token or not self.app_name:
@@ -407,14 +319,14 @@ class FlyIoBackend(ExecutionBackend):
 
         async with aiohttp.ClientSession() as session:
             if machine_id:
-                state = await self._get_machine_state(session, machine_id)
+                state = await self.api.get_machine_state(session, machine_id)
                 logger.info("[Fly.io] Existing machine %s is in state: %s", machine_id, state)
 
                 if state == "started":
                     yield sse_pack("status", "Daemon agent is already running.")
                 elif state in ("stopped", "suspended", "created"):
                     yield sse_pack("status", "Resuming daemon agent...")
-                    started = await self._start_machine(session, machine_id)
+                    started = await self.api.start_machine(session, machine_id)
                     if not started:
                         yield sse_pack("error", "Failed to start daemon machine.")
                         return
@@ -431,7 +343,7 @@ class FlyIoBackend(ExecutionBackend):
                     if not await self._wait_for_started(session, machine_id):
                         # If it doesn't reach started, try an explicit start
                         yield sse_pack("status", "Restarting daemon machine...")
-                        await self._start_machine(session, machine_id)
+                        await self.api.start_machine(session, machine_id)
                         if not await self._wait_for_started(session, machine_id):
                             yield sse_pack("error", "Daemon machine did not reach started state in time.")
                             return
@@ -443,14 +355,14 @@ class FlyIoBackend(ExecutionBackend):
             if not machine_id:
                 if not volume_id:
                     yield sse_pack("status", "Allocating persistent storage volume...")
-                    volume_id, vol_err = await self._create_volume(session, config.agent_id, user_id)
+                    volume_id, vol_err = await self.api.create_volume(session, config.agent_id, user_id)
                     if not volume_id:
                         yield sse_pack("error", f"Failed to allocate storage volume. {vol_err or ''}".strip())
                         return
                     logger.info("[Fly.io] Created volume: %s", volume_id)
 
                 yield sse_pack("status", "Provisioning 24/7 daemon VM...")
-                machine_id = await self._create_machine(session, config, volume_id)
+                machine_id = await self.api.create_machine(session, config, volume_id, self._generate_bootstrap_script())
                 if not machine_id:
                     yield sse_pack("error", "Failed to provision daemon machine.")
                     return

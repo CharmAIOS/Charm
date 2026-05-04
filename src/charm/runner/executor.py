@@ -35,9 +35,16 @@ class CharmDockerExecutor:
         os.makedirs(HOST_CACHE_DIR, exist_ok=True)
         os.makedirs(HOST_ARTIFACTS_ROOT, exist_ok=True)
 
-        self.local_docker_backend = DockerBackend()
+        # Lazy init backends - don't attempt Docker on staging/prod
+        self._local_docker_backend = None
         self.cloud_run_backend = self._safe_cloud_run_backend()
         self.daemon_backend = self._safe_flyio_backend()
+
+    @property
+    def local_docker_backend(self):
+        if self._local_docker_backend is None:
+            self._local_docker_backend = DockerBackend()
+        return self._local_docker_backend
 
     def _safe_cloud_run_backend(self) -> Optional[Any]:
         if not CloudRunBackend:

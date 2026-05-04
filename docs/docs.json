@@ -51,13 +51,14 @@
                             "models",
                             "tool-keys",
                             "execution",
-                            "ui-protocol"
+                            "ui-protocol",
+                            "version-control"
                         ]
                     },
                     {
-                        "group": "",
+                        "group": "Onboarding",
                         "pages": [
-                            "version-control",
+                            "quickstart",
                             "cli"
                         ]
                     }

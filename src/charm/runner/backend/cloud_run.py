@@ -143,16 +143,16 @@ class CloudRunBackend(ExecutionBackend):
             request = run_v2.GetJobRequest(name=job_fqn)
             existing = await self.jobs_client.get_job(request=request)
             logger.info(f"[CloudRun] Found existing job: {job_id}")
-            # Check if job needs update (env vars may have changed)
+            # Check if job needs update (only check bundle-related vars)
             if config.env_vars:
-                needs_update = True
-                # Check if this job has the expected env vars
+                needs_update = False
                 container_spec = existing.template.template.containers[0]
                 existing_env_names = {e["name"] for e in container_spec.env}
-                for key in config.env_vars:
-                    if key not in existing_env_names:
+                # Only check for bundle path - not all runtime env vars
+                bundle_key = "CHARM_BUNDLE_GCS_PATH"
+                if bundle_key in config.env_vars:
+                    if bundle_key not in existing_env_names:
                         needs_update = True
-                        break
                 if needs_update:
                     logger.info(f"[CloudRun] Job needs update, deleting and recreating...")
                     delete_req = run_v2.DeleteJobRequest(name=job_fqn)

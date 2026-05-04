@@ -165,6 +165,11 @@ class CloudRunBackend(ExecutionBackend):
             },
         }
 
+        # Pass env vars from config (includes bundle path, etc.)
+        if config.env_vars:
+            for key, value in config.env_vars.items():
+                container["env"].append({"name": key, "value": value})
+
         job = run_v2.Job()
         job.template.template.max_retries = 0
         job.template.template.timeout = f"{timeout_seconds}s"

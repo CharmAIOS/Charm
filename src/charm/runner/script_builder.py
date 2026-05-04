@@ -206,11 +206,31 @@ print("OpenClaw LLM proxy configured:", proxy_base)
             charm run . --json "$INPUT_JSON"
             """
         elif use_file_input:
+            # Import agent via CharmWrapper to get proper event output
             execution_cmd = """
             echo '::CHARM_EVENT::{"type":"status","content":"Running Agent (File Mode)..."}'
-            python3 -c "import sys, subprocess, pathlib; \
-            json_payload = pathlib.Path('/app/artifacts_mount/input.json').read_text(encoding='utf-8'); \
-            sys.exit(subprocess.run(['charm', 'run', '.', '--json', json_payload]).returncode)"
+            python3 << 'PYEOF'
+import json
+import sys
+sys.path.insert(0, '.')
+# Read input from file
+with open('/app/artifacts_mount/input.json') as f:
+    inputs = json.load(f)
+# Use CharmWrapper for proper output
+from charm.core.loader import CharmLoader
+from charm.core.io import CharmEmitter
+try:
+    wrapper = CharmLoader.load('.')
+    result = wrapper.invoke(inputs)
+    # Emit final result
+    if result.get('status') == 'success':
+        CharmEmitter.emit_final(result.get('output', ''))
+    else:
+        CharmEmitter.emit_error(result.get('message', 'Unknown error'))
+except Exception as e:
+    CharmEmitter.emit_error(str(e))
+    sys.exit(1)
+PYEOF
             """
         else:
             b64_payload = base64.b64encode(json.dumps(input_payload).encode()).decode()

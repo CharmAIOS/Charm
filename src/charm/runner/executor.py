@@ -94,6 +94,14 @@ class CharmDockerExecutor:
         if state_snapshot:
             input_payload["__charm_state__"] = state_snapshot
 
+        # Pass chat history to the agent
+        if history:
+            input_payload["__charm_history__"] = history
+            input_payload["history"] = history
+            # Also pass via env var for stability
+            import json as json_module
+            env_vars["CHARM_HISTORY"] = json_module.dumps(history)
+
         user_id = env_vars.get("CHARM_USER_ID", "local_dev")
         # Daemon agents share a single workspace across all threads so OpenClaw
         # memory persists regardless of which conversation the user is in.

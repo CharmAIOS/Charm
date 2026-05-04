@@ -36,28 +36,6 @@
         }
     },
     "redirects": [],
-    "tabs": [
-        {
-            "name": "Get Started",
-            "url": "index"
-        },
-        {
-            "name": "Publishing",
-            "url": "overview"
-        },
-        {
-            "name": "Platforms",
-            "url": "overview"
-        },
-        {
-            "name": "Open Source",
-            "url": "overview"
-        },
-        {
-            "name": "Community & Resources",
-            "url": "Community"
-        }
-    ],
     "navigation": {
         "tabs": [
             {

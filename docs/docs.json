@@ -68,13 +68,30 @@
                         ]
                     },
                     {
-                        "group": "Publishing",
+                        "group": "",
+                        "pages": [
+                            "version-control",
+                            "cli"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Publishing",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "overview"
+                        ]
+                    },
+                    {
+                        "group": "",
                         "pages": [
                             "init",
                             "local-run",
                             "manifest",
-                            "push",
-                            "cli"
+                            "push"
                         ]
                     }
                 ]

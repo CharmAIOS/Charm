@@ -123,8 +123,14 @@ class CloudRunBackend(ExecutionBackend):
         )
         worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
         timeout_seconds = self._resolve_timeout_seconds(config)
+        # Include key env vars in hash so different configs create different jobs
+        env_hash = ""
+        if config.env_vars:
+            bundle_path = config.env_vars.get("CHARM_BUNDLE_GCS_PATH", "")
+            if bundle_path:
+                env_hash = hashlib.sha1(bundle_path.encode("utf-8")).hexdigest()[:8]
         spec_hash = hashlib.sha1(
-            f"{worker_image}|{timeout_seconds}".encode("utf-8")
+            f"{worker_image}|{timeout_seconds}|{env_hash}".encode("utf-8")
         ).hexdigest()
         job_id = self._make_job_id(config.agent_id, spec_hash)
         job_fqn = f"{self.parent}/jobs/{job_id}"
@@ -137,6 +143,24 @@ class CloudRunBackend(ExecutionBackend):
             request = run_v2.GetJobRequest(name=job_fqn)
             existing = await self.jobs_client.get_job(request=request)
             logger.info(f"[CloudRun] Found existing job: {job_id}")
+            # Check if job needs update (env vars may have changed)
+            if config.env_vars:
+                needs_update = True
+                # Check if this job has the expected env vars
+                container_spec = existing.template.template.containers[0]
+                existing_env_names = {e["name"] for e in container_spec.env}
+                for key in config.env_vars:
+                    if key not in existing_env_names:
+                        needs_update = True
+                        break
+                if needs_update:
+                    logger.info(f"[CloudRun] Job needs update, deleting and recreating...")
+                    delete_req = run_v2.DeleteJobRequest(name=job_fqn)
+                    await self.jobs_client.delete_job(request=delete_req)
+                    # Clear from cache to force recreation
+                    if job_fqn in self._job_cache:
+                        del self._job_cache[job_fqn]
+                        raise google_exceptions.NotFound("Job deleted, will recreate")
             self._job_cache[job_fqn] = existing.name
             return existing.name
         except google_exceptions.NotFound:

@@ -35,14 +35,23 @@
             "href": "https://store.charmos.io"
         }
     },
+    "redirects": [],
     "tabs": [
         {
             "name": "Get Started",
-            "url": "Charm"
+            "url": "index"
+        },
+        {
+            "name": "Publishing",
+            "url": "overview"
         },
         {
             "name": "Platforms",
-            "url": "Platforms"
+            "url": "overview"
+        },
+        {
+            "name": "Open Source",
+            "url": "overview"
         },
         {
             "name": "Community & Resources",
@@ -57,7 +66,7 @@
                     {
                         "group": "Overview",
                         "pages": [
-                            "Charm",
+                            "index",
                             "charm-store",
                             "studio",
                             "oauth",

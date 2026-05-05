@@ -42,17 +42,11 @@
                 "tab": "Get Started",
                 "groups": [
                     {
-                        "group": "Overview",
+                        "group": "",
                         "pages": [
                             "index",
-                            "charm-store",
-                            "studio",
-                            "oauth",
-                            "models",
-                            "tool-keys",
-                            "execution",
-                            "ui-protocol",
-                            "version-control"
+                            "features",
+                            "tamplates"
                         ]
                     },
                     {
@@ -65,7 +59,7 @@
                 ]
             },
             {
-                "tab": "Publishing",
+                "tab": "Infrastructure",
                 "groups": [
                     {
                         "group": "",
@@ -74,12 +68,26 @@
                         ]
                     },
                     {
-                        "group": "",
+                        "group": "Publishing",
                         "pages": [
                             "init",
                             "local-run",
                             "manifest",
                             "push"
+                        ]
+                    },
+                    {
+                        "group": "Features",
+                        "pages": [
+                            "execution modes",
+                            "observability",
+                            "version control",
+                            "oauth",
+                            "models",
+                            "tool-keys",
+                            "execution",
+                            "ui-protocol",
+                            "version-control"
                         ]
                     }
                 ]

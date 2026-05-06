@@ -72,68 +72,79 @@
                 ]
             },
             {
-                "tab": "Build",
+                "tab": "Guides",
                 "groups": [
                     {
                         "group": "",
                         "pages": [
-                            "build/overview"
+                            "guides/overview"
                         ]
                     },
                     {
                         "group": "Configuration",
                         "pages": [
-                            "build/manifest",
-                            "build/interface",
-                            "build/charmignore"
+                            "guides/manifest",
+                            "guides/interface",
+                            "guides/charmignore"
                         ]
                     },
                     {
                         "group": "Development",
                         "pages": [
-                            "build/local-run",
-                            "build/docker-sandbox",
-                            "build/validate",
-                            "build/debugging"
+                            "guides/local-run",
+                            "guides/docker-sandbox",
+                            "guides/validate",
+                            "guides/debugging"
                         ]
                     },
                     {
                         "group": "Publishing",
                         "pages": [
-                            "build/push",
-                            "build/version-control"
+                            "guides/push",
+                            "guides/version-control"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "CLI",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "guides/onboarding"
                         ]
                     },
                     {
-                        "group": "CLI Reference",
+                        "group": "Commands",
                         "pages": [
-                            "build/onboarding",
-                            "build/cli-init",
-                            "build/cli-run",
-                            "build/cli-validate",
-                            "build/cli-push",
-                            "build/cli-logs",
-                            "build/cli-auth"
+                            "cli/init",
+                            "cli/run",
+                            "cli/validate",
+                            "cli/push",
+                            "cli/logs",
+                            "cli/auth"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Adapters",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "adapters/overview"
                         ]
                     },
                     {
-                        "group": "Adapters",
+                        "group": "Integrations",
                         "pages": [
-                            "build/adapters/overview",
-                            "build/adapters/crewai",
-                            "build/adapters/langchain",
-                            "build/adapters/langgraph",
-                            "build/adapters/custom",
-                            "build/adapters/openclaw"
-                        ]
-                    },
-                    {
-                        "group": "Runtime",
-                        "pages": [
-                            "platform/execution-modes",
-                            "platform/base-images",
-                            "platform/skills",
-                            "platform/constraints"
+                            "adapters/crewai",
+                            "adapters/langchain",
+                            "adapters/langgraph",
+                            "adapters/custom",
+                            "adapters/openclaw"
                         ]
                     }
                 ]
@@ -145,6 +156,15 @@
                         "group": "",
                         "pages": [
                             "platform/overview"
+                        ]
+                    },
+                    {
+                        "group": "Runtime",
+                        "pages": [
+                            "platform/execution-modes",
+                            "platform/base-images",
+                            "platform/skills",
+                            "platform/constraints"
                         ]
                     },
                     {

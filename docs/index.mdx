@@ -1,84 +1,104 @@
 ---
-title: Charm
+title: Charm OS
+description: The Unified Application Layer for Agentic Intelligence
+mode: "wide"
 ---
 
-<img src="/assets/banner.png" alt="Charm Banner" noZoom style={{ width: '100%', marginTop: '1rem', marginBottom: '1.5rem' }} />
+<img src="/assets/banner.png" alt="Charm Banner" noZoom style={{ width: '100%', borderRadius: '0.5rem', marginBottom: '2rem' }} />
 
-<div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: '1.1rem', marginBottom: '3rem' }}>
-  **Charm** is a unified application layer that turns your AI agents into real-world business applications in just a few commands.
+<div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: '1.2rem', marginBottom: '3rem', color: '#E8A694' }}>
+  Bring your AI agents to everyday users.
 </div>
 
 ---
 
-## Getting Started
+Turn your agent code—whether built in any framework or from scratch—into production-ready, monetizable applications in minutes. Developers focus purely on agent logic; Charm handles the containerization, UI, secure execution, and distribution.
 
 <CardGroup cols={2}>
-  <Card title="Installation" icon="terminal" color="#E8A694" href="/docs/installation">
-    Install the Charm CLI and set up your local development environment.
+  <Card title="Quickstart Guide" icon="bolt" color="#E8A694" href="/quickstart/install">
+    
   </Card>
-  <Card title="Quickstart Guide" icon="bolt" color="#E8A694" href="/docs/quickstart">
-    Build and run your very first Charm agent in under 5 minutes.
+  <Card title="Onboarding" icon="plug" color="#E8A694" href="/adapters/overview">
+   
   </Card>
-  <Card title="Charm UAC Manifest" icon="file-lines" color="#E8A694" href="/docs/configuration">
-    Learn how to configure your agent's identity and behavior using charm.yaml.
+  <Card title="Charm Store" icon="book-open" color="#E8A694" href="/guides/overview">
+    
   </Card>
-  <Card title="Publish to Store" icon="store" color="#E8A694" href="/docs/publish">
-    Deploy and share your agent with the world on the Charm Storefront.
+  <Card title="Charm Studio" icon="cloud" color="#E8A694" href="/platform/overview">
+  
   </Card>
 </CardGroup>
 
-## Integrations
+## Why Charm?
+
+- **Ecosystem Agnostic**: Supports CrewAI, LangChain, LangGraph, OpenClaw, and more.
+- **Zero-Ops Infrastructure**: Push your code. Charm instantly provisions and manages isolated cloud containers, handles dependencies and scales automatically.
+- **Server-Driven UI**: Never write frontend code again. Agents return markdown or JSON, and Charm renders dynamic, native UIs directly on the user's device.
+- **Built-in Monetization**: Configure subscriptions, one-time payments, or earn-as-you-go revenue sharing directly from your `charm.yaml` manifest.
+
+## How It Works
+
+---
+
+<img src="/assets/how-it-works.png" alt="Charm How It Works" noZoom style={{ width: '100%', borderRadius: '0.5rem', marginBottom: '2rem' }} />
+
+---
+
+## Start Here
+
+<Steps>
+  <Step title="Write Your Agent">
+    Develop your core agent logic using your preferred framework. You don't need to learn a new way to write AI—just write pure Python or TypeScript.
+  </Step>
+  <Step title="Configure the Manifest">
+    Add a `charm.yaml` file to your project root. Define your required API keys, UI schema, and execution environment (Standard or Full).
+  </Step>
+  <Step title="Test Locally">
+    Use `charm run --docker` to simulate the exact production cloud environment on your local machine, ensuring 100% parity before deployment.
+  </Step>
+  <Step title="Publish & Monetize">
+    Run `charm push`. Your agent is instantly bundled, deployed to the Charm Cloud Runner, and listed on the Charm Store for users to discover and install.
+  </Step>
+</Steps>
+
+## Explore the Ecosystem
 
 <Tabs>
-  <Tab title="Agent">
+  <Tab title="Runtime & Execution">
     <CardGroup cols={2}>
-      <Card title="Agent Adapters" icon="people-group" color="#E8A694" href="/docs/crewai">
-        Easily ...
+      <Card title="Execution Modes" icon="server" href="/platform/execution-modes">
+        Choose between Serverless (task-based), Interactive, or always-on Daemon modes.
       </Card>
-      <Card title="Base Images" icon="link" color="#E8A694" href="/docs/langchain">
-        Wrap ...
+      <Card title="Tool Keys" icon="key" href="/platform/tool-keys">
+        Charm securely injects third-party API keys at runtime so you never expose secrets.
       </Card>
     </CardGroup>
   </Tab>
-  <Tab title="API Services">
+  <Tab title="Distribution & UI">
     <CardGroup cols={2}>
-      <Card title="Tool Keys" icon="robot" color="#E8A694" href="/docs/tool-keys">
-        Create ...
+      <Card title="UI Protocol" icon="palette" href="/platform/ui-protocol">
+        Learn how to return JSON to render timelines, comparison tables, and viral cards.
+      </Card>
+      <Card title="Charm Store" icon="shop" href="/platform/store">
+        Understand how users discover, purchase, and install your agents.
       </Card>
     </CardGroup>
   </Tab>
 </Tabs>
 
-## Platform Features
-
-<CardGroup cols={2}>
-  <Card title="UI Protocol" icon="palette" color="#E8A694" href="ui-protocol">
-    Render rich, server-driven user interfaces directly from your agent's output.
-  </Card>
-  <Card title="Zero-Key Routing" icon="server" color="#E8A694" href="runner">
-    Simulate and test your agent locally in an isolated docker environment.
-  </Card>
-  <Card title="OAuth & Identity" icon="shield-halved" color="#E8A694" href="auth">
-    Securely connect your agent to user accounts via Google, GitHub, and more.
-  </Card>
-  <Card title="Ambient Desktop Companion" icon="lock" color="#E8A694" href="policies">
-    Configure execution limits, internet access, and data privacy policies.
-  </Card>
-</CardGroup>
-
 ## Community & Resources
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Home" icon="house" color="#E8A694" href="https://charmos.io">
-    Visit the Charm Storefront to discover and download agents. 
+    
   </Card>
-  <Card title="Charm Store" icon="shop" color="#E8A694" href="https://store.charmos.io">
-    Discover and try out the best agents built by the community.
+  <Card title="Contact Us" icon="mail" color="#E8A694" href="[EMAIL_ADDRESS]">
+    
   </Card>
   <Card title="Discord" icon="discord" color="#E8A694" href="https://discord.gg/gdakynHUEb">
-    Join the discussion, share agents, and get instant help from the team.
+    
   </Card>
-  <Card title="GitHub" icon="github" color="#E8A694" href="https://github.com/CharmAIOS/Charm">
-    Contribute to the open-source Charm core and explore the source code.
+  <Card title="Blog" icon="blog" color="#E8A694" href="https://charmos.io/blog">
+    
   </Card>
 </CardGroup>

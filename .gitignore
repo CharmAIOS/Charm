@@ -5,7 +5,6 @@ __pycache__/
 *.egg-info/
 .eggs/
 dist/
-build/
 develop-eggs/
 lib/
 lib64/

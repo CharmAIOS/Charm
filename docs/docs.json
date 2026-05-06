@@ -46,76 +46,131 @@
                         "pages": [
                             "index",
                             "features",
-                            "tamplates"
+                            "help"
                         ]
                     },
                     {
-                        "group": "Onboarding",
+                        "group": "Quickstart",
                         "pages": [
-                            "quickstart",
-                            "cli"
+                            "quickstart/install",
+                            "quickstart/first-app",
+                            "quickstart/publish"
+                        ]
+                    },
+                    {
+                        "group": "Templates",
+                        "pages": [
+                            "templates/overview",
+                            "templates/research",
+                            "templates/code-review",
+                            "templates/customer-support",
+                            "templates/data-pipeline",
+                            "templates/slack-bot",
+                            "templates/openclaw"
                         ]
                     }
                 ]
             },
             {
-                "tab": "Infrastructure",
+                "tab": "Build",
                 "groups": [
                     {
                         "group": "",
                         "pages": [
-                            "overview"
+                            "build/overview"
+                        ]
+                    },
+                    {
+                        "group": "Configuration",
+                        "pages": [
+                            "build/manifest",
+                            "build/interface",
+                            "build/charmignore"
+                        ]
+                    },
+                    {
+                        "group": "Development",
+                        "pages": [
+                            "build/local-run",
+                            "build/docker-sandbox",
+                            "build/validate",
+                            "build/debugging"
                         ]
                     },
                     {
                         "group": "Publishing",
                         "pages": [
-                            "init",
-                            "local-run",
-                            "manifest",
-                            "push"
+                            "build/push",
+                            "build/version-control"
                         ]
                     },
                     {
-                        "group": "Features",
+                        "group": "CLI Reference",
                         "pages": [
-                            "execution modes",
-                            "observability",
-                            "version control",
-                            "oauth",
-                            "models",
-                            "tool-keys",
-                            "execution",
-                            "ui-protocol",
-                            "version-control"
+                            "build/onboarding",
+                            "build/cli-init",
+                            "build/cli-run",
+                            "build/cli-validate",
+                            "build/cli-push",
+                            "build/cli-logs",
+                            "build/cli-auth"
+                        ]
+                    },
+                    {
+                        "group": "Adapters",
+                        "pages": [
+                            "build/adapters/overview",
+                            "build/adapters/crewai",
+                            "build/adapters/langchain",
+                            "build/adapters/langgraph",
+                            "build/adapters/custom",
+                            "build/adapters/openclaw"
+                        ]
+                    },
+                    {
+                        "group": "Runtime",
+                        "pages": [
+                            "platform/execution-modes",
+                            "platform/base-images",
+                            "platform/skills",
+                            "platform/constraints"
                         ]
                     }
                 ]
             },
             {
-                "tab": "Platforms",
+                "tab": "Platform",
                 "groups": [
                     {
                         "group": "",
                         "pages": [
-                            "overview"
+                            "platform/overview"
                         ]
                     },
                     {
-                        "group": "Integrations",
+                        "group": "Features",
                         "pages": [
-                            "LangChain",
-                            "CrewAI",
-                            "Custom",
-                            "OpenClaw"
+                            "platform/ui-protocol",
+                            "platform/observability",
+                            "platform/tool-keys",
+                            "platform/oauth",
+                            "platform/threads"
+                        ]
+                    },
+                    {
+                        "group": "Charm Store",
+                        "pages": [
+                            "platform/store",
+                            "platform/studio",
+                            "platform/desktop"
                         ]
                     },
                     {
                         "group": "Pricing",
                         "pages": [
-                            "App",
-                            "Platform",
-                            "Earn as you go"
+                            "platform/app",
+                            "platform/platform",
+                            "platform/earn-as-you-go"
                         ]
                     }
                 ]
@@ -126,22 +181,23 @@
                     {
                         "group": "",
                         "pages": [
-                            "overview"
+                            "oss/overview"
                         ]
                     },
                     {
-                        "group": "Contribute",
+                        "group": "Contributing",
                         "pages": [
-                            "contribute/documentation",
-                            "contribute/code",
-                            {
-                                "group": "Integrations",
-                                "pages": [
-                                    "Adapter",
-                                    "Base Imagd",
-                                    "Docs"
-                                ]
-                            }
+                            "oss/contributing",
+                            "oss/dev-setup",
+                            "oss/code-style"
+                        ]
+                    },
+                    {
+                        "group": "Tools & Plugins",
+                        "pages": [
+                            "oss/adapter",
+                            "oss/base-image",
+                            "oss/documentation"
                         ]
                     }
                 ]

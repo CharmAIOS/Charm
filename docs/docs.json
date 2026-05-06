@@ -172,7 +172,7 @@
                         "pages": [
                             "platform/ui-protocol",
                             "platform/observability",
-                            "platform/tool-keys",
+                            "platform/keys",
                             "platform/oauth",
                             "platform/threads"
                         ]
@@ -182,11 +182,22 @@
                         "pages": [
                             "platform/store",
                             "platform/studio",
-                            "platform/desktop"
+                            "platform/ambient-desktop-companion"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Platform",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "platform/overview"
                         ]
                     },
                     {
-                        "group": "Pricing",
+                        "group": "Payments",
                         "pages": [
                             "platform/app",
                             "platform/platform",

@@ -5,25 +5,18 @@ title: Charm
 <img src="/assets/banner.png" alt="Charm Banner" noZoom style={{ width: '100%', marginTop: '1rem', marginBottom: '1.5rem' }} />
 
 <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: '1.1rem', marginBottom: '3rem' }}>
-  Bring your AI agents to everyday users
+  > Bring your AI agents to everyday users
 </div>
 
----
-
-Turn your AI agents into ...
-
 <CardGroup cols={2}>
-  <Card title="Get Started" icon="rocket-launch" color="#E8A694" href="/docs/installation">
-    Install the ...
+  <Card title="Get Started" icon="rocket-launch" color="#E8A694" href="quickstart/install">
+    Install Charm CLI
   </Card>
-  <Card title="Onboarding" icon="terminal" color="#E8A694" href="/docs/quickstart">
-    Build and run your ...
+  <Card title="Onboarding" icon="terminal" color="#E8A694" href="guides/onboarding">
+    Run your first charm locally in an isolated Docker environment with no API keys required.
   </Card>
-  <Card title="Charm Store" icon="box-open" color="#E8A694" href="/docs/configuration">
-    Learn how to ...
-  </Card>
-  <Card title="Charm Studio" icon="window-restore" color="#E8A694" href="/docs/publish">
-    Deploy and share your ...
+  <Card title="Templates" icon="list" color="#E8A694" href="templates/overview">
+    Use prebuilt agent architectures for common business use cases.
   </Card>
 </CardGroup>
 
@@ -41,10 +34,16 @@ Turn your AI agents into ...
 - **Zero-Config**: Run and test your agent locally in an isolated Docker environment with no API keys required.
 - **Open Source**: Charm is open source and community driven.
 
+## Who needs Charm?
+
+
+## What do you need?
+
+
 ## How it works
 
 <Frame>
-  <img className="rounded-xl w-full" src="/assets/how_it_works.png" alt="How it works" />
+  <img className="rounded-xl w-full" src="/assets/how-it-works.png" alt="How it works" />
 </Frame>
 
 ---
@@ -52,20 +51,23 @@ Turn your AI agents into ...
 ## Start Here
 
 <Tabs>
-  <Tab title="Build and run an agent">
+  <Tab title="Infra">
     <CardGroup cols={2}>
-      <Card title="Popular Adapters" icon="people-group" color="#E8A694" href="/docs/crewai">
-        Easily ...
+      <Card title="Configuration" icon="gear" color="#E8A694" href="guides/manifest">
+        Define the behavior and interface of your agent using the Charm manifest.
       </Card>
-      <Card title="Custom Adapters" icon="link" color="#E8A694" href="/docs/langchain">
-        Wrap ...
+      <Card title="Run & Test" icon="terminal" color="#E8A694" href="guides/local-run">
+        Wrap your agent in a Charm and run it locally in an isolated Docker environment with no API keys required.
       </Card>
     </CardGroup>
   </Tab>
-  <Tab title="Run and test your agent">
+  <Tab title="Platform">
     <CardGroup cols={2}>
-      <Card title="Tool Keys" icon="robot" color="#E8A694" href="/docs/tool-keys">
-        Create ...
+      <Card title="Charm Store" icon="robot" color="#E8A694" href="/docs/tool-keys">
+        Discover and install charms built by the community.
+      </Card>
+      <Card title="Charm Studio" icon="window-restore" color="#E8A694" href="/docs/tool-keys">
+        Create, package, and share your own charms with the community.
       </Card>
     </CardGroup>
   </Tab>
@@ -74,17 +76,20 @@ Turn your AI agents into ...
 ## Key Features
 
 <CardGroup cols={2}>
-  <Card title="Server-Driven UI" icon="palette" color="#E8A694" href="ui-protocol">
-    Render rich, server-driven user interfaces directly from your agent's output.
+  <Card title="Secrets Management" icon="key" color="#E8A694" href="platform/keys">
+    Securely manage API keys and credentials for your agent.
   </Card>
-  <Card title="Local Sandbox" icon="server" color="#E8A694" href="runner">
-    Simulate and test your agent locally in an isolated docker environment.
+  <Card title="OAuth" icon="shield-halved" color="#E8A694" href="platform/oauth">
+    Securely authenticate and authorize your agent with user accounts via Google, GitHub, and more.
   </Card>
-  <Card title="Secure Authentication" icon="shield-halved" color="#E8A694" href="auth">
-    Securely connect your agent to user accounts via Google, GitHub, and more.
+  <Card title="Ambient Desktop Companion" icon="display" color="#E8A694" href="platform/ambient-desktop-companion">
+    Run agents as desktop companions that can access local files, hardware, and persistent memory.
   </Card>
-  <Card title="Ambient Desktop Companion" icon="lock" color="#E8A694" href="policies">
-    Configure execution limits, internet access, and data privacy policies.
+  <Card title="Server-Driven UI" icon="palette" color="#E8A694" href="platform/ui-protocol">
+    Build rich, interactive user interfaces for your agents with just a few lines of YAML.
+  </Card>
+  <Card title="Payments" icon="money-bill-1" color="#E8A694" href="platform/payments">
+    Integrate payments and subscriptions into your charms.
   </Card>
 </CardGroup>
 

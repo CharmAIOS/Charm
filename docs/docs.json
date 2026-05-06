@@ -1,145 +1,227 @@
 {
-  "theme": "mint",
-  "name": "Charm Docs",
-  "favicon": "/assets/logo.png",
-  "logo": {
-    "light": "/assets/logo.png",
-    "dark": "/assets/logo.png"
-  },
-  "colors": {
-    "primary": "#E8A694",
-    "light": "#FFFCF2",
-    "dark": "#E8A694"
-  },
-  "navbar": {
-    "links": [
-      { "label": "GitHub", "icon": "github", "href": "https://github.com/CharmAIOS/charm" },
-      { "label": "Changelog", "icon": "box", "href": "https://charmos.io/changelog" },
-      { "label": "Discord", "icon": "discord", "href": "https://discord.gg/gdakynHUEb" }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Charm Store",
-      "href": "https://store.charmos.io"
+    "theme": "mint",
+    "name": "Charm Docs",
+    "favicon": "/assets/logo.png",
+    "logo": {
+        "light": "/assets/logo.png",
+        "dark": "/assets/logo.png"
+    },
+    "colors": {
+        "primary": "#E8A694",
+        "light": "#FFFCF2",
+        "dark": "#E8A694"
+    },
+    "navbar": {
+        "links": [
+            {
+                "label": "GitHub",
+                "icon": "github",
+                "href": "https://github.com/CharmAIOS/charm"
+            },
+            {
+                "label": "Changelog",
+                "icon": "box",
+                "href": "https://charmos.io/changelog"
+            },
+            {
+                "label": "Discord",
+                "icon": "discord",
+                "href": "https://discord.gg/gdakynHUEb"
+            }
+        ],
+        "primary": {
+            "type": "button",
+            "label": "Charm Store",
+            "href": "https://store.charmos.io"
+        }
+    },
+    "redirects": [],
+    "navigation": {
+        "tabs": [
+            {
+                "tab": "Get Started",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "index",
+                            "features",
+                            "help"
+                        ]
+                    },
+                    {
+                        "group": "Quickstart",
+                        "pages": [
+                            "quickstart/install",
+                            "quickstart/first-app",
+                            "quickstart/publish"
+                        ]
+                    },
+                    {
+                        "group": "Templates",
+                        "pages": [
+                            "templates/overview",
+                            "templates/research",
+                            "templates/code-review",
+                            "templates/customer-support",
+                            "templates/data-pipeline",
+                            "templates/slack-bot",
+                            "templates/openclaw"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Guides",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "guides/overview"
+                        ]
+                    },
+                    {
+                        "group": "Configuration",
+                        "pages": [
+                            "guides/manifest",
+                            "guides/interface",
+                            "guides/charmignore"
+                        ]
+                    },
+                    {
+                        "group": "Development",
+                        "pages": [
+                            "guides/local-run",
+                            "guides/docker-sandbox",
+                            "guides/validate",
+                            "guides/debugging"
+                        ]
+                    },
+                    {
+                        "group": "Publishing",
+                        "pages": [
+                            "guides/push",
+                            "guides/version-control"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "CLI",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "guides/onboarding"
+                        ]
+                    },
+                    {
+                        "group": "Commands",
+                        "pages": [
+                            "cli/init",
+                            "cli/run",
+                            "cli/validate",
+                            "cli/push",
+                            "cli/logs",
+                            "cli/auth"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Adapters",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "adapters/overview"
+                        ]
+                    },
+                    {
+                        "group": "Integrations",
+                        "pages": [
+                            "adapters/crewai",
+                            "adapters/langchain",
+                            "adapters/langgraph",
+                            "adapters/custom",
+                            "adapters/openclaw"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Platform",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "platform/overview"
+                        ]
+                    },
+                    {
+                        "group": "Runtime",
+                        "pages": [
+                            "platform/execution-modes",
+                            "platform/base-images",
+                            "platform/skills",
+                            "platform/constraints"
+                        ]
+                    },
+                    {
+                        "group": "Features",
+                        "pages": [
+                            "platform/ui-protocol",
+                            "platform/observability",
+                            "platform/tool-keys",
+                            "platform/oauth",
+                            "platform/threads"
+                        ]
+                    },
+                    {
+                        "group": "Charm Store",
+                        "pages": [
+                            "platform/store",
+                            "platform/studio",
+                            "platform/desktop"
+                        ]
+                    },
+                    {
+                        "group": "Pricing",
+                        "pages": [
+                            "platform/app",
+                            "platform/platform",
+                            "platform/earn-as-you-go"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Open Source",
+                "groups": [
+                    {
+                        "group": "",
+                        "pages": [
+                            "oss/overview"
+                        ]
+                    },
+                    {
+                        "group": "Contributing",
+                        "pages": [
+                            "oss/contributing",
+                            "oss/dev-setup",
+                            "oss/code-style"
+                        ]
+                    },
+                    {
+                        "group": "Tools & Plugins",
+                        "pages": [
+                            "oss/adapter",
+                            "oss/base-image",
+                            "oss/documentation"
+                        ]
+                    }
+                ]
+            }
+        ]
     }
-  },
-  "tabs": [
-    { "name": "Get Started", "url": "index" },
-    { "name": "Guides", "url": "guides/overview" },
-    { "name": "CLI", "url": "cli/init" },
-    { "name": "Adapters", "url": "adapters/overview" },
-    { "name": "Platform", "url": "platform/overview" },
-    { "name": "Open Source", "url": "oss/overview" }
-  ],
-  "navigation": [
-    {
-      "group": "Overview",
-      "tab": "Get Started",
-      "pages": ["index", "features", "help"]
-    },
-    {
-      "group": "Quickstart",
-      "tab": "Get Started",
-      "pages": ["quickstart/install", "quickstart/first-app", "quickstart/publish"]
-    },
-    {
-      "group": "Templates",
-      "tab": "Get Started",
-      "pages": [
-        "templates/overview",
-        "templates/research",
-        "templates/code-review",
-        "templates/customer-support",
-        "templates/data-pipeline",
-        "templates/slack-bot",
-        "templates/openclaw"
-      ]
-    },
-    {
-      "group": "Introduction",
-      "tab": "Guides",
-      "pages": ["guides/overview"]
-    },
-    {
-      "group": "Configuration",
-      "tab": "Guides",
-      "pages": ["guides/manifest", "guides/interface", "guides/charmignore"]
-    },
-    {
-      "group": "Development",
-      "tab": "Guides",
-      "pages": ["guides/local-run", "guides/docker-sandbox", "guides/validate", "guides/debugging"]
-    },
-    {
-      "group": "Publishing",
-      "tab": "Guides",
-      "pages": ["guides/push", "guides/version-control"]
-    },
-    {
-      "group": "Onboarding",
-      "tab": "CLI",
-      "pages": ["guides/onboarding"]
-    },
-    {
-      "group": "Commands",
-      "tab": "CLI",
-      "pages": ["cli/init", "cli/run", "cli/validate", "cli/push", "cli/logs", "cli/auth"]
-    },
-    {
-      "group": "Introduction",
-      "tab": "Adapters",
-      "pages": ["adapters/overview"]
-    },
-    {
-      "group": "Integrations",
-      "tab": "Adapters",
-      "pages": [
-        "adapters/crewai",
-        "adapters/langchain",
-        "adapters/langgraph",
-        "adapters/custom",
-        "adapters/openclaw"
-      ]
-    },
-    {
-      "group": "Introduction",
-      "tab": "Platform",
-      "pages": ["platform/overview"]
-    },
-    {
-      "group": "Runtime",
-      "tab": "Platform",
-      "pages": ["platform/execution-modes", "platform/base-images", "platform/skills", "platform/constraints"]
-    },
-    {
-      "group": "Features",
-      "tab": "Platform",
-      "pages": ["platform/ui-protocol", "platform/observability", "platform/tool-keys", "platform/oauth", "platform/threads"]
-    },
-    {
-      "group": "Charm Store",
-      "tab": "Platform",
-      "pages": ["platform/store", "platform/studio", "platform/desktop"]
-    },
-    {
-      "group": "Pricing",
-      "tab": "Platform",
-      "pages": ["platform/app", "platform/platform", "platform/earn-as-you-go"]
-    },
-    {
-      "group": "Introduction",
-      "tab": "Open Source",
-      "pages": ["oss/overview"]
-    },
-    {
-      "group": "Contributing",
-      "tab": "Open Source",
-      "pages": ["oss/contributing", "oss/dev-setup", "oss/code-style"]
-    },
-    {
-      "group": "Tools & Plugins",
-      "tab": "Open Source",
-      "pages": ["oss/adapter", "oss/base-image", "oss/documentation"]
-    }
-  ]
 }

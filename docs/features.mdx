@@ -5,52 +5,15 @@ description: Discover how Charm transforms AI agents into real, commercial-ready
 
 # Why Charm?
 
-Most AI agents today are confined to terminal windows, Jupyter notebooks, or fragile local scripts. Scaling them into commercial applications usually requires weeks of work building backend APIs, frontend interfaces, billing systems, and secure container infrastructure.
-
-**Charm eliminates this friction.** It is the unified infrastructure layer that provides the missing pieces needed to turn agent code into a real-world product.
-
----
-
-## Key Differentiators
-
-### 1. Framework-Agnostic Adapters
-Charm doesn't force you to use a specific LLM or Agent library. Whether you use **CrewAI**, **LangChain**, **LangGraph**, or raw **Python**, Charm provides native adapters that wrap your logic and handle the execution boilerplate.
-
-### 2. Zero-Ops Publishing
-With a single command—`charm push`—your agent is bundled, validated, and deployed to the Charm Cloud. We handle:
-- **Containerization**: Automatic Docker image building.
-- **Dependency Management**: Handling Python environments and system-level tools like Headless Chrome or FFmpeg.
-- **Scaling**: Running your agents in isolated, auto-scaling serverless containers.
-
-### 3. Server-Driven UI (SDUI)
-Building a frontend for an AI agent is tedious because agent outputs are dynamic. The **Charm UI Protocol** allows your agent to return structured JSON or Markdown that the Charm Store renders into rich, native UI components—timelines, comparison tables, viral cards, and more—without you writing a single line of React or HTML.
-
-### 4. Secure & Isolated Runtime
-Every Charm agent runs in an isolated sandbox. We provide:
-- **Zero-Key Routing**: Securely inject API keys (OpenAI, Serper, etc.) at runtime so you never hardcode secrets.
-- **OAuth Integration**: Connect your agent to users' Google or GitHub accounts securely.
-- **Privacy Policies**: Fine-grained control over internet access and data retention.
-
-### 5. Built-in Monetization
-Charm turns your agent into a business from Day 1. Configure your pricing model directly in your `charm.yaml` manifest:
-- **Subscriptions**: Recurring monthly or annual revenue.
-- **One-Time Purchase**: Fixed price for lifetime access.
-- **Earn-as-you-go**: Participate in the Charm creator economy and earn revenue every time your agent executes.
-
----
-
-## Charm vs. DIY Deployment
-
-| Feature | DIY Approach | With Charm |
-| :--- | :--- | :--- |
-| **Infrastructure** | Manual K8s/Docker setup | Auto-provisioned Cloud Runner |
-| **Frontend** | Build custom UI / API | Server-Driven UI Protocol |
-| **Payments** | Integrate Stripe/Billing | Manifest-based Configuration |
-| **Secret Mgmt** | Hardcoded or .env risks | Secure Vault Injection |
-| **Distribution** | Build your own website | Instant Listing on Charm Store |
-
----
-
-## Ready to build?
-
-If you're ready to see Charm in action, head over to the [Installation](/quickstart/install) guide to set up the CLI.
+{/* TODO: Write value proposition content covering:
+  - The problem: AI agents are stuck in notebooks and demos
+  - The solution: Charm as a unified application layer
+  - Key differentiators:
+    1. Zero-Ops Publishing (charm push → live on Store)
+    2. Framework-Agnostic (CrewAI, LangChain, LangGraph, Custom, Node.js, OpenClaw)
+    3. Secure Runtime (isolated containers, secret injection, OAuth)
+    4. Server-Driven UI (agents render native UI automatically)
+    5. Built-in Monetization (subscriptions, one-time, earn-as-you-go)
+    6. Skills & MCP Ecosystem (plug-and-play tools)
+  - Comparison table vs DIY deployment
+*/}

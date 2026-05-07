@@ -42,11 +42,9 @@
                 "tab": "Get Started",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
-                            "index",
-                            "features",
-                            "help"
+                            "index"
                         ]
                     },
                     {
@@ -75,7 +73,7 @@
                 "tab": "Guides",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
                             "guides/overview"
                         ]
@@ -110,7 +108,7 @@
                 "tab": "CLI",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
                             "guides/onboarding"
                         ]
@@ -132,7 +130,7 @@
                 "tab": "Adapters",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
                             "adapters/overview"
                         ]
@@ -153,7 +151,7 @@
                 "tab": "Platform",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
                             "platform/overview"
                         ]
@@ -163,8 +161,7 @@
                         "pages": [
                             "platform/execution-modes",
                             "platform/base-images",
-                            "platform/skills",
-                            "platform/constraints"
+                            "platform/skills"
                         ]
                     },
                     {
@@ -184,17 +181,6 @@
                             "platform/studio",
                             "platform/ambient-desktop-companion"
                         ]
-                    }
-                ]
-            },
-            {
-                "tab": "Platform",
-                "groups": [
-                    {
-                        "group": "",
-                        "pages": [
-                            "platform/overview"
-                        ]
                     },
                     {
                         "group": "Payments",
@@ -210,7 +196,7 @@
                 "tab": "Open Source",
                 "groups": [
                     {
-                        "group": "",
+                        "group": " ",
                         "pages": [
                             "oss/overview"
                         ]

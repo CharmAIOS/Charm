@@ -1,16 +1,153 @@
----
-title: Publish to Store
-description: Deploy and share your agent with the world on the Charm Store.
----
+# Charm Store: The App Store for AI Agents
 
-# Publish to Store
+Charm Store helps turn agent-based applications into real, commercial-ready products. Developers can ignore infrastructure and focus purely on agent logic. With standardized publishing, built-in application services and isolated runtimes, your code can become a complete product in minutes.
 
-{/* TODO: Write end-to-end publishing guide covering:
-  1. `charm auth login` — authenticate
-  2. `charm validate` — pre-flight checks
-  3. `charm run . --docker` — sandbox test
-  4. `charm push` — deploy to Store
-  5. Auto-restart for existing installations
-  6. Store URL copied to clipboard
-  7. Checking your agent on store.charmos.io
-*/}
+## Charm Store Compatibility & Constraints Guide (v1)
+
+Please make sure to review our current technical specifications and limitations before publishing, to ensure your agent can run stably on the Charm Cloud Runner.
+
+### Runtime Environments
+
+Charm provides two optimized runtime environments. You can select the environment by configuring the `runtime.mode` field in your `charm.yaml`.
+
+#### A. Standard Runtime (Default)
+
+> **Config:** `mode: "standard"`
+
+The default lightweight environment. Optimized for fast cold-starts and low latency.
+
+- **Target Use Cases**:
+  - Text processing & RAG (Retrieval-Augmented Generation).
+  - Data analysis (Pandas, Numpy).
+  - API-based agents (calling External Tools).
+- **Frameworks**: CrewAI, LangChain (Python), LangGraph, Custom Python Agent
+- **Base Image**: `runner-standard` (Approx. 400MB)
+- **Python Version**: 3.12 (Fixed)
+- **Pre-installed Stack**: `pandas`, `numpy`, `scipy`, `requests`, `beautifulsoup4`.
+- **Browser Support**: **None**. (This environment does NOT contain Chrome/Chromium).
+
+#### B. Full Runtime (Multimedia & Polyglot)
+
+> **Config:** `mode: "full"`
+
+A heavy-duty environment equipped with system-level dependencies for multimedia and browser automation. Select this if your agent requires a display server, audio processing, or Node.js.
+
+- **Target Use Cases**:
+  - **Browser Automation**: Selenium, Playwright, Puppeteer (Python or Node.js).
+  - **Video/Audio Generation**: Remotion, MoviePy, Pydub.
+  - **Node.js Applications**: LangChain.js, Vercel AI SDK, Claude Skills Agent
+- **Base Image**: `runner-full` (Approx. 2GB)
+- **Included Capabilities**:
+  - **Node.js 20 (LTS)** & `npm`.
+  - **Headless Chrome / Chromium** (with `libnss3`, `libatk`, etc.).
+  - **FFmpeg** (Full build).
+
+### Shared Environment Features
+
+- **Resources**: 2 GB RAM, 1 vCPU, 600s Timeout (Hard Limit).
+- **File System**: Ephemeral (temporary). Files written to disk will be lost after execution.
+- **Internet Access**: Outbound allowed (API calls). Inbound blocked.
+
+### Hard Limitations (CRITICAL)
+
+Please read this section carefully. Most deployment failures are caused by violating these rules.
+
+1. **No Heavy Local Models / GPU Support**
+   - **Do NOT** load local LLMs (e.g., Ollama, Llama.cpp) or large embedding models (e.g., HuggingFace transformers > 500MB) into memory.
+   - The runtime environments **do not have GPU access (No CUDA)**.
+   - **Solution**: Use cloud APIs (OpenAI, Anthropic, Groq, HuggingFace Inference API) for all inference tasks.
+
+2. **Strict Resource Limits**
+   - Memory is capped at **2 GB**. Attempting to load large datasets or models will cause an OOM (Out Of Memory) crash immediately.
+   - Execution time is limited to **600 seconds** (10 minutes). Long-running background jobs are not supported.
+
+3. **No Inbound Ports / Web Servers**
+   - **Do NOT** start servers that listen on inbound ports (e.g., `flask run`, `express`, `fastapi`).
+   - The runner is designed for **task execution**, not hosting web services. Any process waiting for inbound HTTP requests will timeout.
+
+4. **System Installs Disabled**
+   - `apt-get` is disabled. You cannot install system-level packages at runtime.
+   - **Solution**: If you need **FFmpeg** or **Chrome**, you **MUST** set `mode: "full"` in your `charm.yaml`.
+
+5. **No Absolute Paths**
+   - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.
+   - **Solution**: Use relative paths (e.g., `./data/...`) or `os.getcwd()` / `process.cwd()`.
+
+### Checklist
+
+Before publishing, make sure:
+
+- [ ] **Config**: `charm.yaml` has the correct `adapter.type` and `mode`.
+- [ ] **No Local Models**: I am not loading local LLMs or heavy weights.
+- [ ] **Dependencies**: All libraries are listed in `requirements.txt`/`pyproject.toml` (Python) or `package.json` (Node).
+- [ ] **Secrets**: All API keys are defined in `charm.yaml` (environment_variables list), not hardcoded.
+
+> If you hit any issues, feel free to open an [issue](https://github.com/CharmAIOS/Charm/issues/new/choose) or ask in our [community](https://discord.gg/gdakynHUEb). It really helps us make the docs and product better.
+
+## Zero-Ops Publishing
+
+Register your agent on the Charm Store.
+
+> If you’re using uv, please prefix all commands with uv run.
+
+#### Authentication
+
+Sign in to the Charm platform and link your account.
+
+```bash
+charm auth login
+```
+
+#### Preparing your UAC manifest
+
+Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
+
+#### Local Validation & Development
+
+Step A: Static Analysis
+
+Use Pydantic to validate that the YAML fields conform to the UAC schema.
+
+```bash
+charm validate .
+```
+
+Step B: Local Execution
+
+Run your agent using your local Python environment. This is best for rapid logic iteration and debugging.
+
+**Option 1**: Simple Text Input
+
+Use this if your agent accepts a single string (e.g., a prompt or a topic).
+
+```bash
+charm run . --input "YOUR_INPUT_TEXT"
+```
+
+**Option 2**: JSON Payload
+
+Use this if your agent requires multiple parameters (as defined in interface.input).
+
+```bash
+charm run . --json '{"field_name": "value", "option_key": 123}'
+```
+
+> field_name: Must match the property names defined in your charm.yaml.
+>
+> value: The actual data you want to pass to the agent.
+
+Step C: Sandbox Simulation (Best to have)
+
+Run your agent inside the Charm Docker Sandbox. This guarantees compatibility with the cloud runtime and validates system dependencies.
+
+```bash
+charm run . --input "YOUR_INPUT_TEXT" --docker
+```
+
+> Prerequisite: Ensure you have installed the runner extras (pip install "charmos[runner]") and Docker is running.
+
+#### Publishing
+
+```bash 
+charm push
+```

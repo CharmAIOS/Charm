@@ -7,9 +7,25 @@
         "dark": "/assets/logo.png"
     },
     "colors": {
-        "primary": "#FDC7A5",
+        "primary": "#FFB6AA",
         "light": "#FFFCF2",
         "dark": "#FDC7A5"
+    },
+    "fonts": {
+        "body": {
+            "family": "Fragment Mono"
+        },
+        "heading": {
+            "family": "DM Sans"
+        }
+    },
+    "styling": {
+        "codeblocks": {
+            "theme": {
+                "dark": "min-dark",
+                "light": "min-light"
+            }
+        }
     },
     "navbar": {
         "links": [

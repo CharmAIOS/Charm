@@ -7,9 +7,9 @@
         "dark": "/assets/logo.png"
     },
     "colors": {
-        "primary": "#FBA38D",
+        "primary": "#F39888",
         "light": "#FFF5EE",
-        "dark": "#FBA38D"
+        "dark": "#F39888"
     },
     "fonts": {
         "body": {

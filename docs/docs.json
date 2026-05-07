@@ -7,16 +7,16 @@
         "dark": "/assets/logo.png"
     },
     "colors": {
-        "primary": "#FFB6AA",
+        "primary": "#FFD0C8",
         "light": "#FFFCF2",
-        "dark": "#FDC7A5"
+        "dark": "#FFC8A9"
     },
     "fonts": {
         "body": {
-            "family": "Fragment Mono"
+            "family": "Space Grotesk"
         },
         "heading": {
-            "family": "DM Sans"
+            "family": "JetBrains Mono"
         }
     },
     "styling": {

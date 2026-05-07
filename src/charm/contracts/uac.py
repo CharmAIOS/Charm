@@ -97,6 +97,26 @@ class OpenClawConfig(BaseModel):
     )
 
 
+# Keys that belong to the LLM/model layer — never treated as tool keys
+# regardless of whether the UAC uses the legacy flat-list format.
+_KNOWN_MODEL_KEYS: frozenset[str] = frozenset({
+    "OPENAI_API_KEY",
+    "OPENAI_API_BASE",
+    "OPENAI_API_HOST",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "GOOGLE_GENERATIVEAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_ENDPOINT",
+    "MISTRAL_API_KEY",
+    "GROQ_API_KEY",
+    "COHERE_API_KEY",
+    "TOGETHER_API_KEY",
+    "CHARM_LLM_PROXY_BASE",
+    "CHARM_LLM_PROXY_KEY",
+})
+
+
 class EnvVars(BaseModel):
     """Environment variables split logically to support backend validation flows."""
 
@@ -122,7 +142,12 @@ class RuntimeAdapter(BaseModel):
     @classmethod
     def convert_legacy_env_list_to_tools(cls, v):
         if isinstance(v, list):
-            return {"tools": v, "models": []}
+            # Legacy flat list: classify each key into models vs tools so that
+            # LLM provisioning keys are never passed to the tool-key interceptor.
+            return {
+                "models": [k for k in v if k in _KNOWN_MODEL_KEYS],
+                "tools": [k for k in v if k not in _KNOWN_MODEL_KEYS],
+            }
         return v
 
 

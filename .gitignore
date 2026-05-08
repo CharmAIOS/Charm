@@ -40,12 +40,6 @@ htmlcov/
 # --- Charm Specific ---
 *.log
 *.tmp
-assets/*
-
-# --- Agent ---
-AGENTS.md
-CLAUDE.md
-skills/*
 
 # Local agents (create with: charm init agents/<name>)
 agents/

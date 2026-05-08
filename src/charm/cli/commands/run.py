@@ -1,13 +1,18 @@
 import asyncio
 import json
 import os
-from typing import Any, Dict, Optional
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import typer
 from dotenv import dotenv_values, load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.table import Table
+
+from .. import state
 
 # Import Core Components
 from ...core.errors import CharmError
@@ -25,8 +30,17 @@ console = Console()
 
 app = typer.Typer()
 
+# Valid adapter types
+VALID_ADAPTER_TYPES = ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
 
-async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Dict[str, str]):
+
+async def run_docker_simulation(
+    path: str,
+    payload: Dict[str, Any],
+    env_vars: Dict[str, str],
+    mock_oauth: bool = False,
+    mock_skills: bool = False,
+):
     """
     Orchestrates the local Docker simulation using the SDK Executor.
     """
@@ -47,9 +61,69 @@ async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Di
     executor = CharmDockerExecutor()
     abs_path = os.path.abspath(path)
 
+    # Detect adapter type and skills from charm.yaml for image selection
+    adapter_type = "custom"
+    skills = []
+    runtime_mode = "standard"
+    lifecycle = "serverless"
+    try:
+        import yaml
+
+        charm_yaml_path = os.path.join(abs_path, "charm.yaml")
+        if os.path.exists(charm_yaml_path):
+            with open(charm_yaml_path, "r") as f:
+                uac = yaml.safe_load(f)
+            runtime = uac.get("runtime", {})
+            adapter_cfg = runtime.get("adapter", {})
+            adapter_type = adapter_cfg.get("type", "custom")
+            skills = runtime.get("skills", [])
+            runtime_mode = runtime.get("mode", "standard")
+            lifecycle = runtime.get("lifecycle", "serverless")
+    except Exception:
+        pass
+
+    # Validate adapter type
+    if adapter_type not in VALID_ADAPTER_TYPES:
+        console.print(f"[bold red]Warning:[/bold red] Unknown adapter type '{adapter_type}'. Using 'custom'.")
+        adapter_type = "custom"
+
+    # Select correct Docker image based on adapter type and mode
+    image = None
+    if adapter_type in ("openclaw", "node") or runtime_mode == "full":
+        image = "ucmind/runner-full:latest"
+    else:
+        image = "ucmind/runner-base:latest"
+
+    # Build env vars with mock tokens if requested
+    final_env_vars = env_vars.copy()
+    if mock_oauth:
+        # Inject mock OAuth tokens for known providers
+        mock_tokens = {
+            "GOOGLE_OAUTH_TOKEN": "mock_google_token_12345",
+            "GITHUB_OAUTH_TOKEN": "mock_github_token_12345",
+            "NOTION_OAUTH_TOKEN": "mock_notion_token_12345",
+        }
+        final_env_vars.update(mock_tokens)
+        console.print("[dim]Using mock OAuth tokens (--mock-oauth)[/dim]")
+
+    # Skip actual skill connections if mock_skills is set
+    if mock_skills and skills:
+        console.print(f"[dim]Mocking {len(skills)} skills (--mock-skills)[/dim]")
+
+    # Metrics tracking
+    start_time = time.time()
+    token_count = 0
+    llm_calls = 0
+    tools_invoked = 0
+
     console.print(
         Panel(
-            f"Mounting: [cyan]{abs_path}[/cyan]\nEnvironment: [cyan]{len(env_vars)} variables[/cyan]",
+            f"Mounting: [cyan]{abs_path}[/cyan]\n"
+            f"Environment: [cyan]{len(final_env_vars)} variables[/cyan]\n"
+            f"Adapter: [cyan]{adapter_type}[/cyan]\n"
+            f"Mode: [cyan]{runtime_mode}[/cyan]\n"
+            f"Lifecycle: [cyan]{lifecycle}[/cyan]"
+            + (f"\nImage: [cyan]{image}[/cyan]" if image else ""),
             title="[bold blue]🚀 Starting Docker Simulation[/bold blue]",
             border_style="blue",
         )
@@ -58,14 +132,35 @@ async def run_docker_simulation(path: str, payload: Dict[str, Any], env_vars: Di
     try:
         async for sse_line in executor.run(
             agent_id="local_sim",
-            bundle_url="local_override",  # Signal to use local mount if supported, or pass real URL
             input_payload=payload,
-            env_vars=env_vars,
+            env_vars=final_env_vars,
             file_urls={},
             history=[],
-            local_source_path=abs_path,  # Mount local path
+            local_source_path=abs_path,
+            image=image,
+            adapter_type=adapter_type,
+            skills=skills if not mock_skills else [],  # Empty if mocking
         ):
+            # Track metrics from SSE events
+            if sse_line.startswith("data: "):
+                try:
+                    data = json.loads(sse_line.replace("data: ", ""))
+                    evt_type = data.get("type")
+                    if evt_type == "delta":
+                        token_count += 1
+                    elif evt_type == "thinking":
+                        # LLM call detected
+                        llm_calls += 1
+                    elif evt_type in ("tool", "artifact"):
+                        tools_invoked += 1
+                except Exception:
+                    pass
+
             parse_and_print_sse(sse_line)
+
+        # Show execution metrics
+        elapsed_time = time.time() - start_time
+        print_metrics(elapsed_time, token_count, llm_calls, tools_invoked)
 
     except Exception as e:
         console.print(f"[bold red]Docker Execution Error:[/bold red] {e}")
@@ -115,28 +210,81 @@ def parse_and_print_sse(sse_line: str):
         pass  # Ignore parse errors for robust stream handling
 
 
+def print_metrics(elapsed_time: float, token_count: int, llm_calls: int, tools_invoked: int):
+    """Print execution metrics in a table."""
+    table = Table(title="Execution Metrics", show_header=True)
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Execution Time", f"{elapsed_time:.2f}s")
+    table.add_row("Tokens (estimated)", str(token_count))
+    table.add_row("LLM Calls", str(llm_calls))
+    table.add_row("Tools Invoked", str(tools_invoked))
+
+    console.print(table)
+
+
+def load_test_cases(file_path: str) -> List[Dict[str, Any]]:
+    """Load test cases from JSON file."""
+    try:
+        with open(file_path, "r") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            raise ValueError("Test file must contain a JSON array")
+
+        # Validate each test case
+        for i, case in enumerate(data):
+            if not isinstance(case, dict):
+                raise ValueError(f"Test case {i} must be an object")
+            if "input" not in case:
+                raise ValueError(f"Test case {i} missing 'input' field")
+
+        return data
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in test file: {e}")
+
+
 @app.command("run")
 def run_command(
     path: str = typer.Argument(".", help="Path to the Charm project root"),
     input_text: Optional[str] = typer.Option(None, "--input", "-i", help="Simple text input"),
     json_input: Optional[str] = typer.Option(None, "--json", help="Raw JSON input payload"),
+    input_file: Optional[str] = typer.Option(
+        None, "--input-file", "-f", help="Path to test cases JSON file"
+    ),
     docker: bool = typer.Option(
         False, "--docker", help="Run inside a local Docker container (Simulate Cloud)"
     ),
+    mock_oauth: bool = typer.Option(
+        False, "--mock-oauth", help="Use mock OAuth tokens for testing"
+    ),
+    mock_skills: bool = typer.Option(
+        False, "--mock-skills", help="Use mock skills (skip actual MCP connections)"
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Enable debug mode"),
 ):
+    if debug:
+        state.DEBUG_MODE = True
     """
     Run a Charm Agent locally.
     Supports both interactive mode, headless (JSON/Text) mode, and Docker Simulation.
+
+    Test cases can be provided via --input-file with JSON format:
+    [
+      {"name": "Test 1", "input": {"query": "hello"}},
+      {"name": "Test 2", "input": {"query": "bye"}}
+    ]
     """
     # 1. Environment Loading
     env_path = os.path.join(path, ".env")
-    abs_path = os.path.abspath(env_path)
+    abs_env_path = os.path.abspath(env_path)
 
     # We capture env vars to pass to Docker if needed
     loaded_env_vars: Dict[str, str] = {}
 
     if os.path.exists(env_path):
-        console.print(f"[dim]Loading .env from: {abs_path}[/dim]")
+        console.print(f"[dim]Loading .env from: {abs_env_path}[/dim]")
         load_dotenv(env_path, override=True)
         # Read file robustly using dotenv_values
         try:
@@ -145,7 +293,30 @@ def run_command(
         except Exception:
             pass
 
-    # 2. Payload Preparation
+    # 2. Handle test cases from file
+    if input_file:
+        test_cases = load_test_cases(input_file)
+        console.print(f"[bold]Running {len(test_cases)} test cases from {input_file}[/bold]\n")
+
+        for i, case in enumerate(test_cases):
+            case_name = case.get("name", f"Test {i+1}")
+            case_input = case.get("input", {})
+
+            console.print(f"[bold cyan]--- {case_name} ---[/bold cyan]")
+            console.print(f"[dim]Input: {case_input}[/dim]\n")
+
+            # Run the test
+            if docker:
+                asyncio.run(run_docker_simulation(path, case_input, loaded_env_vars, mock_oauth, mock_skills))
+            else:
+                run_local(path, case_input)
+
+            console.print()
+
+        console.print(f"[bold green]✓ Completed {len(test_cases)} test cases[/bold green]")
+        return
+
+    # 3. Single input preparation
     payload: Dict[str, Any] = {}
     if json_input:
         try:
@@ -163,10 +334,15 @@ def run_command(
     # MODE 1: DOCKER SIMULATION
     if docker:
         # Use asyncio to run the async generator
-        asyncio.run(run_docker_simulation(path, payload, loaded_env_vars))
+        asyncio.run(run_docker_simulation(path, payload, loaded_env_vars, mock_oauth, mock_skills))
         return
 
     # MODE 2: LOCAL PYTHON EXECUTION
+    run_local(path, payload, json_input)
+
+
+def run_local(path: str, payload: Dict[str, Any], json_input: Optional[str] = None):
+    """Run agent locally without Docker."""
     try:
         with console.status(
             f"[bold green]Loading Agent from {path}...[/bold green]", spinner="dots"
@@ -188,8 +364,9 @@ def run_command(
 
     try:
         with console.status("[bold blue]Agent is thinking...[/bold blue]", spinner="earth"):
+            start_time = time.time()
             result = wrapper.invoke(payload)
-
+            elapsed_time = time.time() - start_time
     except Exception as e:
         console.print(f"[bold red] Execution Error:[/bold red] {e}")
         raise typer.Exit(code=2) from e
@@ -207,10 +384,12 @@ def run_command(
                     border_style="green",
                 )
             )
+            # Show execution time for local mode
+            console.print(f"[dim]Execution time: {elapsed_time:.2f}s[/dim]")
         else:
             error_msg = result.get("message", "Unknown error")
             console.print(
                 Panel(f"[bold]Error:[/bold] {error_msg}", title="Agent Failed", border_style="red")
             )
     else:
-        console.print("[DEBUG CHECK] Silent Mode Active. Panel suppressed.")
+        console.print(json.dumps(result))

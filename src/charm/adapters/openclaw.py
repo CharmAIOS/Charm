@@ -52,7 +52,8 @@ class CharmOpenClawAdapter(BaseAdapter):
 
         # 1. Python Requirements
         req_file = os.path.join(skill_path, "requirements.txt")
-        if os.path.exists(req_file):
+        marker_file = os.path.join(skill_path, ".charm_installed")
+        if os.path.exists(req_file) and not os.path.exists(marker_file):
             logger.info(f"📦 [{skill_name}] Installing Python dependencies...")
             try:
                 subprocess.check_call(
@@ -60,6 +61,8 @@ class CharmOpenClawAdapter(BaseAdapter):
                     stdout=subprocess.DEVNULL,  # Keep logs clean
                     stderr=subprocess.STDOUT,
                 )
+                with open(marker_file, "w") as f:
+                    f.write("installed")
             except subprocess.CalledProcessError:
                 logger.error(f"❌ [{skill_name}] Failed to install requirements.txt")
 
@@ -79,14 +82,151 @@ class CharmOpenClawAdapter(BaseAdapter):
                 except subprocess.CalledProcessError:
                     logger.error(f"❌ [{skill_name}] Failed to install npm packages")
 
-    def _generate_openclaw_config(self) -> str:
+    def _onboard_openclaw(self, env: dict):
         """
-        Transform 'charm.yaml' into 'openclaw_config.json'.
+        Run OpenClaw onboarding if not already initialized.
+        Creates ~/.openclaw/openclaw.json with default config.
+        """
+        openclaw_home = os.path.join(env.get("HOME", "/root"), ".openclaw")
+        config_file = os.path.join(openclaw_home, "openclaw.json")
+
+        if os.path.exists(config_file):
+            return
+
+        logger.info("Running OpenClaw onboarding (first boot)...")
+        try:
+            result = subprocess.run(
+                [
+                    "openclaw",
+                    "onboard",
+                    "--non-interactive",
+                    "--accept-risk",
+                ],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                logger.debug(f"Onboard stderr (non-fatal): {result.stderr.strip()}")
+            logger.info("OpenClaw onboarding complete.")
+        except Exception as e:
+            logger.warning(f"Onboarding issue (may be non-fatal): {e}")
+
+    def _build_mcp_servers(self) -> dict:
+        """
+        Build MCP server configurations from charm.yaml skills.
+        Returns a dict suitable for ~/.openclaw/.mcp.json
         """
         mcp_servers = {}
         oc_config = self.config.runtime.config
 
-        # Logic for writing IDENTITY.md, adding file existence check to avoid overwriting user customizations
+        if not self.config.runtime.skills:
+            return mcp_servers
+
+        for skill in self.config.runtime.skills:
+            server_config = {}
+            is_local_path = False
+            target_path = ""
+
+            if skill.source.startswith("local:"):
+                rel_path = skill.source.replace("local:", "")
+                target_path = os.path.abspath(rel_path)
+                is_local_path = True
+            elif skill.source.startswith("git:") or skill.source.startswith("http"):
+                target_path = os.path.abspath(f"skills/{skill.name}")
+                is_local_path = True
+
+            if is_local_path:
+                if not os.path.exists(target_path):
+                    logger.warning(f"Skill path missing: {target_path}")
+                    continue
+
+                if not oc_config or oc_config.auto_install_dependencies:
+                    self._install_dependencies(target_path)
+
+                if os.path.isfile(target_path):
+                    if target_path.endswith(".py"):
+                        server_config = {"command": "python", "args": [target_path]}
+                    elif target_path.endswith(".js"):
+                        server_config = {"command": "node", "args": [target_path]}
+                else:
+                    if os.path.exists(os.path.join(target_path, "package.json")):
+                        server_config = {
+                            "command": "npm",
+                            "args": ["start"],
+                            "cwd": target_path,
+                        }
+                    elif os.path.exists(os.path.join(target_path, "pyproject.toml")):
+                        server_config = {
+                            "command": "uv",
+                            "args": ["run", "python", "-m", "server"],
+                            "cwd": target_path,
+                        }
+                        if os.path.exists(os.path.join(target_path, "server.py")):
+                            server_config["args"] = ["run", "python", "server.py"]
+                    else:
+                        server_config = {
+                            "command": "python",
+                            "args": [os.path.join(target_path, "server.py")],
+                        }
+
+            elif skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
+                pkg_name = skill.source.replace("smithery:", "").replace("npm:", "")
+                server_config = {
+                    "command": "npx",
+                    "args": [
+                        "-y",
+                        "@smithery/cli",
+                        "run",
+                        pkg_name,
+                        "--config",
+                        json.dumps(skill.config),
+                    ],
+                }
+
+            elif skill.source.startswith("pip:") or skill.source.startswith("pypi:"):
+                pkg_name = skill.source.replace("pip:", "").replace("pypi:", "")
+                server_config = {"command": "uvx", "args": [pkg_name]}
+
+            if server_config:
+                env_vars = skill.config.copy() if skill.config else {}
+                for env_key, env_value in os.environ.items():
+                    if (
+                        env_key.endswith("_API_KEY")
+                        or env_key.endswith("_ACCESS_TOKEN")
+                        or env_key.endswith("_TOKEN")
+                        or env_key in ["OPENAI_API_BASE", "OPENAI_API_HOST"]
+                    ):
+                        if env_key not in env_vars:
+                            env_vars[env_key] = env_value
+
+                if env_vars:
+                    server_config["env"] = env_vars
+
+                mcp_servers[skill.name] = server_config
+
+        return mcp_servers
+
+    def _inject_proxy_env(self, env: dict):
+        """Ensure both OPENAI_API_BASE and OPENAI_BASE_URL are set consistently.
+
+        resolve_dependencies (main.py) already maps CHARM_LLM_PROXY_BASE →
+        OPENAI_API_BASE before the container starts. We just make sure litellm's
+        alternate env var name is also populated so nothing falls through.
+        """
+        proxy_base = env.get("OPENAI_API_BASE", "").strip()
+        if proxy_base:
+            env["OPENAI_BASE_URL"] = proxy_base
+            logger.info(f"🔀 LLM proxy active: {proxy_base}")
+        else:
+            logger.warning("OPENAI_API_BASE not set — LLM calls may hit provider directly")
+
+    def _generate_openclaw_config(self, env: dict):
+        """Configure OpenClaw for the current session."""
+        oc_config = self.config.runtime.config
+        openclaw_home = os.path.join(env.get("HOME", "/root"), ".openclaw")
+
         if oc_config and oc_config.system_prompt:
             identity_path = os.path.join(self.workspace_dir, "IDENTITY.md")
             try:
@@ -97,115 +237,98 @@ class CharmOpenClawAdapter(BaseAdapter):
             except Exception as e:
                 logger.error(f"Failed to write IDENTITY.md: {e}")
 
-        # Process Skills
-        if self.config.runtime.skills:
-            for skill in self.config.runtime.skills:
-                server_config = {}
-                is_local_path = False
-                target_path = ""
-
-                # --- Path Resolution ---
-                if skill.source.startswith("local:"):
-                    rel_path = skill.source.replace("local:", "")
-                    target_path = os.path.abspath(rel_path)
-                    is_local_path = True
-                elif skill.source.startswith("git:") or skill.source.startswith("http"):
-                    target_path = os.path.abspath(f"skills/{skill.name}")
-                    is_local_path = True
-
-                # --- Configuration Building ---
-                if is_local_path:
-                    if not os.path.exists(target_path):
-                        logger.warning(f"⚠️ Skill path missing: {target_path}")
-                        continue
-
-                    # Auto-Install Deps
-                    if not oc_config or oc_config.auto_install_dependencies:
-                        self._install_dependencies(target_path)
-
-                    # Detect Runtime
-                    if os.path.isfile(target_path):
-                        if target_path.endswith(".py"):
-                            server_config = {"command": "python", "args": [target_path]}
-                        elif target_path.endswith(".js"):
-                            server_config = {"command": "node", "args": [target_path]}
-                    else:
-                        if os.path.exists(os.path.join(target_path, "package.json")):
-                            server_config = {
-                                "command": "npm",
-                                "args": ["start"],
-                                "cwd": target_path,
-                            }
-                        elif os.path.exists(os.path.join(target_path, "pyproject.toml")):
-                            server_config = {
-                                "command": "uv",
-                                "args": ["run", "python", "-m", "server"],
-                                "cwd": target_path,
-                            }
-                            if os.path.exists(os.path.join(target_path, "server.py")):
-                                server_config["args"] = ["run", "python", "server.py"]
-                        else:
-                            server_config = {
-                                "command": "python",
-                                "args": [os.path.join(target_path, "server.py")],
-                            }
-
-                elif skill.source.startswith("smithery:") or skill.source.startswith("npm:"):
-                    pkg_name = skill.source.replace("smithery:", "").replace("npm:", "")
-                    server_config = {
-                        "command": "npx",
-                        "args": [
-                            "-y",
-                            "@smithery/cli",
-                            "run",
-                            pkg_name,
-                            "--config",
-                            json.dumps(skill.config),
-                        ],
-                    }
-
-                elif skill.source.startswith("pip:") or skill.source.startswith("pypi:"):
-                    pkg_name = skill.source.replace("pip:", "").replace("pypi:", "")
-                    server_config = {"command": "uvx", "args": [pkg_name]}
-
-                # --- Environment Injection ---
-                if server_config:
-                    env_vars = skill.config.copy() if skill.config else {}
-                    for env_key, env_value in os.environ.items():
-                        if (
-                            env_key.endswith("_API_KEY")
-                            or env_key.endswith("_ACCESS_TOKEN")
-                            or env_key.endswith("_TOKEN")
-                            or env_key in ["OPENAI_API_BASE", "OPENAI_API_HOST"]
-                        ):
-                            if env_key not in env_vars:
-                                env_vars[env_key] = env_value
-
-                    if env_vars:
-                        server_config["env"] = env_vars
-
-                    mcp_servers[skill.name] = server_config
-
-        # Restore LLM parameter assembly
-        full_config = {
-            "mcpServers": mcp_servers,
-            "workspace": self.workspace_dir,
-            "llm": {
-                "model": oc_config.model if oc_config else "gpt-4o",
-                "temperature": oc_config.temperature if oc_config else 0.0,
-            },
-        }
-
-        config_path = os.path.join(self.work_dir, "openclaw_runtime_config.json")
+        mcp_servers = self._build_mcp_servers()
+        mcp_json_path = os.path.join(openclaw_home, ".mcp.json")
         try:
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(full_config, f, indent=2)
-            logger.info(f"Generated OpenClaw Config: {config_path}")
+            os.makedirs(openclaw_home, exist_ok=True)
+            with open(mcp_json_path, "w", encoding="utf-8") as f:
+                json.dump(mcp_servers, f, indent=2)
+            logger.info(f"MCP config written: {mcp_json_path} ({len(mcp_servers)} servers)")
         except Exception as e:
-            logger.error(f"Failed to write config: {e}")
+            logger.error(f"Failed to write .mcp.json: {e}")
             raise e
 
-        return config_path
+        # Read proxy config directly from the runner's env vars.
+        # The runner sets CHARM_LLM_PROXY_BASE and CHARM_LLM_PROXY_KEY.
+        # env is os.environ.copy() so these are available directly.
+        proxy_base = env.get("CHARM_LLM_PROXY_BASE", "").strip()
+        proxy_key = env.get("CHARM_LLM_PROXY_KEY", "").strip()
+
+        raw_model = oc_config.model if oc_config else "gpt-4o"
+        # Strip any existing provider prefix to obtain the bare model id
+        model_id = raw_model.split("/", 1)[-1] if "/" in raw_model else raw_model
+
+        if not proxy_base or not proxy_key:
+            logger.warning(
+                "CHARM_LLM_PROXY_BASE or CHARM_LLM_PROXY_KEY not set — LLM calls may fail"
+            )
+
+        # Patch openclaw.json to route LLM calls through the Charm proxy.
+        #
+        # Strategy: load the onboard-generated config (which has all required gateway/
+        # session fields), then merge our provider override so the "openai" provider
+        # sends requests to proxy_base instead of api.openai.com.
+        #
+        # The config MUST include models.providers.openai.models (array) or OpenClaw
+        # rejects the entire config as invalid. The proxy_key stored here is NOT used
+        # for auth — auth-profiles.json is the authoritative credential store. Having
+        # it here prevents OpenClaw's schema validation from rejecting the section.
+        config_path = os.path.join(openclaw_home, "openclaw.json")
+        try:
+            os.makedirs(openclaw_home, exist_ok=True)
+
+            # Load the onboard-generated config (standard JSON written by _onboard_openclaw)
+            base_cfg: dict = {}
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    base_cfg = json.load(f)
+            except Exception:
+                pass  # File absent or JSON5 — start fresh, will be minimal but valid
+
+            # Deep-merge our proxy overrides into the base config
+            base_cfg.setdefault("agents", {}).setdefault("defaults", {})["model"] = {
+                "primary": f"openai/{model_id}"
+            }
+            base_cfg.setdefault("models", {}).setdefault("providers", {})["openai"] = {
+                "baseUrl": proxy_base,
+                "apiKey": proxy_key,
+                "models": [{"id": model_id, "name": model_id}],
+            }
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(base_cfg, f, indent=2)
+            logger.info(f"✅ openclaw.json patched: model=openai/{model_id} → {proxy_base}")
+        except Exception as e:
+            logger.warning(f"Failed to patch openclaw.json: {e}")
+
+        # Write auth-profiles.json for the 'main' agent so OpenClaw's per-agent
+        # auth store is pre-populated.
+        #
+        # Correct AuthProfileStore format (from OpenClaw SDK types):
+        #   version: 1 (required)
+        #   profiles.<profileId>.type: "api_key"
+        #   profiles.<profileId>.provider: "<provider>"
+        #   profiles.<profileId>.key: "<raw api key>"  ← "key" NOT "apiKey"
+        # Profile ID convention: "<provider>:api" (e.g. "openai:api")
+        auth_dir = os.path.join(openclaw_home, "agents", "main", "agent")
+        auth_path = os.path.join(auth_dir, "auth-profiles.json")
+        try:
+            os.makedirs(auth_dir, exist_ok=True)
+            auth_profiles: dict = {
+                "version": 1,
+                "profiles": {
+                    "openai:api": {
+                        "type": "api_key",
+                        "provider": "openai",
+                        "key": proxy_key,
+                    }
+                },
+            }
+            with open(auth_path, "w", encoding="utf-8") as f:
+                json.dump(auth_profiles, f, indent=2)
+            logger.info(f"✅ auth-profiles.json written: {auth_path}")
+        except Exception as e:
+            logger.warning(f"Failed to write auth-profiles.json: {e}")
 
     def _parse_log(self, line: str):
         """Parse OpenClaw stdout to Charm Events."""
@@ -236,30 +359,50 @@ class CharmOpenClawAdapter(BaseAdapter):
     ) -> Dict[str, Any]:
         logger.info("🚀 Booting OpenClaw Adapter (Session Mode)")
 
-        # 1. Copy initial templates (with non-overwriting mechanism)
-        try:
-            for item in os.listdir(self.work_dir):
-                if item in ["openclaw_runtime_config.json", "input.json"]:
-                    continue
+        env = os.environ.copy()
+        env["HOME"] = "/root"
+        self._inject_proxy_env(env)
 
-                if item.endswith(".md") or item.endswith(".txt") or item.endswith(".json"):
-                    src_path = os.path.join(self.work_dir, item)
-                    dst_path = os.path.join(self.workspace_dir, item)
+        # During upgrades, the workspace should contain the user's customized files
+        # from the PREVIOUS version (old bundle).  Seeding from agent_code/ (which
+        # holds the NEW bundle) would cause the agentic merge to fail because the
+        # diff expects the OLD content but the file already has the NEW content.
+        #
+        # In production the workspace is persisted (GCS Fuse), so old-version files
+        # are already there.  For local Docker tests (no persistence) the workspace
+        # starts empty — the agent uses the diff to create/update files from scratch.
+        #
+        # We only seed from bundle for normal (non-upgrade) runs where the workspace
+        # is genuinely empty and needs bootstrapping.
+        is_upgrade = "__charm_upgrade_diff__" in inputs
 
-                    if os.path.isfile(src_path):
-                        if not os.path.exists(dst_path):
-                            shutil.copy2(src_path, dst_path)
-                            logger.info(f"📄 Initialized asset in workspace: {item}")
-                        else:
-                            logger.debug(f"📄 Asset {item} already exists, skipping overwrite.")
-        except Exception as e:
-            logger.error(f"Failed to sync static assets: {e}")
+        if not is_upgrade:
+            try:
+                for item in os.listdir(self.work_dir):
+                    if item in ["openclaw_runtime_config.json", "input.json"]:
+                        continue
 
-        # 2. Config Generation
-        config_path = self._generate_openclaw_config()
+                    if item.endswith(".md") or item.endswith(".txt") or item.endswith(".json"):
+                        src_path = os.path.join(self.work_dir, item)
+                        dst_path = os.path.join(self.workspace_dir, item)
 
-        # 3. Prepare Prompt (Normal or Upgrade Mode)
-        if "__charm_upgrade_diff__" in inputs:
+                        if os.path.isfile(src_path):
+                            if not os.path.exists(dst_path):
+                                shutil.copy2(src_path, dst_path)
+                                logger.info(f"📄 Initialized asset in workspace: {item}")
+                            else:
+                                logger.debug(f"📄 Asset {item} already exists, skipping overwrite.")
+            except Exception as e:
+                logger.error(f"Failed to sync static assets: {e}")
+        else:
+            logger.info(
+                "🔄 Upgrade mode: skipping workspace seed from bundle (workspace retains user's prior-version files)."
+            )
+
+        self._onboard_openclaw(env)
+        self._generate_openclaw_config(env)
+
+        if is_upgrade:
             upgrade_diff = inputs.pop("__charm_upgrade_diff__")
 
             try:
@@ -271,22 +414,33 @@ class CharmOpenClawAdapter(BaseAdapter):
                 )
             except Exception as e:
                 logger.error(f"Failed to load upgrade template: {e}")
-                template_str = "Execute upgrade with diff: {upgrade_diff}"  # Fallback
+                template_str = "Execute upgrade with diff: {upgrade_diff}"
 
             user_input = template_str.format(upgrade_diff=upgrade_diff)
             logger.info("🔧 Upgrade payload intercepted. Launching Agentic Merge Mode.")
         else:
             user_input = inputs.get("input", "")
-            # Filter out underlying system parameters to avoid interfering with AI
             for k, v in inputs.items():
-                if k not in ["input", "__charm_thread_id__", "__charm_state__"]:
+                if k not in [
+                    "input",
+                    "__charm_thread_id__",
+                    "__charm_state__",
+                    "history",
+                    "messages",
+                ]:
                     user_input += f"\n\n[{k}]: {v}"
 
-        # 4. Start OpenClaw CLI
-        cmd = ["openclaw", "run", "--config", config_path, "--prompt", user_input]
-
-        env = os.environ.copy()
-        env["HOME"] = "/root"
+        env["CHARM_WORKSPACE_DIR"] = self.workspace_dir
+        cmd = [
+            "openclaw",
+            "agent",
+            "--local",
+            "--agent",
+            "main",
+            "--message",
+            user_input,
+            "--json",
+        ]
 
         try:
             process = subprocess.Popen(
@@ -303,15 +457,16 @@ class CharmOpenClawAdapter(BaseAdapter):
                 "message": "OpenClaw binary not found. Is it installed in the Docker image?",
             }
 
-        # Ensure stdout collection array exists, used as fallback for Final Answer
         stdout_lines = []
+        stderr_lines = []
         final_output = ""
 
-        # Define Stream Reader
         def read_stream(stream, is_stderr):
             nonlocal final_output
             for line in stream:
-                if not is_stderr:
+                if is_stderr:
+                    stderr_lines.append(line.strip())
+                else:
                     if "Final Answer:" in line:
                         final_output = line.split("Final Answer:", 1)[1].strip()
                     else:
@@ -330,15 +485,36 @@ class CharmOpenClawAdapter(BaseAdapter):
         t_err.join()
 
         if process.returncode != 0:
-            return {"status": "error", "message": f"OpenClaw exited with code {process.returncode}"}
+            err_detail = "\n".join(stderr_lines[-20:]) if stderr_lines else "No stderr captured."
+            logger.error(f"OpenClaw stderr:\n{err_detail}")
+            return {
+                "status": "error",
+                "message": f"OpenClaw exited with code {process.returncode}\n{err_detail}",
+            }
 
-        # If Agent forgot to output Final Answer, backtrack and extract from log array
         if not final_output and stdout_lines:
-            clean_output = [
-                line for line in stdout_lines if not line.startswith("[") and "Thought:" not in line
-            ]
-            if clean_output:
-                final_output = "\n".join(clean_output[-10:])
+            raw_output = "".join(stdout_lines).strip()
+            try:
+                result_json = json.loads(raw_output)
+                # OpenClaw --json output: {"payloads": [{"text": "..."}], "meta": {...}, ...}
+                if isinstance(result_json.get("payloads"), list):
+                    texts = [p.get("text", "") for p in result_json["payloads"] if p.get("text")]
+                    final_output = "\n".join(texts)
+                else:
+                    # Fallback for other potential JSON shapes
+                    final_output = result_json.get("reply", result_json.get("output", ""))
+            except (json.JSONDecodeError, TypeError):
+                clean_output = [
+                    line
+                    for line in stdout_lines
+                    if not line.startswith("[") and "Thought:" not in line
+                ]
+                if clean_output:
+                    final_output = "\n".join(clean_output[-10:])
+
+        # Emit upgrade sentinel to trigger version bump in runner
+        if is_upgrade:
+            final_output = f"UPGRADE_COMPLETE: {final_output}"
 
         return {
             "status": "success",

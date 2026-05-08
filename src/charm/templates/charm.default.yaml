@@ -1,101 +1,182 @@
-version: "0.4.1" # [System] UAC Protocol Version
+# ==================================================================
+# Charm Agent Manifest (Annotated Reference)
+# ==================================================================
 
-# 1. Metadata
+version: "0.4.2"  # [System] The UAC Spec version (Do not change manually).
+
+# ------------------------------------------------------------------
+# 1. Identity & Store Metadata
+# ------------------------------------------------------------------
 persona:
-  name: "My Charm Agent"
-  version: "0.1.0" # Semantic Versioning (e.g. 0.1.0, 1.2.0)
-  description: "A short description of what this agent does."
+  name: "My Charm Agent" # Display Project Name (Max 50 chars)
+  version: "0.1.0" # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
+  description: "A short description of this agent." # Tagline (Card view, Max 100 chars)
+  
+  # Full description supports Markdown. Used for the Info Page.
   full_description: |
     # My Charm Agent
-    Write a detailed markdown description here.
-    Explain capabilities, inputs, and what to expect.
-  authors: ["Your Name"]
-  tags: ["productivity"] # First tag determines category
+    ...
+  # Describe usage, available capabilities, and expected deliverables.
+    
+  authors: ["Brand, Company, or Individual Name"]
+  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others.
   license: "MIT"
+  
+  # Assets for the Storefront
+  assets:
+    icon: "https://your-site.com/assets/icon.png" # 512x512 Square
+    banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
-  # Storefront Assets
-  # assets:
-  #   icon: "https://.../icon.png"
-  #   banner: "https://.../banner.jpg"
-
-# 2. Pricing
 pricing:
-  type: "free"
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
 
-# 3. Interface (UI Definition)
+
+# ------------------------------------------------------------------
+# 2. UI Generation
+# ------------------------------------------------------------------
+# Defines the input form shown to users.
+# It uses standard JSON Schema.
 interface:
   input:
     type: "object"
-    required: ["task"]
+    required: ["topic"] # Mandatory fields
     properties:
-      task:
+      # Example 1: Simple Text Input
+      topic:
         type: "string"
-        title: "Task Input"
-        description: "What should the agent input?"
-        x-ui-widget: "textarea"
+        title: "Research Topic"
+        default: "AI Agents"
+      
+      # Example 2: Large Text Area
+      details:
+        type: "string"
+        title: "Extra Details"
+        description: "Paste any background info here."
+        x-ui-widget: "textarea" 
+      
+      # Example 3: File Upload
+      # The Runner will download the file and inject the filename into this variable.
+      document:
+        type: "string"
+        title: "Upload Document"
+        x-ui-widget: "file" 
 
-      # File Upload Configuration
-      # Uncomment and rename the variable below if your agent needs to read files.
-      # The platform will automatically inject the uploaded filename into this variable.
-      # doc_file:
-      #   type: "string"
-      #   title: "Upload Document"
-      #   description: "Upload a PDF or Image."
-      #   x-ui-widget: "file"
+      # Example 4: Number Input
+      depth:
+        type: "integer"
+        title: "Search Depth"
+        default: 3
+        minimum: 1
+        maximum: 5
 
   output:
     type: "object"
-    description: "The agent's result."
+    description: "The structure of the final result."
 
-# 4. Runtime Configuration
+# ------------------------------------------------------------------
+# 3. Runtime Configuration
+# ------------------------------------------------------------------
 runtime:
   adapter:
     # - crewai / langchain / langgraph : Standard Python Frameworks
-    # - openclaw : Configuration-driven Agent (No code required)
+    # - openclaw : Configuration-driven Agent
     # - node : For JavaScript/TypeScript Agents
     # - custom : Pure Python functions
     type: "crewai"
+    
+    # --------------------------------------------------------------
+    # ENTRY POINT: Where is your agent object?
+    # Format: <python_module_path>:<variable_or_function_name>
+    #         OR <shell_command> (for Node.js)
+    # --------------------------------------------------------------
+    # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
+    entry_point: "src.main:my_crew"
+    
+    # [Case B] For Custom (Pure Python): Point to a function or class instance.
+    entry_point: "src.my_script:run_pipeline"
 
-    # [Entry Point] Where does execution start?
-    # - Python: "module:variable" (e.g. "src.main:agent")
-    # - Node.js: "shell command"  (e.g. "npm start")
-    # - OpenClaw: Optional (uses default host if empty)
-    entry_point: "src.main:agent"
+    # [Case C] For Node.js (Remotion, Puppeteer, etc.): Provide the shell command.
+    entry_point: "npm start"
 
-    # List required environment variable NAMES (keys only, no values)
+    # [Case D] For OpenClaw: Optional (uses default host if empty)
+    entry_point: ""
+    
+    # --------------------------------------------------------------
+    # SECURE ENV VARS: List keys your agent needs.
+    # DO NOT put values here. The Runner injects them securely.
+    # --------------------------------------------------------------
     environment_variables:
-      - "OPENAI_API_KEY"
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
 
-    # [Environment Mode]
-    # "standard": Lightweight Python env. Best for text/data tasks.
-    # "full": Includes Node.js, Chrome, FFmpeg. REQUIRED for MCP Skills, Browser Use, or OpenClaw.
-    mode: "standard"
+  # --------------------------------------------------------------
+  # SKILLS & MCP TOOLS
+  # --------------------------------------------------------------
+  skills:
+    
+    # [Source: Git] 
+    - name: "research-flow"
+      source: "git:https://github.com/openclaw/skill-researcher"
+      version: "main" # Or Commit Hash / Tag (If you want to pin the version)
 
-    # [Execution Mode]
-    # "serverless": Max 10 mins. Ideal for single tasks.
-    # "daemon": 24/7 Always-on. Ideal for monitoring or long-running services.
-    lifecycle: "serverless"
+    # [Source: Zip] 
+    - name: "finance-analyst"
+      source: "https://clawhub.ai/download/skills/finance-v1.2.0.zip"
 
-    # [AgentSkills & MCP Tools]
-    # Usage in Code: You are responsible for connecting to them (e.g. using LangChain adapters).
-    # skills:
-    #   - name: "my-skill"
-    #     source: "./skills/my-skill"
-    #   - name: "google-search"
-    #     source: "smithery:@mcp/google-search"
-    #   - name: "time-server"
-    #     source: "pypi:mcp-server-time"
+    # [Source: NPM] 
+    - name: "google-search"
+      source: "npm:@modelcontextprotocol/server-google-search"
 
-# 5. Authentication Requirements
+    # [Source: PyPI] 
+    - name: "local-time"
+      source: "pip:mcp-server-time"
+  
+  # --------------------------------------------------------------
+  # Base Image
+  # --------------------------------------------------------------
+   # "standard": Lightweight Python environment. Fast boot time.
+   # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
+  mode: "standard"
+
+  # --------------------------------------------------------------
+  # Execution Mode
+  # --------------------------------------------------------------
+   # "serverless": 
+   # "interactive":
+   # "daemon": 24/7 Always-on. Ideal for monitoring or long-running services.
+  lifecycle: "serverless"
+
+# ------------------------------------------------------------------
+# 4. Authentication
+# ------------------------------------------------------------------
 # Declare if your agent needs user's OAuth tokens.
+# NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
+    # [OAuth: Google]
     - name: "google"
-      scopes:
+      scopes: 
         - "https://www.googleapis.com/auth/calendar.readonly"
         - "https://www.googleapis.com/auth/gmail.send"
 
-# 6. Governance
+    # [OAuth: GitHub]
+    - name: "github"
+      scopes: 
+        - "repo"
+        - "read:user"
+
+# ------------------------------------------------------------------
+# 5. Governance (Policies)
+# ------------------------------------------------------------------
 policies:
   allow_internet_access: true
   max_steps: 20
+  # Optional: Override serverless run timeout for this agent (seconds).
+  # execution_timeout_seconds: 600

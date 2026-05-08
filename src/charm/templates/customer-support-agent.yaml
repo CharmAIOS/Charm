@@ -1,0 +1,70 @@
+# Customer Support Agent Template
+# Handles enquiries, resolves issues, and escalates when needed.
+
+version: "0.4.2"
+
+persona:
+  name: "Customer Support Agent"
+  description: "Handles customer enquiries, resolves issues, and escalates when needed. Runs as a persistent always-on daemon."
+  version: "0.1.0"
+  authors: ["You"]
+  tags: ["support", "customer-service", "helpdesk", "daemon"]
+
+pricing:
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
+
+interface:
+  input:
+    type: "object"
+    required: ["message"]
+    properties:
+      message:
+        type: "string"
+        title: "Customer Message"
+        description: "The customer's question or issue."
+        x-ui-widget: "textarea"
+      customer_id:
+        type: "string"
+        title: "Customer ID"
+        description: "Optional — used to personalise the response."
+
+  output:
+    type: "string"
+
+runtime:
+  adapter:
+    type: "openclaw"
+    entry_point: ""
+
+  config:
+    model: "gpt-4o"
+    temperature: 0.4
+    system_prompt: |
+      You are a friendly, professional customer support agent.
+
+      Your goals:
+      - Understand the customer's issue quickly and empathetically
+      - Provide clear, accurate answers
+      - Offer step-by-step guidance for technical problems
+      - Escalate complex billing or account issues to the human team
+      - Always end with a confirmation that the issue is resolved, or a clear next-action step
+
+      Tone: warm, concise, solution-focused. Avoid jargon.
+      If the customer is frustrated, acknowledge their feelings before solving.
+
+  mode: "full"
+  lifecycle: "daemon"
+
+  skills:
+    - name: "knowledge-base"
+      source: "smithery:@mcp/knowledge-base"
+
+policies:
+  allow_internet_access: true
+  max_steps: 20
+  execution_timeout_seconds: 90

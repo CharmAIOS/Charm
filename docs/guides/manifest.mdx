@@ -1,3 +1,8 @@
+---
+title: Configuration
+description: The UAC Manifest
+---
+
 # Configuration Guide: The UAC Manifest
 
 ## Getting Started
@@ -36,10 +41,10 @@ By configuring your editor, you get auto-completion and error checking. This is 
 
 1. Create .vscode/settings.json in your project root.
 
-```JSON
+```json
 {
   "yaml.schemas": {
-    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.1.schema.json": "charm.yaml"
+    "https://raw.githubusercontent.com/CharmAIOS/Charm/main/src/charm/contracts/uac.v0.4.2.schema.json": "charm.yaml"
   }
 }
 ```
@@ -48,30 +53,30 @@ By configuring your editor, you get auto-completion and error checking. This is 
 
 This is a fully annotated example to understand specific capabilities or customization options.
 
-```YAML
+```yaml
 
 # ==================================================================
 # Charm Agent Manifest (Annotated Reference)
 # ==================================================================
 
-version: "0.4.1"  # [System] The UAC Spec version (Do not change manually).
+version: "0.4.2"  # [System] The UAC Spec version (Do not change manually).
 
 # ------------------------------------------------------------------
 # 1. Identity & Store Metadata
 # ------------------------------------------------------------------
 persona:
-  name: "Research Assistant" # Display Project Name (Max 50 chars)
+  name: "My Charm Agent" # Display Project Name (Max 50 chars)
   version: "0.1.0" # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
-  description: "Deep research on any topic." # Tagline (Card view, Max 100 chars)
+  description: "A short description of this agent." # Tagline (Card view, Max 100 chars)
   
   # Full description supports Markdown. Used for the Info Page.
   full_description: |
-    # Research Assistant
+    # My Charm Agent
     ...
   # Describe usage, available capabilities, and expected deliverables.
     
   authors: ["Brand, Company, or Individual Name"]
-  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others, and feel free to add any additional tags based on your preferences.
+  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others.
   license: "MIT"
   
   # Assets for the Storefront
@@ -80,10 +85,15 @@ persona:
     banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
 pricing:
-  type: "free"  # Options: free, usage_based, one_time, subscription. At this stage, please fill in free.
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
 
 # ------------------------------------------------------------------
-# 2. Interface (UI Generation)
+# 2. UI Generation
 # ------------------------------------------------------------------
 # Defines the input form shown to users.
 # It uses standard JSON Schema.
@@ -125,12 +135,12 @@ interface:
     description: "The structure of the final result."
 
 # ------------------------------------------------------------------
-# 3. Runtime (Execution Logic)
+# 3. Runtime Configuration
 # ------------------------------------------------------------------
 runtime:
   adapter:
     # - crewai / langchain / langgraph : Standard Python Frameworks
-    # - openclaw : Configuration-driven Agent (No code required)
+    # - openclaw : Configuration-driven Agent
     # - node : For JavaScript/TypeScript Agents
     # - custom : Pure Python functions
     type: "crewai"
@@ -157,8 +167,10 @@ runtime:
     # DO NOT put values here. The Runner injects them securely.
     # --------------------------------------------------------------
     environment_variables:
-      - "OPENAI_API_KEY"
-      - "SERPER_API_KEY"
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
 
   # --------------------------------------------------------------
   # SKILLS & MCP TOOLS
@@ -183,16 +195,24 @@ runtime:
       source: "pip:mcp-server-time"
   
   # --------------------------------------------------------------
-  # RUNTIME MODE (Environment Selection)
+  # Base Image
   # --------------------------------------------------------------
-  # "standard": Lightweight Python environment. Fast boot time.
-  # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
+   # "standard": Lightweight Python environment. Fast boot time.
+   # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
   mode: "standard"
+
+  # --------------------------------------------------------------
+  # Execution Mode
+  # --------------------------------------------------------------
+   # "serverless": 
+   # "interactive":
+   # "daemon": 24/7 Always-on. Ideal for monitoring or long-running services.
+  lifecycle: "serverless"
 
 # ------------------------------------------------------------------
 # 4. Authentication
 # ------------------------------------------------------------------
-# Declare OAuth requirements.
+# Declare if your agent needs user's OAuth tokens.
 # NOTE: Use the official scope strings defined by the provider.
 auth:
   providers:
@@ -214,6 +234,8 @@ auth:
 policies:
   allow_internet_access: true
   max_steps: 20
+  # Optional: Override serverless run timeout for this agent (seconds).
+  # execution_timeout_seconds: 600
   ```
 
 ### Field Reference Table
@@ -224,11 +246,16 @@ policies:
 |  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
 |  |  description  | String |Short tagline for search results and cards. |
 |  |  assets.icon   | URL|512x512px PNG/JPG image.|
+| Pricing   | model | Enum | free, subscription, one_time. |
+|  |  amount | Number | Price in USD. Ignored if free. |
+|  |  billing_period | Enum | monthly, annual (for subscription). |
+|  |  trial.enabled | Boolean | Whether trial is offered. |
+|  |  trial.days | Integer | Number of trial days. |
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
 |Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|
 | |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
-| |environment_variables |List |Names of required env vars (e.g., OPENAI_API_KEY).|
+| |environment_variables |Object |Map of 'models' and 'tools' requiring Env keys (e.g., OPENAI_API_KEY).|
 | |skills |List |List of MCP Skills to mount.|
 | |mode |Enum |standard (Default), full. Selects the container environment.|
 | Auth|providers |List |List of OAuth providers.|

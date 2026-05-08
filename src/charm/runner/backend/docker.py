@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import re
 import time
 import os
 import tempfile
@@ -20,6 +21,12 @@ from .base import ExecutionBackend, RunConfig
 
 logger = logging.getLogger("charm.runner.docker")
 
+# Match Supabase storage signed URL so we can redact it whole (avoids replacing UUID inside URL with [CHARM_USER_ID_REDACTED] which would show a broken URL)
+_SUPABASE_SIGNED_URL_RE = re.compile(
+    r"https://[a-zA-Z0-9.-]+\.supabase\.co/storage/v1/object/sign/[^\s]+",
+    re.ASCII,
+)
+
 
 class LogRedactor:
     def __init__(self, env_vars: Dict[str, str]):
@@ -31,6 +38,8 @@ class LogRedactor:
     def clean(self, text: str) -> str:
         if not text:
             return text
+        # Redact entire bundle/signed URLs first so we never show a partially redacted URL (e.g. UUID replaced inside URL)
+        text = _SUPABASE_SIGNED_URL_RE.sub("[CHARM_BUNDLE_URL_REDACTED]", text)
         for secret, replacement in self.patterns.items():
             if secret in text:
                 text = text.replace(secret, replacement)
@@ -81,6 +90,17 @@ class DockerBackend(ExecutionBackend):
                 "mode": "ro",
             }
 
+        # Mount local SDK for dev installs (LOCAL_SDK_HOST_PATH)
+        if config.local_sdk_path and os.path.isdir(config.local_sdk_path):
+            volumes_config[config.local_sdk_path] = {
+                "bind": "/mnt/local_sdk",
+                "mode": "ro",
+            }
+
+        if config.bundle_local_path:
+            _mount_dir = os.path.dirname(config.bundle_local_path)
+            volumes_config[_mount_dir] = {"bind": "/app/bundle_mount", "mode": "ro"}
+
         b64_script = base64.b64encode(config.script_content.encode("utf-8")).decode("utf-8")
         full_command = f'/bin/bash -c "echo {b64_script} | base64 -d | bash"'
 
@@ -124,14 +144,24 @@ class DockerBackend(ExecutionBackend):
                     if not safe_line:
                         continue
 
+                    # Parse both __CHARM_EVENT__ and ::CHARM_EVENT:: (script uses both)
+                    json_part = None
                     if EVENT_PREFIX in safe_line:
                         try:
-                            json_part = safe_line.split(EVENT_PREFIX)[1]
+                            json_part = safe_line.split(EVENT_PREFIX)[1].strip()
+                        except IndexError:
+                            pass
+                    elif "::CHARM_EVENT::" in safe_line:
+                        try:
+                            json_part = safe_line.split("::CHARM_EVENT::", 1)[1].strip()
+                        except IndexError:
+                            pass
+                    if json_part:
+                        try:
                             import json
-
                             payload = json.loads(json_part)
                             content_str = str(payload.get("content", ""))
-                            if content_str:
+                            if content_str and payload.get("type") != "thinking":
                                 sent_event_contents.append(content_str)
                             yield f"data: {json_part}\n\n"
                         except Exception:
@@ -153,7 +183,12 @@ class DockerBackend(ExecutionBackend):
             exit_code = result.get("StatusCode", 1)
 
             if exit_code != 0:
-                err_detail = "\n".join(recent_logs)
+                # Drop raw protocol lines from error detail so UI stays readable
+                err_lines = [
+                    line for line in recent_logs
+                    if EVENT_PREFIX not in line and "::CHARM_EVENT::" not in line
+                ]
+                err_detail = "\n".join(err_lines) if err_lines else "See runner logs."
                 yield sse_pack("error", f"Execution Failed (Code {exit_code}).\n{err_detail}")
 
         except Exception as e:

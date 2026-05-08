@@ -3,11 +3,10 @@ name: Trigger Runner Deploy
 on:
     push:
         branches:
-            - main
             - develop
         paths:
-            - "src/**"
-            - "pyproject.toml"
+            - 'src/**'
+            - 'Dockerfile*'
 
 jobs:
     notify-runner:
@@ -16,7 +15,7 @@ jobs:
             - name: Trigger Runner Workflow
               uses: peter-evans/repository-dispatch@v3
               with:
-                  token: ${{ secrets.PAT_TOKEN }}
+                  token: ${{ secrets.SDK_PAT_TOKEN }}
                   repository: CharmAIOS/charm-cloud-runner
                   event-type: sdk_updated
                   client-payload: '{"ref": "${{ github.ref_name }}"}'

@@ -1,0 +1,59 @@
+---
+title: Tool API Keys
+description: Learn how to declare tool permissions and API keys for your Charm Agents.
+---
+
+# Tool API Keys
+
+When building your Charm Agents, you may rely on various external APIs and tools (e.g., search engines, web scrapers, data platforms). The Charm ecosystem securely provisions these credentials dynamically at runtime, ensuring your agent always has the access it needs—without hardcoding secrets into your bundles.
+
+## Declaring Required Keys
+
+Starting from UAC schema version `0.4.2`, your agent's required environment variables are split logically into `models` and `tools` within your `charm.yaml` manifest:
+
+```yaml
+# charm.yaml
+version: "0.4.2"
+# ...
+runtime:
+  adapter:
+    type: "openclaw"
+    environment_variables:
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
+        - "FIRECRAWL_API_KEY"
+```
+
+- **`models`**: Used for your underlying LLM API keys (e.g., `OPENAI_API_KEY`, `GEMINI_API_KEY`).
+- **`tools`**: Used for your External Services and MCP Skills (e.g., Web REST API keys, Data providers).
+
+> [!IMPORTANT]
+> **Never hardcode API keys in your Python or Node source code.** The Charm Cloud Runner securely resolves and injects these variables directly into your agent's execution container from the user's secure vault at runtime.
+
+## Pre-Supported Tool Keys
+
+The Charm Store automatically analyzes your `tools` definition array upon deployment. Currently, the Global Platform natively supports the following Tool Keys right out of the box:
+
+- `TAVILY_API_KEY` (Tavily Search Engine)
+- `FIRECRAWL_API_KEY` (Firecrawl Web Scraper)
+- `SERPER_API_KEY` (Serper Google Search API)
+- `BROWSERLESS_API_KEY` (Browserless Headless Chrome Integration)
+- `JIGSAW_STACK_API_KEY` (JigsawStack)
+- `BRAVE_API_KEY` (Brave Web Search)
+
+If your agent only relies on keys from this whitelisted repository, your deployment pipeline to the Charm Store will be processed automatically without delay.
+
+## Pushing Custom APIs or New Keys
+
+We know developers build custom tools and push the boundaries of agent capabilities. If you are building a custom runtime skill or utilizing an API key not currently on the supported list, here is how you get it supported:
+
+1. **Declare the exact key**: Define your unique, custom key (e.g., `MY_CUSTOM_TOOL_KEY`) in the `tools` array of your `charm.yaml`.
+2. **Publish your Agent**: Run `charm publish` to push your bundle to the Charm Store.
+3. **Automated Pending State**: The Charm pre-flight systems will intercept the deployment request upon detecting an unknown API requirement, and temporarily park your agent in a `Pending_Platform_Support` status.
+4. **ChatOps Approval**: An automated alert is dispatched to the Charm Infrastructure Team via Discord. The team evaluates the compatibility requirements.
+5. **Auto-Resume & Publication**: Once our team reviews and approves the key, your agent gets instantaneously verified and published. Your unique tool key is subsequently seeded into the global repository, meaning all future deployments involving this key will be instantly validated!
+
+> [!TIP]
+> Need an API key approved faster for a time-critical deployment? Don't hesitate to directly reach out to the core team in our [Community Discord server](https://discord.gg/gdakynHUEb).

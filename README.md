@@ -2,11 +2,8 @@
   <img src="assets/charm-banner.png" alt="Charm Banner" width="100%" />
 </p>
 
-<p align="center">
-  <a href="https://charmos.io/">Homepage</a> .
-  <a href="https://store.charmos.io/">Store</a> .
-  <a href="https://discord.gg/gdakynHUEb">Discord</a>
-</p>
+[![Build](https://img.shields.io/github/actions/workflow/status/CharmAIOS/Charm/deploy-staging.yml?label=BUILD&style=flat-square&color=E8A694)](https://github.com/CharmAIOS/Charm/actions) [![Release](https://img.shields.io/github/v/release/CharmAIOS/Charm?label=RELEASE&style=flat-square&color=007ec6)](https://github.com/CharmAIOS/Charm/releases) [![Discord](https://img.shields.io/badge/DISCORD-JOIN%20US-5865f2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/gdakynHUEb) [![License](https://img.shields.io/github/license/CharmAIOS/Charm?label=LICENSE&style=for-the-badge&color=007ec6)](https://github.com/CharmAIOS/Charm/blob/main/LICENSE) [![X](https://img.shields.io/twitter/follow/charm_labs?label=FOLLOW%20@CHARM_LABS&style=flat-square&color=000000&logo=x&logoColor=white)](https://x.com/charm_labs)
+
 
 # Charm: The Unified Platform for Agentic Intelligence
 

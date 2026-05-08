@@ -9,7 +9,7 @@ on:
             - 'Dockerfile*'
 
 env:
-    PROJECT_ID: charm-cloud-runner
+    PROJECT_ID: charm-cloud-runner-prod
     REGION: us-central1
     REPO_NAME: charm-images
 
@@ -23,18 +23,22 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            # WIF credentials do not always flow into Docker via `gcloud auth configure-docker`
+            # on GH-hosted runners; use OAuth access-token login (recommended pattern for Artifact Registry).
             - id: 'auth'
-              name: 'Authenticate to Google Cloud'
+              name: 'Authenticate to Google Cloud (WIF → access token)'
               uses: 'google-github-actions/auth@v2'
               with:
                   workload_identity_provider: 'projects/684785328850/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider'
                   service_account: 'github-deployer-prod@charm-cloud-runner-prod.iam.gserviceaccount.com'
+                  token_format: access_token
 
-            - name: "Set up Cloud SDK"
-              uses: "google-github-actions/setup-gcloud@v2"
-
-            - name: "Configure Docker"
-              run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+            - name: 'Login to Artifact Registry'
+              uses: docker/login-action@v3
+              with:
+                  registry: '${{ env.REGION }}-docker.pkg.dev'
+                  username: 'oauth2accesstoken'
+                  password: '${{ steps.auth.outputs.access_token }}'
 
             - name: "Build & Push Standard Image"
               run: |

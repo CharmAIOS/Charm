@@ -1,12 +1,15 @@
 name: Build Runtime Images (Production)
 
 on:
+    workflow_dispatch:
     push:
         branches:
             - main
         paths:
             - 'src/**'
             - 'Dockerfile*'
+            # Re-run when this workflow or related CI changes (paths filter otherwise skips workflow-only edits)
+            - '.github/workflows/**'
 
 env:
     PROJECT_ID: charm-cloud-runner-prod

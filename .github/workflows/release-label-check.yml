@@ -1,0 +1,44 @@
+name: Release Label Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+      - ready_for_review
+
+permissions:
+  pull-requests: read
+
+jobs:
+  release-label:
+    name: release-label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require one release category label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const categoryLabels = new Set([
+              "release:feature",
+              "release:fix",
+              "release:breaking",
+              "release:security",
+              "release:infra",
+              "release:docs",
+              "release:chore",
+              "release:skip",
+            ]);
+
+            const labels = context.payload.pull_request.labels.map((label) => label.name);
+            const matched = labels.filter((label) => categoryLabels.has(label));
+
+            if (matched.length !== 1) {
+              core.setFailed(
+                `Expected exactly one release category label, found ${matched.length}: ${matched.join(", ") || "none"}. ` +
+                `Use one of: ${Array.from(categoryLabels).join(", ")}.`
+              );
+            }

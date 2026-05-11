@@ -1,5 +1,6 @@
 import hashlib
 from typing import Any, Dict, List
+
 from .protocol import EVENT_PREFIX
 
 
@@ -55,23 +56,23 @@ class SkillInstaller:
                     script_lines.append(f"    cd '{cache_path}'")
                     script_lines.append(f"    git fetch -q origin {version or 'HEAD'}")
                     script_lines.append(
-                        f'    if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then'
+                        '    if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then'
                     )
-                    script_lines.append(f"        echo '🔄 New version detected. Updating...'")
-                    script_lines.append(f"        git merge FETCH_HEAD -q")
-                    script_lines.append(f"        UPDATED=1")
-                    script_lines.append(f"    else")
-                    script_lines.append(f"        UPDATED=0")
-                    script_lines.append(f"    fi")
-                    script_lines.append(f"    cd - > /dev/null")
+                    script_lines.append("        echo '🔄 New version detected. Updating...'")
+                    script_lines.append("        git merge FETCH_HEAD -q")
+                    script_lines.append("        UPDATED=1")
+                    script_lines.append("    else")
+                    script_lines.append("        UPDATED=0")
+                    script_lines.append("    fi")
+                    script_lines.append("    cd - > /dev/null")
                 else:
                     # Zip or Pinned Git: Trust Cache
                     script_lines.append(
                         f"    echo '⚡ Cache Hit ({'Zip' if is_zip else 'Pinned'}). Skipping download.'"
                     )
-                    script_lines.append(f"    UPDATED=0")
+                    script_lines.append("    UPDATED=0")
 
-                script_lines.append(f"else")
+                script_lines.append("else")
 
                 # --- Cache Miss: Download Logic ---
                 script_lines.append(f"    echo '⬇️ Installing Skill: {name}...'")
@@ -79,7 +80,7 @@ class SkillInstaller:
 
                 if is_zip:
                     # Zip Handling using Python
-                    script_lines.append(f"    echo '📦 Downloading Zip artifact...'")
+                    script_lines.append("    echo '📦 Downloading Zip artifact...'")
                     script_lines.append(
                         f"    curl -L -s '{clean_url}' -o /tmp/skill_{skill_hash}.zip"
                     )
@@ -94,13 +95,13 @@ class SkillInstaller:
                     script_lines.append(
                         f"        mv '{cache_path}/'*/* '{cache_path}/' && rm -rf '{cache_path}/'$(ls '{cache_path}')"
                     )
-                    script_lines.append(f"    fi")
+                    script_lines.append("    fi")
                 else:
                     # Git Clone
                     script_lines.append(f"    git clone --depth 1 {clean_url} '{cache_path}'")
 
-                script_lines.append(f"    UPDATED=1")
-                script_lines.append(f"fi")
+                script_lines.append("    UPDATED=1")
+                script_lines.append("fi")
 
                 # --- Dependency Management (Common) ---
                 # Python
@@ -112,13 +113,13 @@ class SkillInstaller:
                     f"    INSTALLED_HASH=$(cat '/tmp/{name}_req.hash' 2>/dev/null || echo '')"
                 )
                 script_lines.append(
-                    f'    if [ "$UPDATED" -eq 1 ] || [ "$REQ_HASH" != "$INSTALLED_HASH" ]; then'
+                    '    if [ "$UPDATED" -eq 1 ] || [ "$REQ_HASH" != "$INSTALLED_HASH" ]; then'
                 )
                 script_lines.append(f"        echo '🐍 Installing Python deps for {name}...'")
                 script_lines.append(f"        uv pip install -q -r '{cache_path}/requirements.txt'")
                 script_lines.append(f"        echo \"$REQ_HASH\" > '/tmp/{name}_req.hash'")
-                script_lines.append(f"    fi")
-                script_lines.append(f"fi")
+                script_lines.append("    fi")
+                script_lines.append("fi")
 
                 # Node.js
                 script_lines.append(f"if [ -f '{cache_path}/package.json' ]; then")
@@ -129,8 +130,8 @@ class SkillInstaller:
                 script_lines.append(
                     f"        cd '{cache_path}' && npm install --production --no-audit --quiet && cd -"
                 )
-                script_lines.append(f"    fi")
-                script_lines.append(f"fi")
+                script_lines.append("    fi")
+                script_lines.append("fi")
 
                 # Linking
                 script_lines.append(f"rm -rf '{local_link_path}'")
@@ -140,12 +141,12 @@ class SkillInstaller:
             elif source.startswith("smithery:") or source.startswith("npm:"):
                 pkg_name = source.replace("smithery:", "").replace("npm:", "")
                 script_lines.append(f"\n# Skill (NPM): {name}")
-                script_lines.append(f"if command -v npm &> /dev/null; then")
+                script_lines.append("if command -v npm &> /dev/null; then")
                 script_lines.append(f"    echo '📦 Pre-installing NPM Package: {pkg_name}...'")
                 script_lines.append(f"    npm install -g {pkg_name} --quiet")
-                script_lines.append(f"else")
+                script_lines.append("else")
                 script_lines.append(f"    echo '⚠️ Node.js not found. Skipping {name}.'")
-                script_lines.append(f"fi")
+                script_lines.append("fi")
 
             # --- PyPI Skills ---
             elif source.startswith("pip:") or source.startswith("pypi:"):

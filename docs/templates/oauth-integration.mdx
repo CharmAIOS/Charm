@@ -1,9 +1,7 @@
 ---
 title: OAuth Integration Agent Template
-description: Skeleton documentation for agents that require user-authorized OAuth connections.
+summary: Skeleton documentation for agents that require user-authorized OAuth connections.
 ---
-
-# OAuth Integration Agent Template
 
 OAuth integration agents require a user to connect an external account before the agent runs. Charm uses the `auth.providers` block in `charm.yaml` to declare those requirements.
 
@@ -75,4 +73,3 @@ charm push
 - The provider redirects back successfully.
 - The runner logs show that the provider token was injected.
 - The agent handles missing or expired tokens gracefully.
-

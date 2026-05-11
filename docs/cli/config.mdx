@@ -1,0 +1,34 @@
+---
+title: charm config
+summary: Manage your local CLI configuration.
+---
+
+Manage local configuration settings for the Charm CLI.
+
+## Usage
+
+```bash
+charm config [command]
+```
+
+## Commands
+
+### Set a Configuration Value
+
+Use `charm config set` to update a specific configuration value. Keys are formatted as `section.key`.
+
+```bash
+charm config set core.api_base https://store.charmos.io/api
+```
+
+### List Configuration
+
+Use `charm config list` to view all your current local configuration settings.
+
+```bash
+charm config list
+```
+
+## Storage
+
+Configuration is saved locally, typically in `~/.charm/config.toml`. Do not commit this file to version control.

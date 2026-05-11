@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff
+
+      - name: Run Ruff
+        run: ruff check src
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and type dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[runner,dev]"
+
+      - name: Run mypy
+        run: mypy src/charm
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[runner,dev]"
+
+      - name: Run pytest
+        run: |
+          if [ -d tests ]; then
+            pytest
+          else
+            echo "No tests directory yet; keeping required tests gate active."
+          fi
+
+  package-build:
+    name: package-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build package artifacts
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check dist/*
+
+  docs-validation:
+    name: docs-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docs navigation
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+
+          root = pathlib.Path("docs")
+          config = json.loads((root / "docs.json").read_text(encoding="utf-8"))
+          missing = []
+          missing_openapi = []
+          for tab in config["navigation"]["tabs"]:
+              for group in tab.get("groups", []):
+                  openapi = group.get("openapi")
+                  if openapi:
+                      if not (root / openapi).exists():
+                          missing_openapi.append(openapi)
+                      continue
+                  for page in group.get("pages", []):
+                      if not (root / f"{page}.mdx").exists():
+                          missing.append(page)
+
+          if missing_openapi:
+              raise SystemExit(f"Missing OpenAPI specs referenced by docs.json: {missing_openapi}")
+          if missing:
+              raise SystemExit(f"Missing docs pages referenced by docs.json: {missing}")
+          PY
+
+      - name: Check for placeholder TODOs
+        run: |
+          python - <<'PY'
+          import pathlib
+
+          offenders = []
+          for path in pathlib.Path("docs").rglob("*.mdx"):
+              if "TODO:" in path.read_text(encoding="utf-8"):
+                  offenders.append(str(path))
+
+          if offenders:
+              raise SystemExit(f"Found TODO placeholders in docs: {offenders}")
+          PY
+
+  build-validation:
+    name: build-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build standard runtime image
+        run: docker build -f Dockerfile.standard -t charm-runner-standard:ci .
+
+      - name: Build full runtime image
+        run: docker build -f Dockerfile.full -t charm-runner-full:ci .

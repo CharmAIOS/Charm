@@ -1,6 +1,7 @@
-import aiohttp
 import logging
-from typing import Optional, Tuple, Dict, Any
+from typing import Any, Optional, Tuple
+
+import aiohttp
 
 logger = logging.getLogger("charm.runner.fly_api_client")
 FLY_API_BASE = "https://api.machines.dev/v1"

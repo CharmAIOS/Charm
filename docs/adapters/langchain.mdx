@@ -1,9 +1,7 @@
 ---
 title: LangChain Adapter
-description: Use LangChain chains and agents with the Charm platform.
+summary: Use LangChain chains and agents with the Charm platform.
 ---
-
-# LangChain Adapter
 
 Use the LangChain adapter when your agent is built as a LangChain chain, runnable, or agent object.
 
@@ -31,4 +29,4 @@ Charm loads the entry point and forwards the user's input payload into the LangC
 
 - Declare required model and tool keys in `runtime.adapter.environment_variables`.
 - Keep outputs JSON-serializable when possible.
-- Use `mode: "full"` only if you need browser, Node.js, or multimedia dependencies.
+- Use `mode: "full"` only if you need browser or multimedia dependencies.

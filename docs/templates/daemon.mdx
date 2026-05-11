@@ -1,9 +1,7 @@
 ---
 title: Daemon Agent Template
-description: Skeleton documentation for always-on agents that run through the daemon lifecycle.
+summary: Skeleton documentation for always-on agents that run through the daemon lifecycle.
 ---
-
-# Daemon Agent Template
 
 Daemon agents are always-on or long-lived agents. They are used when a task should keep running beyond a single request, maintain state between events, or respond to external triggers.
 
@@ -66,4 +64,3 @@ charm push
 - Always test pause, restart, and terminate behavior.
 - Avoid hardcoded local paths.
 - Keep secrets in platform-managed environment variables, not source code.
-

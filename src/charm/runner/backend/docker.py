@@ -1,10 +1,10 @@
 import asyncio
 import base64
 import logging
-import re
-import time
 import os
+import re
 import tempfile
+import time
 from collections import deque
 from typing import AsyncGenerator, Dict
 
@@ -198,7 +198,7 @@ class DockerBackend(ExecutionBackend):
             if container:
                 try:
                     container.remove(force=True)
-                except:
+                except Exception:
                     pass
 
             yield sse_pack(

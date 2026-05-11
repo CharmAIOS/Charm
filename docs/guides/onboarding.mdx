@@ -1,9 +1,7 @@
 ---
 title: CLI Reference
-description: Comprehensive documentation for the Charm Command Line Interface (CLI).
+summary: Comprehensive documentation for the Charm Command Line Interface (CLI).
 ---
-
-# Charm CLI Reference
 
 The Charm CLI (`charmos`) is the definitive tool to scaffold, test, validate, and deploy intelligent agents to the Charm ecosystem. Built with a focus on developer experience, it brings the entire Charm Cloud Runner capability down to your local machine.
 
@@ -114,7 +112,6 @@ charm validate
 1. **Schema Validation:** Ensures `charm.yaml` strictly conforms to the UAC specification.
 2. **Path Portability:** Scans internal Python files for hardcoded absolute paths (e.g., `/Users/dev/...`) which will instantly crash when deployed to the cloud runner.
 3. **Entry Point Verification:** For Python and Custom adapters, it imports your `main.py` locally and maps the signature to ensure your `agent(inputs, callbacks)` conforms exactly to the required parameters.
-4. **Node Readiness:** For Node.js agents, asserts `package.json` configurations are robust.
 
 ---
 

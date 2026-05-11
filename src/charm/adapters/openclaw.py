@@ -28,7 +28,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
         # --- [1. Persistence Strategy] ---
         # Must use CHARM_WORKSPACE_DIR passed by Runner (corresponds to GCS mount point)
-        self.workspace_dir = os.getenv("CHARM_WORKSPACE_DIR")
+        self.workspace_dir: str = os.getenv("CHARM_WORKSPACE_DIR") or ""
 
         # Fallback for local development compatibility
         if not self.workspace_dir:
@@ -118,14 +118,14 @@ class CharmOpenClawAdapter(BaseAdapter):
         Build MCP server configurations from charm.yaml skills.
         Returns a dict suitable for ~/.openclaw/.mcp.json
         """
-        mcp_servers = {}
+        mcp_servers: Dict[str, Dict[str, Any]] = {}
         oc_config = self.config.runtime.config
 
         if not self.config.runtime.skills:
             return mcp_servers
 
         for skill in self.config.runtime.skills:
-            server_config = {}
+            server_config: Dict[str, Any] = {}
             is_local_path = False
             target_path = ""
 
@@ -419,7 +419,7 @@ class CharmOpenClawAdapter(BaseAdapter):
             user_input = template_str.format(upgrade_diff=upgrade_diff)
             logger.info("🔧 Upgrade payload intercepted. Launching Agentic Merge Mode.")
         else:
-            user_input = inputs.get("input", "")
+            user_input = str(inputs.get("input") or "")
             for k, v in inputs.items():
                 if k not in [
                     "input",

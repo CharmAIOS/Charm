@@ -6,15 +6,15 @@ import logging
 import os
 import random
 import time
-from typing import AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict
 
 try:
-    from google.cloud import run_v2
-    from google.cloud import logging as cloud_logging
     from google.api_core import exceptions as google_exceptions
+    from google.cloud import logging as cloud_logging
+    from google.cloud import run_v2
 except ImportError:
-    run_v2 = None
-    cloud_logging = None
+    run_v2 = None  # type: ignore[assignment]
+    cloud_logging = None  # type: ignore[assignment]
 
 from ...core.io import EVENT_PREFIX
 from ...runner.protocol import sse_pack
@@ -154,7 +154,7 @@ class CloudRunBackend(ExecutionBackend):
                     if bundle_key not in existing_env_names:
                         needs_update = True
                 if needs_update:
-                    logger.info(f"[CloudRun] Job needs update, deleting and recreating...")
+                    logger.info("[CloudRun] Job needs update, deleting and recreating...")
                     delete_req = run_v2.DeleteJobRequest(name=job_fqn)
                     await self.jobs_client.delete_job(request=delete_req)
                     # Clear from cache to force recreation
@@ -173,7 +173,7 @@ class CloudRunBackend(ExecutionBackend):
             job_id,
         )
 
-        container = {
+        container: Dict[str, Any] = {
             "image": worker_image,
             "command": ["/bin/bash", "-c"],
             "args": ["echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"],
@@ -194,7 +194,7 @@ class CloudRunBackend(ExecutionBackend):
             for key, value in config.env_vars.items():
                 container["env"].append({"name": key, "value": value})
 
-        job = run_v2.Job()
+        job: Any = run_v2.Job()
         job.template.template.max_retries = 0
         job.template.template.timeout = f"{timeout_seconds}s"
 

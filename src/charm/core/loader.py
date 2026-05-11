@@ -7,8 +7,8 @@ from ..adapters.crewai import CharmCrewAIAdapter
 from ..adapters.custom import CharmCustomAdapter
 from ..adapters.langchain import CharmLangChainAdapter
 from ..adapters.langgraph import CharmLangGraphAdapter
-from ..adapters.process import CharmProcessAdapter
 from ..adapters.openclaw import CharmOpenClawAdapter
+from ..adapters.process import CharmProcessAdapter
 from ..contracts.uac import CharmConfig
 from .errors import CharmConfigError, CharmValidationError
 from .logger import logger

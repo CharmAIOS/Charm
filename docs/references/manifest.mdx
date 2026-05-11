@@ -1,9 +1,7 @@
 ---
 title: Manifest Reference
-description: Skeleton reference for the Charm `charm.yaml` schema.
+summary: Skeleton reference for the Charm `charm.yaml` schema.
 ---
-
-# Manifest Reference
 
 `charm.yaml` is the manifest that tells Charm how to display, run, price, and publish an agent.
 
@@ -41,11 +39,22 @@ interface:
         title: "Message"
   output:
     type: "object"
+  state:
+    format: "json"
+    schema:
+      type: "object"
+      properties:
+        memory:
+          type: "string"
 
 runtime:
   adapter:
     type: "custom"
     entry_point: "src.main:agent"
+  config:
+    system_prompt: "You are a helpful assistant."
+    model: "gpt-4o"
+    temperature: 0.0
   mode: "standard"
   lifecycle: "serverless"
 ```
@@ -70,11 +79,11 @@ Optional OAuth requirements. The Store uses this to prompt users to connect prov
 
 ### `interface`
 
-JSON Schema-style input and output definitions. These control the generated UI.
+JSON Schema-style input, output, and optional state definitions. These control the generated UI and persistent memory structures.
 
 ### `runtime`
 
-Adapter, entry point, lifecycle, mode, skills, and environment variable requirements.
+Adapter, entry point, engine configuration (`config`), lifecycle, mode, skills, and environment variable requirements.
 
 ### `policies`
 
@@ -91,4 +100,3 @@ Execution limits and permissions, such as internet access or max steps.
 - [Configuration Guide](/guides/manifest)
 - [Execution Modes](/platform/execution-modes)
 - [OAuth Integration Agent](/templates/oauth-integration)
-

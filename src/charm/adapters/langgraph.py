@@ -1,18 +1,16 @@
-import json
 import os
 from typing import Any, Dict, List, Optional
 
-from supabase import create_client, Client
+from supabase import Client, create_client
 
-from ..core.logger import logger
-from ..core.io import CharmEmitter
 from ..core.checkpoint import CharmSupabaseCheckpointer
+from ..core.logger import logger
 from .base import BaseAdapter
 
 try:
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+    from langchain_core.messages import HumanMessage
 except ImportError:
-    from langchain.schema import AIMessage, HumanMessage, SystemMessage  # type: ignore
+    from langchain.schema import HumanMessage  # type: ignore
 
 
 class CharmLangGraphAdapter(BaseAdapter):

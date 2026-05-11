@@ -1,9 +1,7 @@
 ---
 title: Tool API Keys
-description: Learn how to declare tool permissions and API keys for your Charm Agents.
+summary: Learn how to declare tool permissions and API keys for your Charm Agents.
 ---
-
-# Tool API Keys
 
 When building your Charm Agents, you may rely on various external APIs and tools (e.g., search engines, web scrapers, data platforms). The Charm ecosystem securely provisions these credentials dynamically at runtime, ensuring your agent always has the access it needs—without hardcoding secrets into your bundles.
 
@@ -30,7 +28,7 @@ runtime:
 - **`tools`**: Used for your External Services and MCP Skills (e.g., Web REST API keys, Data providers).
 
 > [!IMPORTANT]
-> **Never hardcode API keys in your Python or Node source code.** The Charm Cloud Runner securely resolves and injects these variables directly into your agent's execution container from the user's secure vault at runtime.
+> **Never hardcode API keys in your source code.** The Charm Cloud Runner securely resolves and injects these variables directly into your agent's execution container from the user's secure vault at runtime.
 
 ## Pre-Supported Tool Keys
 

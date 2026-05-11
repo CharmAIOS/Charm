@@ -1,9 +1,7 @@
 ---
 title: Agent Adapters
-description: Understand how Charm adapters bridge your agent framework to the Cloud Runner.
+summary: Understand how Charm adapters bridge your agent framework to the Cloud Runner.
 ---
-
-# Agent Adapters
 
 Adapters tell Charm how to call your agent code.
 
@@ -17,7 +15,6 @@ Different frameworks expose different runtime objects, so the adapter bridges yo
 | `langchain` | LangChain chains/runnables | `module:chain` |
 | `langgraph` | LangGraph graphs | `module:graph` |
 | `crewai` | CrewAI crews | `module:crew` |
-| `node` | Node.js agents | shell command or Node entry |
 | `openclaw` | OpenClaw/browser-tool agents | OpenClaw host |
 
 ## Configure an Adapter
@@ -33,7 +30,6 @@ runtime:
 
 - Use `custom` for the smallest Python integration.
 - Use `langchain`, `langgraph`, or `crewai` when you already use that framework.
-- Use `node` for JavaScript/TypeScript agents.
 - Use `openclaw` for browser, tools, and computer-use style workflows.
 
 ## Adapter Pages
@@ -42,5 +38,4 @@ runtime:
 - [LangChain](/adapters/langchain)
 - [LangGraph](/adapters/langgraph)
 - [CrewAI](/adapters/crewai)
-- [Node.js](/adapters/node)
 - [OpenClaw](/adapters/openclaw)

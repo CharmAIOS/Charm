@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Sequence, Tuple, cast
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
@@ -46,23 +46,17 @@ class CharmSupabaseCheckpointer(BaseCheckpointSaver):
         if not result.data:
             return None
 
-        row = result.data[0]
-        config_values = {
-            "thread_id": thread_id,
-            "checkpoint_ns": checkpoint_ns,
-            "checkpoint_id": row["checkpoint_id"],
-        }
-
-        # Deserialize
-        checkpoint = self.serde.loads(json.dumps(row["checkpoint"]))
-        metadata = self.serde.loads(json.dumps(row["metadata"]))
+        row = cast(Dict[str, Any], result.data[0])
         parent_checkpoint_id = row.get("parent_checkpoint_id")
-
-        return CheckpointTuple(
-            config=config_values,
-            checkpoint=checkpoint,
-            metadata=metadata,
-            parent_config={
+        config_values: RunnableConfig = {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_ns": checkpoint_ns,
+                "checkpoint_id": row["checkpoint_id"],
+            }
+        }
+        parent_config: Optional[RunnableConfig] = (
+            {
                 "configurable": {
                     "thread_id": thread_id,
                     "checkpoint_ns": checkpoint_ns,
@@ -70,7 +64,18 @@ class CharmSupabaseCheckpointer(BaseCheckpointSaver):
                 }
             }
             if parent_checkpoint_id
-            else None,
+            else None
+        )
+
+        serde = cast(Any, self.serde)
+        checkpoint = serde.loads(json.dumps(row["checkpoint"]))
+        metadata = serde.loads(json.dumps(row["metadata"]))
+
+        return CheckpointTuple(
+            config=config_values,
+            checkpoint=checkpoint,
+            metadata=metadata,
+            parent_config=parent_config,
             pending_writes=[],
         )
 
@@ -96,8 +101,9 @@ class CharmSupabaseCheckpointer(BaseCheckpointSaver):
         checkpoint_id = checkpoint["id"]
         parent_checkpoint_id = config["configurable"].get("checkpoint_id")
 
-        checkpoint_json = json.loads(self.serde.dumps(checkpoint))
-        metadata_json = json.loads(self.serde.dumps(metadata))
+        serde = cast(Any, self.serde)
+        checkpoint_json = json.loads(serde.dumps(checkpoint))
+        metadata_json = json.loads(serde.dumps(metadata))
 
         data = {
             "thread_id": thread_id,
@@ -123,6 +129,10 @@ class CharmSupabaseCheckpointer(BaseCheckpointSaver):
         }
 
     def put_writes(
-        self, config: RunnableConfig, writes: List[Tuple[str, Any]], task_id: str
+        self,
+        config: RunnableConfig,
+        writes: Sequence[Tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
     ) -> None:
         pass  # Simplified for basic HITL

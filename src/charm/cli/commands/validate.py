@@ -120,7 +120,7 @@ def _check_entry_point_signature(project_path: Path, entry_point_str: str) -> Li
 
 def _validate_auth_providers(config: CharmConfig) -> List[str]:
     """Validate auth providers configuration."""
-    errors = []
+    errors: List[str] = []
 
     if not config.auth:
         return errors
@@ -137,7 +137,7 @@ def _validate_auth_providers(config: CharmConfig) -> List[str]:
 
 def _validate_runtime_skills(config: CharmConfig) -> List[str]:
     """Validate runtime skills configuration."""
-    warnings = []
+    warnings: List[str] = []
 
     if not config.runtime or not config.runtime.skills:
         return warnings
@@ -154,7 +154,7 @@ def _validate_runtime_skills(config: CharmConfig) -> List[str]:
 
 def _validate_policies(config: CharmConfig) -> List[str]:
     """Validate policies configuration."""
-    warnings = []
+    warnings: List[str] = []
 
     if not config.policies:
         return warnings
@@ -178,7 +178,7 @@ def _validate_policies(config: CharmConfig) -> List[str]:
 
 def _validate_pricing(config: CharmConfig) -> List[str]:
     """Validate pricing configuration."""
-    warnings = []
+    warnings: List[str] = []
 
     if not config.pricing:
         return warnings
@@ -202,7 +202,7 @@ def _validate_interface_state(config: CharmConfig) -> List[str]:
 
     We validate the inner schema dict for correctness.
     """
-    warnings = []
+    warnings: List[str] = []
 
     if not config.interface:
         return warnings
@@ -426,13 +426,15 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
             console.print("[bold red]✖ Missing package.json for Node.js agent.[/bold red]")
         else:
             console.print("[green]✔ package.json found.[/green]")
-        if not config.runtime.adapter.entry_point.strip():
+        entry_point = config.runtime.adapter.entry_point or ""
+        if not entry_point.strip():
             issues_found = True
             console.print("[bold red]✖ Entry point command cannot be empty.[/bold red]")
 
     elif config.runtime.adapter.type in ("python", "custom", "crewai", "langchain", "langgraph"):
         # Python checks
-        ep_errors = _check_entry_point_signature(project_path, config.runtime.adapter.entry_point)
+        entry_point = config.runtime.adapter.entry_point or ""
+        ep_errors = _check_entry_point_signature(project_path, entry_point)
         if ep_errors:
             issues_found = True
             console.print("[bold red]✖ Entry Point Contract Violation:[/bold red]")

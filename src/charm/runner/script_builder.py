@@ -2,7 +2,7 @@ import base64
 import json
 import os
 import shlex
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .protocol import EVENT_PREFIX
 from .skill_installer import SkillInstaller
@@ -19,10 +19,10 @@ class BashScriptBuilder:
         use_bundle_gcs: bool = False,
         use_file_input: bool = False,
         adapter_type: str = "python",
-        skills: List[Dict[str, Any]] = None,
+        skills: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         skills = skills or []
-        
+
         # Environment Variables
         env_file_lines = []
         for k, v in env_vars.items():

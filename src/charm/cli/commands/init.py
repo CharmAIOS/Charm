@@ -171,7 +171,12 @@ def create_project(project_path: Path, template: str):
         raise typer.Exit(1) from e
 
 
-def create_project_from_template(project_path: Path, template: str, name: str = None, description: str = None):
+def create_project_from_template(
+    project_path: Path,
+    template: str,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+):
     """Create project from template with optional customization."""
     # Load template YAML
     template_source = files("charm.templates").joinpath(f"{template}.yaml")

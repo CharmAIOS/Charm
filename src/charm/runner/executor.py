@@ -11,13 +11,19 @@ from .backend.docker import DockerBackend
 from .protocol import sse_pack
 from .script_builder import BashScriptBuilder
 
+CloudRunBackend: Optional[type[Any]]
 try:
-    from .backend.cloud_run import CloudRunBackend
+    from .backend.cloud_run import CloudRunBackend as _CloudRunBackend
+
+    CloudRunBackend = _CloudRunBackend
 except ImportError:
     CloudRunBackend = None
 
+FlyIoBackend: Optional[type[Any]]
 try:
-    from .backend.fly_io import FlyIoBackend
+    from .backend.fly_io import FlyIoBackend as _FlyIoBackend
+
+    FlyIoBackend = _FlyIoBackend
 except ImportError:
     FlyIoBackend = None
 
@@ -167,7 +173,7 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Failed to write input.json: {e}")
 
-        use_bundle_local = bool(bundle_local_path) and os.path.isfile(bundle_local_path) and isinstance(
+        use_bundle_local = bundle_local_path is not None and os.path.isfile(bundle_local_path) and isinstance(
             backend, DockerBackend
         )
         use_bundle_gcs = bool(bundle_gcs_path) and not isinstance(backend, DockerBackend)

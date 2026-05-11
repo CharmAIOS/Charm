@@ -44,8 +44,8 @@ class CharmProcessAdapter(BaseAdapter):
                 env={**os.environ, "CHARM_INPUT_FILE": input_path},
             )
 
-            stdout_lines = []
-            stderr_lines = []
+            stdout_lines: List[str] = []
+            stderr_lines: List[str] = []
 
             # Stream output in real-time
             def read_stream(stream, collection, is_err=False):

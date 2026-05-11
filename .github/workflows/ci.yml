@@ -109,12 +109,20 @@ jobs:
           root = pathlib.Path("docs")
           config = json.loads((root / "docs.json").read_text(encoding="utf-8"))
           missing = []
+          missing_openapi = []
           for tab in config["navigation"]["tabs"]:
               for group in tab.get("groups", []):
+                  openapi = group.get("openapi")
+                  if openapi:
+                      if not (root / openapi).exists():
+                          missing_openapi.append(openapi)
+                      continue
                   for page in group.get("pages", []):
                       if not (root / f"{page}.mdx").exists():
                           missing.append(page)
 
+          if missing_openapi:
+              raise SystemExit(f"Missing OpenAPI specs referenced by docs.json: {missing_openapi}")
           if missing:
               raise SystemExit(f"Missing docs pages referenced by docs.json: {missing}")
           PY

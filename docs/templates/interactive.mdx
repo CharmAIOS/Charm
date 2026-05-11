@@ -1,9 +1,7 @@
 ---
 title: Interactive Agent Template
-description: Skeleton documentation for agents that stream real-time conversations through the interactive worker.
+summary: Skeleton documentation for agents that stream real-time conversations through the interactive worker.
 ---
-
-# Interactive Agent Template
 
 Interactive agents are designed for real-time conversations and streaming responses. They are routed through Charm's interactive worker instead of the standard serverless execution path.
 
@@ -64,4 +62,3 @@ charm push
 ## Limitations
 
 Interactive agents should return quickly and stream user-facing output. Long-running background tasks are a better fit for [Daemon Agent](/templates/daemon).
-

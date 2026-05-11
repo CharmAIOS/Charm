@@ -1,9 +1,7 @@
 ---
 title: Configuration
-description: The UAC Manifest
+summary: The UAC Manifest
 ---
-
-# Configuration Guide: The UAC Manifest
 
 ## Getting Started
 
@@ -134,6 +132,16 @@ interface:
     type: "object"
     description: "The structure of the final result."
 
+  # Optional: For agents that persist state across runs
+  state:
+    format: "json"
+    schema:
+      type: "object"
+      properties:
+        history:
+          type: "array"
+      additionalProperties: false
+
 # ------------------------------------------------------------------
 # 3. Runtime Configuration
 # ------------------------------------------------------------------
@@ -171,6 +179,15 @@ runtime:
         - "OPENAI_API_KEY"
       tools:
         - "SERPER_API_KEY"
+
+  # --------------------------------------------------------------
+  # ENGINE CONFIG: For OpenClaw or specific engines
+  # --------------------------------------------------------------
+  config:
+    system_prompt: "You are an expert researcher."
+    model: "gpt-4o"
+    temperature: 0.0
+    auto_install_dependencies: true
 
   # --------------------------------------------------------------
   # SKILLS & MCP TOOLS
@@ -253,9 +270,11 @@ policies:
 |  |  trial.days | Integer | Number of trial days. |
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
+|  |  state | Schema |Optional JSON Schema defining persistent state.|
 |Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|
 | |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
 | |environment_variables |Object |Map of 'models' and 'tools' requiring Env keys (e.g., OPENAI_API_KEY).|
+| |config |Object |Engine-specific configuration (e.g. OpenClaw system_prompt, model).|
 | |skills |List |List of MCP Skills to mount.|
 | |mode |Enum |standard (Default), full. Selects the container environment.|
 | Auth|providers |List |List of OAuth providers.|

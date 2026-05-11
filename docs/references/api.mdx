@@ -1,62 +1,38 @@
 ---
 title: Platform API Reference
-description: Skeleton reference for Charm platform and runner APIs.
+summary: Auto-generated interactive reference for the Charm Cloud Runner API.
 ---
 
-# Platform API Reference
+This reference is auto-generated from the Charm Cloud Runner OpenAPI specification. Use the sidebar to browse individual endpoints grouped by domain.
 
-This page is the landing page for Charm platform API reference material. It separates public app-facing APIs from internal operational APIs.
+## Endpoint Groups
 
-## Planned Endpoint Groups
-
-- Agent execution.
-- Runs and threads.
-- Billing and wallet.
-- Store publishing.
-- OAuth and integrations.
-- Internal operations.
-
-## API Categories
-
-### Runner APIs
-
-Runner APIs start and manage agent execution.
-
-Examples:
-
-- execute an agent,
-- complete a run,
-- read run status,
-- read logs or traces.
-
-### Store APIs
-
-Store APIs support publishing, agent discovery, checkout, and user-facing app flows.
-
-### Billing APIs
-
-Billing APIs handle wallet state, checkout, Stripe webhooks, subscription state, revenue events, and creator payouts.
-
-### Integration APIs
-
-Integration APIs check OAuth connection state and help route users into provider authorization flows.
-
-### Internal APIs
-
-Internal APIs are for cron jobs, operational maintenance, migration support, and service-to-service callbacks. These endpoints should not be treated as public product APIs.
+| Group | Description |
+| --- | --- |
+| **Execute** | Start an agent run with SSE streaming output. |
+| **Agents** | CRUD operations for agent registrations. |
+| **Versions** | Upgrade, rollback, and list agent versions. |
+| **Runs** | Inspect, complete, cancel, and track run progress. |
+| **Threads** | Query run history within a conversation thread. |
+| **Studio** | Dashboard analytics: stats, installs, errors, usage logs. |
+| **Billing** | Wallet, subscriptions, transactions, and Stripe webhooks. |
+| **Daemons** | Manage long-running daemon agent processes. |
 
 ## Authentication
 
-API routes may use different auth models:
+API routes use different auth models depending on the caller:
 
-- Supabase user bearer token for user-facing requests.
-- Runner secret for internal callbacks.
-- Cron secret for scheduled jobs.
-- Provider-specific webhook secrets for external services such as Stripe.
+- **Supabase bearer token** — user-facing requests from Charm Store / Studio.
+- **Runner secret** — internal callbacks from the Cloud Runner.
+- **Cron secret** — scheduled maintenance jobs.
+- **Stripe webhook secret** — payment event verification.
 
-Each endpoint group should document the required auth before this page is considered complete.
+## Base URL
 
-## Future Work
+```
+https://store.charmos.io/api
+```
 
-Add generated OpenAPI documentation or endpoint tables once public/internal API boundaries are finalized.
+## OpenAPI Spec
 
+The raw specification powering this reference is available at [`openapi.json`](/openapi.json). You can import it into Postman, Insomnia, or any OpenAPI-compatible tool.

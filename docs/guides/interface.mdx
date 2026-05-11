@@ -1,9 +1,7 @@
 ---
 title: UI Schema
-description: Define dynamic input forms for your agent using JSON Schema.
+summary: Define dynamic input forms for your agent using JSON Schema.
 ---
-
-# UI Schema (interface)
 
 The `interface` block defines the input form users see in Charm Store.
 
@@ -22,6 +20,14 @@ interface:
         x-ui-widget: "textarea"
   output:
     type: "object"
+  state:
+    format: "json"
+    schema:
+      type: "object"
+      properties:
+        history:
+          type: "array"
+      additionalProperties: false
 ```
 
 ## JSON Schema Basics
@@ -45,6 +51,24 @@ Common examples:
 - `password`
 - `file`
 - `color`
+
+## State Schema (Optional)
+
+If your agent is interactive or long-running (daemon), you can define a state schema using `interface.state`.
+
+```yaml
+interface:
+  state:
+    format: "json"
+    schema:
+      type: "object"
+      properties:
+        conversation_history:
+          type: "array"
+      additionalProperties: false
+```
+
+This ensures the platform maintains your required state structure between executions.
 
 ## Agent Inputs
 

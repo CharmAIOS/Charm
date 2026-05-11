@@ -142,7 +142,8 @@
                             "cli/validate",
                             "cli/push",
                             "cli/logs",
-                            "cli/auth"
+                            "cli/auth",
+                            "cli/config"
                         ]
                     }
                 ]
@@ -162,6 +163,90 @@
                             "references/sdk",
                             "references/api",
                             "references/manifest"
+                        ]
+                    },
+                    {
+                        "group": "Execute",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "POST /v1/execute"
+                        ]
+                    },
+                    {
+                        "group": "Agents",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "POST /v1/agents",
+                            "GET /v1/agents",
+                            "GET /v1/agents/{agent_id}",
+                            "PATCH /v1/agents/{agent_id}",
+                            "DELETE /v1/agents/{agent_id}"
+                        ]
+                    },
+                    {
+                        "group": "Versions",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "POST /v1/upgrade",
+                            "GET /v1/versions/{agent_id}",
+                            "POST /v1/rollback"
+                        ]
+                    },
+                    {
+                        "group": "Runs",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "GET /v1/runs/{run_id}",
+                            "GET /v1/runs/{run_id}/events",
+                            "POST /v1/runs/{run_id}/complete",
+                            "POST /v1/runs/{run_id}/cancel",
+                            "POST /v1/runs/{run_id}/progress"
+                        ]
+                    },
+                    {
+                        "group": "Threads",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "GET /v1/threads/{thread_id}/runs"
+                        ]
+                    },
+                    {
+                        "group": "Billing",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "GET /v1/billing/wallet",
+                            "GET /v1/billing/subscriptions",
+                            "GET /v1/billing/subscriptions/{subscription_id}",
+                            "POST /v1/billing/subscriptions",
+                            "POST /v1/billing/transactions",
+                            "POST /v1/billing/webhook-event"
+                        ]
+                    },
+                    {
+                        "group": "Studio",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "GET /v1/studio/agents",
+                            "GET /v1/studio/agents/{agent_id}/stats",
+                            "GET /v1/studio/agents/{agent_id}/runs",
+                            "GET /v1/studio/agents/{agent_id}/installs",
+                            "GET /v1/studio/agents/{agent_id}/errors",
+                            "GET /v1/studio/agents/{agent_id}/usage-log",
+                            "GET /v1/studio/agents/{agent_id}/token-distribution",
+                            "GET /v1/studio/agents/{agent_id}/latency-distribution",
+                            "GET /v1/studio/agents/{agent_id}/session-depth"
+                        ]
+                    },
+                    {
+                        "group": "Daemons",
+                        "openapi": "openapi.json",
+                        "pages": [
+                            "GET /v1/daemon/{agent_id}/status",
+                            "POST /v1/daemon/{agent_id}/start",
+                            "POST /v1/daemon/{agent_id}/stop",
+                            "POST /v1/daemon/{agent_id}/control",
+                            "GET /v1/daemons",
+                            "POST /v1/daemons"
                         ]
                     }
                 ]

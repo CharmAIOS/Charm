@@ -30,15 +30,14 @@ The default lightweight environment. Optimized for fast cold-starts and low late
 
 > **Config:** `mode: "full"`
 
-A heavy-duty environment equipped with system-level dependencies for multimedia and browser automation. Select this if your agent requires a display server, audio processing, or Node.js.
+A heavy-duty environment equipped with system-level dependencies for multimedia and browser automation. Select this if your agent requires a display server or audio processing.
 
 - **Target Use Cases**:
-  - **Browser Automation**: Selenium, Playwright, Puppeteer (Python or Node.js).
-  - **Video/Audio Generation**: Remotion, MoviePy, Pydub.
-  - **Node.js Applications**: LangChain.js, Vercel AI SDK, Claude Skills Agent
+  - **Browser Automation**: Selenium, Playwright, Puppeteer.
+  - **Video/Audio Generation**: MoviePy, Pydub.
 - **Base Image**: `runner-full` (Approx. 2GB)
 - **Included Capabilities**:
-  - **Node.js 20 (LTS)** & `npm`.
+
   - **Headless Chrome / Chromium** (with `libnss3`, `libatk`, etc.).
   - **FFmpeg** (Full build).
 
@@ -71,7 +70,7 @@ Please read this section carefully. Most deployment failures are caused by viola
 
 5. **No Absolute Paths**
    - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.
-   - **Solution**: Use relative paths (e.g., `./data/...`) or `os.getcwd()` / `process.cwd()`.
+   - **Solution**: Use relative paths (e.g., `./data/...`) or `os.getcwd()`.
 
 ### Checklist
 
@@ -79,7 +78,7 @@ Before publishing, make sure:
 
 - [ ] **Config**: `charm.yaml` has the correct `adapter.type` and `mode`.
 - [ ] **No Local Models**: I am not loading local LLMs or heavy weights.
-- [ ] **Dependencies**: All libraries are listed in `requirements.txt`/`pyproject.toml` (Python) or `package.json` (Node).
+- [ ] **Dependencies**: All libraries are listed in `requirements.txt` or `pyproject.toml`.
 - [ ] **Secrets**: All API keys are defined in `charm.yaml` (environment_variables list), not hardcoded.
 
 > If you hit any issues, feel free to open an [issue](https://github.com/CharmAIOS/Charm/issues/new/choose) or ask in our [community](https://discord.gg/gdakynHUEb). It really helps us make the docs and product better.

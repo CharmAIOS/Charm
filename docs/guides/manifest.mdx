@@ -149,14 +149,12 @@ runtime:
   adapter:
     # - crewai / langchain / langgraph : Standard Python Frameworks
     # - openclaw : Configuration-driven Agent
-    # - node : For JavaScript/TypeScript Agents
     # - custom : Pure Python functions
     type: "crewai"
     
     # --------------------------------------------------------------
     # ENTRY POINT: Where is your agent object?
     # Format: <python_module_path>:<variable_or_function_name>
-    #         OR <shell_command> (for Node.js)
     # --------------------------------------------------------------
     # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
     entry_point: "src.main:my_crew"
@@ -164,10 +162,7 @@ runtime:
     # [Case B] For Custom (Pure Python): Point to a function or class instance.
     entry_point: "src.my_script:run_pipeline"
 
-    # [Case C] For Node.js (Remotion, Puppeteer, etc.): Provide the shell command.
-    entry_point: "npm start"
-
-    # [Case D] For OpenClaw: Optional (uses default host if empty)
+    # [Case C] For OpenClaw: Optional (uses default host if empty)
     entry_point: ""
     
     # --------------------------------------------------------------
@@ -215,7 +210,7 @@ runtime:
   # Base Image
   # --------------------------------------------------------------
    # "standard": Lightweight Python environment. Fast boot time.
-   # "full": Heavy environment including Chrome, FFmpeg, Node.js and OpenClaw. REQUIRED if you use skills or Browser automation.
+   # "full": Heavy environment including Chrome, FFmpeg, and OpenClaw. REQUIRED if you use skills or Browser automation.
   mode: "standard"
 
   # --------------------------------------------------------------
@@ -271,8 +266,8 @@ policies:
 | Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
 |  |  x-ui-widget | UI Hint| Values: textarea, password, color, file.|
 |  |  state | Schema |Optional JSON Schema defining persistent state.|
-|Runtime| adapter.type| Enum |crewai, langchain,langgraph, custom, node, openclaw.|
-| |entry_point| String| Python path (module:obj) OR Shell command (e.g. "npm start").|
+|Runtime| adapter.type| Enum |crewai, langchain, langgraph, custom, openclaw.|
+| |entry_point| String| Python path (module:obj). Optional for openclaw.|
 | |environment_variables |Object |Map of 'models' and 'tools' requiring Env keys (e.g., OPENAI_API_KEY).|
 | |config |Object |Engine-specific configuration (e.g. OpenClaw system_prompt, model).|
 | |skills |List |List of MCP Skills to mount.|

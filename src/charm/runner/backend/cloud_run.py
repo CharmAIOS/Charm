@@ -9,9 +9,9 @@ import time
 from typing import AsyncGenerator, Dict
 
 try:
-    from google.cloud import run_v2
-    from google.cloud import logging as cloud_logging
     from google.api_core import exceptions as google_exceptions
+    from google.cloud import logging as cloud_logging
+    from google.cloud import run_v2
 except ImportError:
     run_v2 = None
     cloud_logging = None
@@ -154,7 +154,7 @@ class CloudRunBackend(ExecutionBackend):
                     if bundle_key not in existing_env_names:
                         needs_update = True
                 if needs_update:
-                    logger.info(f"[CloudRun] Job needs update, deleting and recreating...")
+                    logger.info("[CloudRun] Job needs update, deleting and recreating...")
                     delete_req = run_v2.DeleteJobRequest(name=job_fqn)
                     await self.jobs_client.delete_job(request=delete_req)
                     # Clear from cache to force recreation

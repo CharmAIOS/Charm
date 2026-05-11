@@ -3,11 +3,6 @@ from typing import Any, Dict, List, Optional
 from ..core.logger import logger
 from .base import BaseAdapter
 
-try:
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-except ImportError:
-    from langchain.schema import AIMessage, HumanMessage, SystemMessage  # type: ignore
-
 
 class CharmLangChainAdapter(BaseAdapter):
     """Adapter for standard LangChain Chains/Agents."""

@@ -1,13 +1,14 @@
+from datetime import datetime
+from pathlib import Path
+
 import httpx
 import typer
 import yaml
-from pathlib import Path
-from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 
-from ..config import get_token, load_config
 from .. import state
+from ..config import get_token, load_config
 
 console = Console()
 app = typer.Typer()
@@ -48,7 +49,7 @@ def logs_command(
             raise typer.Exit(code=1)
     except Exception as e:
         console.print(f"[bold red]Config Error:[/bold red] {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
     config_data = load_config()
     api_base = api_base_override or config_data.get("core", {}).get("api_base") or DEFAULT_API_BASE
@@ -84,7 +85,7 @@ def logs_command(
             console.print(f"[bold red]Connection Error:[/bold red] {e}")
             if state.DEBUG_MODE:
                 console.print_exception()
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from e
 
     if not logs:
         console.print("[dim]No historical run logs found for this agent.[/dim]")

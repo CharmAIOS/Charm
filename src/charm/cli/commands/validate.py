@@ -11,8 +11,8 @@ import yaml  # type: ignore
 from rich.console import Console
 from rich.panel import Panel
 
-from ...contracts.uac import CharmConfig
 from ... import __version__ as CHARM_SDK_VERSION
+from ...contracts.uac import CharmConfig
 
 console = Console()
 

@@ -6,9 +6,9 @@ import tempfile
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from .backend.base import ExecutionBackend, RunConfig
+from .backend.base import RunConfig
 from .backend.docker import DockerBackend
-from .protocol import EVENT_PREFIX, sse_pack
+from .protocol import sse_pack
 from .script_builder import BashScriptBuilder
 
 try:
@@ -81,8 +81,9 @@ class CharmDockerExecutor:
         adapter_type: str = "python",
         lifecycle: str = "serverless",
         timeout_seconds: Optional[int] = None,
-        skills: List[Dict[str, Any]] = [],
+        skills: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncGenerator[str, None]:
+        skills = skills or []
         run_timestamp = int(time.time())
         run_id = f"{agent_id}_{run_timestamp}"
         host_artifact_path = os.path.join(HOST_ARTIFACTS_ROOT, run_id)

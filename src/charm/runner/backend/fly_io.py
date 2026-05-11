@@ -1,12 +1,14 @@
 import asyncio
 import base64
-import os
-import aiohttp
 import logging
+import os
 import textwrap
 from typing import AsyncGenerator, Optional, Tuple
-from .base import ExecutionBackend, RunConfig
+
+import aiohttp
+
 from ...runner.protocol import sse_pack
+from .base import ExecutionBackend, RunConfig
 from .fly_api_client import FlyApiClient
 
 logger = logging.getLogger("charm.runner.fly_io")

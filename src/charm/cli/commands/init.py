@@ -72,7 +72,7 @@ def init_command(
 
 def run_interactive(project_path: Path):
     """Run init in interactive mode with prompts."""
-    from rich.prompt import Prompt, Confirm
+    from rich.prompt import Prompt
 
     # Check if directory exists
     if project_path.exists():
@@ -120,7 +120,7 @@ def run_interactive(project_path: Path):
         console.print(f"[bold red]Error:[/bold red] {e}")
         if project_path.exists():
             shutil.rmtree(project_path)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 def create_single_file(project_path: Path, create: str):

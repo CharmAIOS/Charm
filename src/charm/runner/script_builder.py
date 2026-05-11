@@ -1,5 +1,4 @@
 import base64
-import hashlib
 import json
 import os
 import shlex
@@ -285,10 +284,10 @@ PYEOF
         fi"""
 
         # Cleanup & Persistence Logic
-        cleanup_function = f"""
-        function cleanup {{
+        cleanup_function = """
+        function cleanup {
             EXIT_CODE=$?
-            echo '::CHARM_EVENT::{{"type":"status","content":"Saving Execution Context..."}}'
+            echo '::CHARM_EVENT::{"type":"status","content":"Saving Execution Context..."}'
             
             # [Removed] Memory Sync logic (curl POST to store)
             # Reason: GCS Fuse writes automatically, no need to manually sync via API.
@@ -305,8 +304,8 @@ PYEOF
                 curl -s -X PUT -T output_artifacts.tar.gz -H "Content-Type: application/gzip" "$CHARM_ARTIFACT_UPLOAD_URL"
             fi
             
-            echo '::CHARM_EVENT::{{"type":"internal_run_finished","content":{{"exit_code":'"$EXIT_CODE"',"duration_ms":0}}}}'
-        }}
+            echo '::CHARM_EVENT::{"type":"internal_run_finished","content":{"exit_code":'"$EXIT_CODE"',"duration_ms":0}}'
+        }
         trap cleanup EXIT
         """
 

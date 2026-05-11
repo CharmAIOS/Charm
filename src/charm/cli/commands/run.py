@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import typer
@@ -12,11 +11,10 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from .. import state
-
 # Import Core Components
 from ...core.errors import CharmError
 from ...core.loader import CharmLoader
+from .. import state
 
 # Try to import Executor (Handle case where 'docker' extra is not installed)
 try:
@@ -242,7 +240,7 @@ def load_test_cases(file_path: str) -> List[Dict[str, Any]]:
 
         return data
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in test file: {e}")
+        raise ValueError(f"Invalid JSON in test file: {e}") from e
 
 
 @app.command("run")

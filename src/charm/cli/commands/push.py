@@ -12,7 +12,6 @@ import yaml  # type: ignore
 from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
-import traceback
 
 from ...contracts.uac import CharmConfig
 from .. import state

@@ -27,7 +27,9 @@ class RunConfig(BaseModel):
 class ExecutionBackend(ABC):
     @abstractmethod
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
-        pass
+        if False:
+            yield ""
+        raise NotImplementedError
 
     @abstractmethod
     async def cleanup(self, run_id: str):

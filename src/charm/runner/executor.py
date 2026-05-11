@@ -6,18 +6,24 @@ import tempfile
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from .backend.base import ExecutionBackend, RunConfig
+from .backend.base import RunConfig
 from .backend.docker import DockerBackend
-from .protocol import EVENT_PREFIX, sse_pack
+from .protocol import sse_pack
 from .script_builder import BashScriptBuilder
 
+CloudRunBackend: Optional[type[Any]]
 try:
-    from .backend.cloud_run import CloudRunBackend
+    from .backend.cloud_run import CloudRunBackend as _CloudRunBackend
+
+    CloudRunBackend = _CloudRunBackend
 except ImportError:
     CloudRunBackend = None
 
+FlyIoBackend: Optional[type[Any]]
 try:
-    from .backend.fly_io import FlyIoBackend
+    from .backend.fly_io import FlyIoBackend as _FlyIoBackend
+
+    FlyIoBackend = _FlyIoBackend
 except ImportError:
     FlyIoBackend = None
 
@@ -81,8 +87,9 @@ class CharmDockerExecutor:
         adapter_type: str = "python",
         lifecycle: str = "serverless",
         timeout_seconds: Optional[int] = None,
-        skills: List[Dict[str, Any]] = [],
+        skills: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncGenerator[str, None]:
+        skills = skills or []
         run_timestamp = int(time.time())
         run_id = f"{agent_id}_{run_timestamp}"
         host_artifact_path = os.path.join(HOST_ARTIFACTS_ROOT, run_id)
@@ -166,7 +173,7 @@ class CharmDockerExecutor:
             except Exception as e:
                 logger.error(f"Failed to write input.json: {e}")
 
-        use_bundle_local = bool(bundle_local_path) and os.path.isfile(bundle_local_path) and isinstance(
+        use_bundle_local = bundle_local_path is not None and os.path.isfile(bundle_local_path) and isinstance(
             backend, DockerBackend
         )
         use_bundle_gcs = bool(bundle_gcs_path) and not isinstance(backend, DockerBackend)

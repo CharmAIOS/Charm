@@ -5,17 +5,42 @@ description: Understand how Charm adapters bridge your agent framework to the Cl
 
 # Agent Adapters
 
-{/* TODO: Write adapters overview covering:
-  - What adapters are: the bridge between your agent code and the Charm execution engine
-  - BaseAdapter interface (invoke, stream, get_state, set_tools)
-  - Supported adapter types table:
-    | Type | Framework | Entry Point Format |
-    | crewai | CrewAI | module:crew_instance |
-    | langchain | LangChain | module:chain_instance |
-    | langgraph | LangGraph | module:graph_instance |
-    | custom | Pure Python | module:function |
-    | node | Node.js | shell command |
-    | openclaw | OpenClaw | (uses default host) |
-  - How to choose the right adapter
-  - Links to individual adapter pages
-*/}
+Adapters tell Charm how to call your agent code.
+
+Different frameworks expose different runtime objects, so the adapter bridges your code to the Charm runner.
+
+## Supported Adapter Types
+
+| Type | Best For | Entry Point Style |
+| --- | --- | --- |
+| `custom` | Plain Python functions/classes | `module:object` |
+| `langchain` | LangChain chains/runnables | `module:chain` |
+| `langgraph` | LangGraph graphs | `module:graph` |
+| `crewai` | CrewAI crews | `module:crew` |
+| `node` | Node.js agents | shell command or Node entry |
+| `openclaw` | OpenClaw/browser-tool agents | OpenClaw host |
+
+## Configure an Adapter
+
+```yaml
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+```
+
+## Choosing an Adapter
+
+- Use `custom` for the smallest Python integration.
+- Use `langchain`, `langgraph`, or `crewai` when you already use that framework.
+- Use `node` for JavaScript/TypeScript agents.
+- Use `openclaw` for browser, tools, and computer-use style workflows.
+
+## Adapter Pages
+
+- [Custom](/adapters/custom)
+- [LangChain](/adapters/langchain)
+- [LangGraph](/adapters/langgraph)
+- [CrewAI](/adapters/crewai)
+- [Node.js](/adapters/node)
+- [OpenClaw](/adapters/openclaw)

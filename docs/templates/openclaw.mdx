@@ -5,4 +5,45 @@ description: A configuration-driven agent template using OpenClaw skills and MCP
 
 # OpenClaw Skill Agent Template
 
-{/* TODO: Document the openclaw template from src/charm/templates/openclaw.yaml */}
+Use this template for OpenClaw agents that rely on tools, skills, browser automation, or computer-use style workflows.
+
+## Use Case
+
+- Browser automation.
+- Tool-rich research.
+- MCP skill orchestration.
+- Desktop-like workflows.
+- Long-running agents with daemon lifecycle.
+
+## Runtime Configuration
+
+OpenClaw agents commonly use the full runtime:
+
+```yaml
+runtime:
+  adapter:
+    type: "openclaw"
+  mode: "full"
+```
+
+Use daemon lifecycle when the agent should stay alive:
+
+```yaml
+runtime:
+  lifecycle: "daemon"
+```
+
+## Development Flow
+
+```bash
+charm init openclaw-agent --template openclaw
+cd openclaw-agent
+charm validate .
+```
+
+## Publishing Checklist
+
+- Required skills and environment variables are declared.
+- Browser or system dependencies require `mode: "full"`.
+- Long-running behavior is tested as a daemon.
+- Output is understandable to end users.

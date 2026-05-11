@@ -5,10 +5,35 @@ description: Tail cloud execution logs for your agent from the terminal.
 
 # charm logs
 
-{/* TODO: Document charm logs command:
-  - Usage: `charm logs [--limit]`
-  - Authentication requirement
-  - Default: 50 recent events, max 500
-  - Example output
-  - Relationship to Studio dashboard
-*/}
+Fetch recent cloud execution logs for an agent from the terminal.
+
+## Usage
+
+```bash
+charm logs --path . --limit 50
+```
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `--path` | Path to the Charm project. Defaults to the current directory. |
+| `--limit`, `-l` | Number of recent log entries to fetch. Defaults to 50. |
+| `--api-base` | Override the platform API base URL. |
+| `--debug` | Print additional diagnostic output. |
+
+## Requirements
+
+- You must be authenticated with `charm auth login`.
+- The project must have a `charm.yaml` with an agent ID.
+- The agent must have cloud run history.
+
+## When to Use
+
+Use `charm logs` when:
+
+- a published agent fails in the Store,
+- a cloud run behaves differently from local execution,
+- you need quick terminal access without opening Studio.
+
+For deeper analysis, use the Studio and observability pages in the platform UI.

@@ -5,17 +5,53 @@ description: Browse pre-built agent templates to jumpstart your Charm project.
 
 # Starter Templates
 
-{/* TODO: Write template gallery page covering:
-  - Card grid of all available templates
-  - Each card: name, description, adapter type, use case
-  - Available templates:
-    1. Python (minimal starter)
-    2. Research Agent (CrewAI-based)
-    3. Code Review Agent
-    4. Customer Support Agent
-    5. Data Pipeline Agent
-    6. Slack Bot (daemon lifecycle)
-    7. OpenClaw Skill Agent
-  - Usage: `charm init my-agent --template <name>`
-  - Link to each individual template detail page
-*/}
+Templates are starter projects that give you a working `charm.yaml`, source file, and dependency setup for a common agent pattern.
+
+Use a template when you want to start from a known runtime shape instead of wiring a manifest from scratch.
+
+## Create from a Template
+
+```bash
+charm init my-agent --template python
+```
+
+Then run:
+
+```bash
+cd my-agent
+charm validate .
+charm run . --input "Hello"
+```
+
+## Template Categories
+
+| Template | Best For | Runtime Shape |
+| --- | --- | --- |
+| [Python Agent](/templates/python) | Minimal custom Python agents | Serverless |
+| [Research Agent](/templates/research) | Topic research and synthesis | Serverless |
+| [Code Review Agent](/templates/code-review) | Developer workflow automation | Serverless |
+| [Customer Support Agent](/templates/customer-support) | Support triage and response drafting | Serverless |
+| [Data Pipeline Agent](/templates/data-pipeline) | Structured processing and data workflows | Serverless |
+| [Slack Bot](/templates/slack-bot) | Chat and workspace automation | Daemon or integration-oriented |
+| [OpenClaw Skill Agent](/templates/openclaw) | Browser/tools-heavy agent execution | Full runtime |
+| [Interactive Agent](/templates/interactive) | Real-time chat and streaming | Interactive |
+| [Daemon Agent](/templates/daemon) | Always-on background agents | Daemon |
+| [OAuth Integration Agent](/templates/oauth-integration) | Agents requiring user-authorized accounts | Depends on adapter |
+
+## Choosing a Template
+
+- Choose **Python** first if you are learning Charm.
+- Choose **Interactive** for chat apps that need streaming and thread history.
+- Choose **Daemon** when the agent must stay alive between user requests.
+- Choose **OAuth Integration** when the agent needs access to a user's Google, GitHub, Slack, Notion, or other connected account.
+- Choose **OpenClaw** when the agent needs tool-rich browser or desktop-style automation.
+
+## What Every Template Includes
+
+- `charm.yaml` manifest.
+- Agent entry point.
+- Dependency file.
+- Example input schema.
+- Runtime adapter configuration.
+
+After selecting a template, review the manifest before publishing. The manifest controls how the Store renders inputs and how the runner executes your agent.

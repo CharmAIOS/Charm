@@ -5,11 +5,59 @@ description: Scaffold a new Charm agent project with a single command.
 
 # charm init
 
-{/* TODO: Document charm init command:
-  - Usage: `charm init [name] [--template] [--create] [--interactive]`
-  - All options with defaults
-  - Available templates list
-  - Interactive TUI mode
-  - Generated project structure
-  - Examples
-*/}
+Scaffold a new Charm agent project.
+
+## Usage
+
+```bash
+charm init <name> [--template <template>] [--create <file>] [--interactive]
+```
+
+## Common Examples
+
+Create a minimal Python agent:
+
+```bash
+charm init my-agent --template python
+```
+
+Start an interactive prompt for template selection:
+
+```bash
+charm init my-agent --interactive
+```
+
+Create a single file from a template:
+
+```bash
+charm init . --create charm.yaml
+```
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `name` | Agent directory path. Use `.` for the current directory. |
+| `--template` | Template to use. Defaults to `python`. |
+| `--create` | Create a single file instead of a full project. |
+| `--interactive`, `-i` | Launch guided template selection. |
+
+## Generated Structure
+
+Most templates produce:
+
+```text
+my-agent/
+├── charm.yaml
+├── requirements.txt or pyproject.toml
+└── src/
+    └── main.py
+```
+
+After scaffolding, run:
+
+```bash
+cd my-agent
+charm validate .
+charm run . --input "Hello"
+```

@@ -5,21 +5,46 @@ description: Configure pricing for your agent — free, subscription, or one-tim
 
 # Pricing Models
 
-{/* TODO: Write pricing guide covering:
-  - Three pricing models:
-    1. **Free** (`model: "free"`) — no charge
-    2. **Subscription** (`model: "subscription"`) — recurring monthly/annual
-    3. **One-Time** (`model: "one_time"`) — single purchase
-  - Configuration in charm.yaml:
-    ```yaml
-    pricing:
-      model: "subscription"
-      amount: 9.99
-      billing_period: "monthly"
-      trial:
-        enabled: true
-        days: 7
-    ```
-  - Trial periods
-  - Pricing strategy recommendations
-*/}
+Pricing is configured in `charm.yaml` and displayed on the Store listing.
+
+## Basic Shape
+
+```yaml
+pricing:
+  model: "free"
+  amount: 0
+```
+
+## Pricing Models
+
+| Model | Description |
+| --- | --- |
+| `free` | No charge to install or run beyond platform usage rules. |
+| `one_time` | One purchase grants access. |
+| `subscription` | Recurring access, usually monthly or annual. |
+
+## Subscription Example
+
+```yaml
+pricing:
+  model: "subscription"
+  amount: 9.99
+  billing_period: "monthly"
+  trial:
+    enabled: true
+    days: 7
+```
+
+## Choosing a Price
+
+Consider:
+
+- how often the agent is used,
+- whether it depends on costly tools,
+- the value of the output,
+- support expectations,
+- whether the agent is experimental or production-ready.
+
+## Notes
+
+Pricing metadata should match the actual value and reliability of the agent. Misleading pricing or unclear usage expectations can lead to poor user trust.

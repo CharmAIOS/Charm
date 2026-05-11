@@ -5,9 +5,30 @@ description: Use LangChain chains and agents with the Charm platform.
 
 # LangChain Adapter
 
-{/* TODO: Document LangChain adapter covering:
-  - Configuration: `adapter.type: "langchain"` + `entry_point: "module:chain"`
-  - How Charm wraps LangChain's invoke/stream
-  - Input/output mapping
-  - Example charm.yaml + agent code
-*/}
+Use the LangChain adapter when your agent is built as a LangChain chain, runnable, or agent object.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "langchain"
+    entry_point: "src.main:chain"
+```
+
+## Runtime Behavior
+
+Charm loads the entry point and forwards the user's input payload into the LangChain object. The result is converted into a response the Store can display.
+
+## Best For
+
+- Prompt chains.
+- Tool-using LangChain agents.
+- RAG workflows.
+- Existing LangChain projects you want to package for Charm.
+
+## Notes
+
+- Declare required model and tool keys in `runtime.adapter.environment_variables`.
+- Keep outputs JSON-serializable when possible.
+- Use `mode: "full"` only if you need browser, Node.js, or multimedia dependencies.

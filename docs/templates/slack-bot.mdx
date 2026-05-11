@@ -5,4 +5,44 @@ description: A daemon-mode Slack bot agent template for always-on team automatio
 
 # Slack Bot Template
 
-{/* TODO: Document the slack-bot template from src/charm/templates/slack-bot.yaml */}
+Use this template for agents that respond to Slack events or provide always-on workspace automation.
+
+## Use Case
+
+- Team assistant bots.
+- Alert triage.
+- Scheduled updates.
+- Internal workflow automation.
+
+## Runtime Mode
+
+Slack bots are usually daemon-style agents because they need to stay available for events.
+
+```yaml
+runtime:
+  lifecycle: "daemon"
+```
+
+## Required Configuration
+
+You will typically need:
+
+- Slack app credentials.
+- Bot token or OAuth connection.
+- Event routing configuration.
+- A production daemon runtime.
+
+## Development Flow
+
+```bash
+charm init slack-agent --template slack-bot
+cd slack-agent
+charm validate .
+```
+
+## Publishing Checklist
+
+- Slack credentials are not hardcoded.
+- Events are idempotent.
+- The bot handles missing permissions gracefully.
+- Daemon lifecycle is tested in staging before production.

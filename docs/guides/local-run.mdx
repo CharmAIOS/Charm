@@ -5,12 +5,56 @@ description: Run and test your agent locally using the Charm CLI.
 
 # Local Execution
 
-{/* TODO: Write local execution guide covering:
-  - `charm run .` — interactive CLI mode
-  - `charm run . --input "text"` — simple text input
-  - `charm run . --json '{...}'` — structured JSON payload
-  - `charm run . --input-file tests.json` — bulk test cases
-  - Environment variables: how to set .env for local dev
-  - Output streaming (SSE events)
-  - Common errors and solutions
-*/}
+Run agents locally while you iterate on code and manifest changes.
+
+## Simple Input
+
+```bash
+charm run . --input "Hello"
+```
+
+## Structured JSON Input
+
+```bash
+charm run . --json '{"message": "Hello", "tone": "friendly"}'
+```
+
+Use field names that match `interface.input.properties` in `charm.yaml`.
+
+## Test Case File
+
+```bash
+charm run . --input-file tests.json
+```
+
+Example:
+
+```json
+[
+  {
+    "name": "Greeting",
+    "input": {
+      "message": "Hello"
+    }
+  }
+]
+```
+
+## Environment Variables
+
+For local development, put non-production values in `.env`:
+
+```bash
+OPENAI_API_KEY=...
+TAVILY_API_KEY=...
+```
+
+Never commit `.env` files containing secrets.
+
+## Docker Mode
+
+```bash
+charm run . --input "Hello" --docker
+```
+
+Use Docker mode before publishing when dependencies or runtime behavior may differ from your host machine.

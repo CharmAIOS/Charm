@@ -5,12 +5,7 @@ description: Skeleton reference for the Charm `charm.yaml` schema.
 
 # Manifest Reference
 
-{/* TODO:
-  - Align this page with the SDK `CharmConfig` schema.
-  - Add field-by-field reference.
-  - Mark required versus optional fields.
-  - Add examples for serverless, interactive, daemon, and OAuth agents.
-*/}
+`charm.yaml` is the manifest that tells Charm how to display, run, price, and publish an agent.
 
 ## Planned Sections
 
@@ -22,4 +17,78 @@ description: Skeleton reference for the Charm `charm.yaml` schema.
 - `runtime`
 - `policies`
 - `workflow`
+
+## Minimal Shape
+
+```yaml
+version: "0.4.3"
+
+persona:
+  name: "My Agent"
+  version: "0.1.0"
+  description: "A short description."
+  authors: ["Your Name"]
+  tags: ["productivity"]
+  license: "MIT"
+
+interface:
+  input:
+    type: "object"
+    required: ["message"]
+    properties:
+      message:
+        type: "string"
+        title: "Message"
+  output:
+    type: "object"
+
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+  mode: "standard"
+  lifecycle: "serverless"
+```
+
+## Field Groups
+
+### `version`
+
+The manifest contract version supported by the installed SDK.
+
+### `persona`
+
+Public metadata used in the Store, docs, and release history.
+
+### `pricing`
+
+Optional commercial metadata such as free, one-time, or subscription pricing.
+
+### `auth`
+
+Optional OAuth requirements. The Store uses this to prompt users to connect provider accounts before a run.
+
+### `interface`
+
+JSON Schema-style input and output definitions. These control the generated UI.
+
+### `runtime`
+
+Adapter, entry point, lifecycle, mode, skills, and environment variable requirements.
+
+### `policies`
+
+Execution limits and permissions, such as internet access or max steps.
+
+## Lifecycle Values
+
+- `serverless`: short-lived execution.
+- `interactive`: real-time streaming.
+- `daemon`: long-running background execution.
+
+## Related Pages
+
+- [Configuration Guide](/guides/manifest)
+- [Execution Modes](/platform/execution-modes)
+- [OAuth Integration Agent](/templates/oauth-integration)
 

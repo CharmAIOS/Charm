@@ -5,11 +5,38 @@ description: Use configuration-driven OpenClaw agents with the Charm platform.
 
 # OpenClaw Adapter
 
-{/* TODO: Document OpenClaw adapter covering:
-  - Configuration: `adapter.type: "openclaw"`
-  - What OpenClaw is (configuration-driven agent framework)
-  - Skill composition via MCP tools
-  - Requires mode: "full"
-  - Memory persistence (daemon workspace)
-  - Example charm.yaml + skill configuration
-*/}
+Use the OpenClaw adapter for configuration-driven agents that need rich tools, browser automation, or long-running workflows.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "openclaw"
+  mode: "full"
+```
+
+For always-on agents:
+
+```yaml
+runtime:
+  lifecycle: "daemon"
+```
+
+## Best For
+
+- Browser-heavy agents.
+- Tool-rich automation.
+- Skills and MCP integrations.
+- Daemon agents that need a persistent workspace.
+
+## Runtime Notes
+
+OpenClaw agents usually need the full runtime because they may depend on browser, Node.js, or system-level tooling.
+
+## Operational Notes
+
+- Test with `charm validate` before publishing.
+- Use daemon lifecycle only when persistent execution is required.
+- Keep secrets in environment variables.
+- Document any external accounts or OAuth providers the agent needs.

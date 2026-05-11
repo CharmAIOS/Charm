@@ -5,11 +5,42 @@ description: How Charm handles payments, Stripe integration, and creator payouts
 
 # Billing & Payouts
 
-{/* TODO: Write billing guide covering:
-  - Stripe integration for payment processing
-  - Subscription management (upgrade, downgrade, proration)
-  - Creator Dashboard for revenue tracking
-  - Payout schedule and mechanics
-  - Revenue categories: Agent Sales vs Earn-As-You-Go
-  - Refund policy
-*/}
+Charm billing connects user payments, wallet usage, subscriptions, and creator revenue.
+
+## Billing Surfaces
+
+Billing can include:
+
+- wallet balance,
+- checkout,
+- subscriptions,
+- one-time purchases,
+- creator revenue,
+- payout processing.
+
+## Payment Provider
+
+Charm uses Stripe-backed flows for payments and webhook-driven billing events.
+
+## Creator Revenue
+
+Creator-facing revenue can come from:
+
+- agent sales,
+- subscriptions,
+- usage-based revenue programs,
+- platform-defined payout rules.
+
+## Operational Notes
+
+Billing changes are considered critical-path changes. They should include:
+
+- tests,
+- idempotency checks,
+- staging validation,
+- rollback or mitigation notes.
+
+## Related Pages
+
+- [Pricing Models](/platform/app)
+- [Earn As You Go](/platform/earn-as-you-go)

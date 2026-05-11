@@ -7,12 +7,9 @@ description: Follow the shortest path from installing Charm to publishing your f
 
 This section is the entry point for new builders.
 
-{/* TODO:
-  - Design the final beginner path and screenshots.
-  - Confirm the exact install command for the current public package.
-  - Add platform-specific notes for macOS, Windows, and Linux.
-  - Link to the most stable starter template once template naming is final.
-*/}
+Use this path when you want to move from an empty folder to a published Charm agent with the fewest decisions.
+
+Charm projects are built around a manifest file, `charm.yaml`, and an adapter-specific entry point. The CLI uses those files to run your agent locally, validate it, package it, and publish it to Charm Store.
 
 ## Planned Flow
 
@@ -28,4 +25,18 @@ This section is the entry point for new builders.
 - [Installation](/quickstart/install)
 - [Build Your First Agent](/quickstart/first-app)
 - [Publish](/quickstart/publish)
+
+## Recommended First Template
+
+Start with the Python template if you are new to Charm:
+
+```bash
+charm init my-first-agent --template python
+```
+
+After that, try framework-specific or lifecycle-specific templates:
+
+- [Interactive Agent](/templates/interactive) for real-time chat-style apps.
+- [Daemon Agent](/templates/daemon) for always-on background agents.
+- [OAuth Integration Agent](/templates/oauth-integration) for agents that need user-authorized external accounts.
 

@@ -5,9 +5,74 @@ description: Execute your agent locally with identical boundaries to the Cloud R
 
 # charm run
 
-{/* TODO: Document charm run command:
-  - Usage: `charm run [path] [--input] [--json] [--input-file] [--docker] [--mock-oauth] [--mock-skills]`
-  - All options with defaults
-  - Examples: simple text, JSON payload, Docker sandbox, mock OAuth
-  - Output format (SSE events)
-*/}
+Run a Charm agent locally.
+
+Use `charm run` while developing agent logic, testing input schemas, and checking runtime compatibility before publishing.
+
+## Usage
+
+```bash
+charm run [path] [--input <text>] [--json <payload>] [--input-file <file>] [--docker]
+```
+
+## Simple Text Input
+
+```bash
+charm run . --input "Write a short welcome message"
+```
+
+## JSON Input
+
+Use JSON when your `interface.input` defines multiple fields:
+
+```bash
+charm run . --json '{"message": "Hello", "tone": "friendly"}'
+```
+
+## Input File
+
+Use `--input-file` for repeatable test cases:
+
+```bash
+charm run . --input-file test-cases.json
+```
+
+Example test file:
+
+```json
+[
+  {
+    "name": "Basic greeting",
+    "input": {
+      "message": "Hello"
+    }
+  }
+]
+```
+
+## Docker Sandbox
+
+Run inside a container to better match the cloud runtime:
+
+```bash
+charm run . --input "Hello" --docker
+```
+
+Docker mode requires `charmos[runner]` and a running Docker daemon.
+
+## Mocked Integrations
+
+For agents that require OAuth or skills, local mocks can speed up testing:
+
+```bash
+charm run . --json '{"message": "Check my calendar"}' --mock-oauth
+charm run . --json '{"message": "Use a skill"}' --mock-skills
+```
+
+## Debugging
+
+Add `--debug` for extra logs:
+
+```bash
+charm run . --input "Hello" --debug
+```

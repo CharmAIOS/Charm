@@ -5,11 +5,41 @@ description: Build and contribute a custom container base image for the Charm Cl
 
 # Create a Base Image
 
-{/* TODO: Write base image contribution guide covering:
-  - Existing base images: Dockerfile.standard, Dockerfile.full
-  - How the runner selects images (runtime.mode)
-  - Requirements for a custom base image
-  - Building and testing locally
-  - Submitting a PR
-  - Image size and optimization best practices
-*/}
+Base images define the runtime environment used to execute agents.
+
+## Existing Modes
+
+Charm currently distinguishes between:
+
+- `standard`: smaller runtime for most Python agents.
+- `full`: heavier runtime for browser, Node.js, multimedia, or OpenClaw workflows.
+
+Agents select the runtime with:
+
+```yaml
+runtime:
+  mode: "standard"
+```
+
+## Contribution Requirements
+
+Base image changes should include:
+
+- clear reason for the new dependency,
+- size impact,
+- security impact,
+- local build validation,
+- runtime smoke test,
+- documentation update.
+
+## Best Practices
+
+- Keep images small.
+- Pin versions when practical.
+- Avoid installing unnecessary system packages.
+- Prefer reusable base layers.
+- Test both build and runtime behavior.
+
+## Before Opening a PR
+
+Run the relevant Docker build and at least one agent smoke test using the image.

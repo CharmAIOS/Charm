@@ -5,12 +5,42 @@ description: Contribute to the Charm documentation site.
 
 # Improve Documentation
 
-{/* TODO: Write docs contribution guide covering:
-  - Docs site powered by Mintlify
-  - Local development: `npx mintlify dev`
-  - File structure and conventions
-  - MDX syntax and components (Cards, Tabs, CodeGroup)
-  - Adding new pages: create .mdx file + add to docs.json
-  - Style guide for writing docs
-  - Submitting a PR
-*/}
+Charm docs are built from MDX files under `docs/`.
+
+## Run Docs Locally
+
+From the docs directory:
+
+```bash
+npx mintlify dev
+```
+
+Then open the local URL printed in the terminal.
+
+On Windows, enable Developer Mode or run the terminal as Administrator if Mintlify fails to create symlinks.
+
+## File Structure
+
+- `docs/docs.json`: Mintlify configuration and navigation.
+- `docs/quickstart`: onboarding.
+- `docs/templates`: starter templates.
+- `docs/guides`: developer workflow guides.
+- `docs/cli`: command reference.
+- `docs/platform`: platform features.
+- `docs/oss`: contributor and open-source pages.
+
+## Add a Page
+
+1. Create a `.mdx` file.
+2. Add frontmatter with `title` and `description`.
+3. Add the page path to `docs/docs.json`.
+4. Run Mintlify locally.
+5. Open a PR.
+
+## Writing Style
+
+- Start with the user goal.
+- Use short sections.
+- Include copy-pasteable commands.
+- Link related pages.
+- Avoid hidden assumptions.

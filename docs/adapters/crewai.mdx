@@ -5,11 +5,34 @@ description: Use CrewAI crews and agents with the Charm platform.
 
 # CrewAI Adapter
 
-{/* TODO: Document CrewAI adapter covering:
-  - Configuration: `adapter.type: "crewai"` + `entry_point: "module:crew"`
-  - How Charm wraps CrewAI's Crew.kickoff()
-  - Input mapping: charm inputs → CrewAI inputs
-  - Output handling: CrewAI results → SSE stream
-  - Example charm.yaml + agent code
-  - Tips and caveats
-*/}
+Use the CrewAI adapter when your project is organized around CrewAI agents, tasks, and crews.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "crewai"
+    entry_point: "src.main:crew"
+```
+
+## Runtime Behavior
+
+Charm loads the CrewAI crew from the entry point and starts the crew with inputs from the Store. The final CrewAI result is returned to the user.
+
+## Best For
+
+- Research crews.
+- Role-based multi-agent workflows.
+- Task decomposition.
+- Existing CrewAI projects.
+
+## Input Mapping
+
+The keys in `interface.input.properties` should match the input names your crew expects.
+
+## Tips
+
+- Keep task outputs concise enough for a user-facing app.
+- Declare model and search/tool keys in the manifest.
+- Test locally before publishing because multi-agent workflows can be slower and more expensive.

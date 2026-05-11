@@ -5,4 +5,54 @@ description: A CrewAI-powered research agent template for deep-dive topic analys
 
 # Research Agent Template
 
-{/* TODO: Document the research-agent template from src/charm/templates/research-agent.yaml */}
+The research agent template is for agents that gather information, synthesize findings, and return a structured answer or report.
+
+## Use Case
+
+Use this template for:
+
+- market research,
+- competitor summaries,
+- topic briefs,
+- literature-style summaries,
+- internal knowledge gathering.
+
+## Typical Inputs
+
+A research agent usually accepts:
+
+- topic or question,
+- desired depth,
+- audience,
+- optional source constraints,
+- output format.
+
+## Runtime Notes
+
+Research agents often call external search, scraping, or browser tools. Declare required tool keys in `runtime.adapter.environment_variables` and avoid hardcoding credentials.
+
+Example:
+
+```yaml
+runtime:
+  adapter:
+    environment_variables:
+      - TAVILY_API_KEY
+      - FIRECRAWL_API_KEY
+```
+
+## Development Flow
+
+```bash
+charm init my-research-agent --template research
+cd my-research-agent
+charm validate .
+charm run . --json '{"topic": "AI agent marketplaces"}'
+```
+
+## Publishing Checklist
+
+- Input schema is clear for non-technical users.
+- Output format is predictable.
+- Tool keys are declared in the manifest.
+- The agent handles missing or low-quality search results.

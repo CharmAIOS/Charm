@@ -5,11 +5,43 @@ description: Optimize your agent's presence on the Charm Store.
 
 # Store Listing Best Practices
 
-{/* TODO: Write listing guide covering:
-  - Persona configuration: name, description, full_description
-  - Assets: icon (512x512), banner (1200x600)
-  - Tags: choosing the right categories
-  - Writing compelling descriptions (Markdown supported)
-  - SEO tips for discoverability
-  - Version updates and changelogs
-*/}
+A strong Store listing helps users understand what your agent does, when to use it, and what they will get back.
+
+## Listing Metadata
+
+Store metadata comes from `persona` in `charm.yaml`:
+
+```yaml
+persona:
+  name: "Research Assistant"
+  version: "0.1.0"
+  description: "Create concise research briefs from a topic."
+  authors: ["Your Name"]
+  tags: ["productivity", "research"]
+```
+
+## Description
+
+Use `description` for a short one-line summary. Use `full_description` for:
+
+- use cases,
+- examples,
+- limitations,
+- expected output,
+- setup requirements.
+
+## Assets
+
+Recommended assets:
+
+- square icon,
+- wide banner,
+- screenshots or examples when supported.
+
+## Tags
+
+Choose tags that match what users are searching for. Avoid stuffing unrelated tags.
+
+## Version Updates
+
+Update `persona.version` when you publish a new agent version. Use release notes or changelog entries for user-visible changes.

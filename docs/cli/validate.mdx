@@ -5,9 +5,57 @@ description: Run static analysis on your agent project before deployment.
 
 # charm validate
 
-{/* TODO: Document charm validate command:
-  - Usage: `charm validate [path]`
-  - Checks performed: schema, paths, entry point, Node readiness
-  - Example output
-  - How to fix common validation errors
-*/}
+Validate a Charm agent before running or publishing it.
+
+## Usage
+
+```bash
+charm validate [path]
+```
+
+If no path is provided, Charm validates the current directory.
+
+```bash
+charm validate .
+```
+
+## What It Checks
+
+Validation catches common project issues, including:
+
+- missing `charm.yaml`,
+- invalid manifest schema,
+- unsupported adapter type,
+- invalid auth provider names,
+- missing or invalid entry point,
+- absolute paths that will not work in cloud runtimes,
+- pricing configuration issues,
+- policy configuration issues,
+- interface and state schema issues.
+
+## When to Run It
+
+Run validation:
+
+- after editing `charm.yaml`,
+- before `charm push`,
+- before opening a PR for a template,
+- before testing in Docker.
+
+## Fixing Errors
+
+Common fixes:
+
+- Make sure `charm.yaml` is at the project root.
+- Confirm `runtime.adapter.entry_point` points to an importable object.
+- Use supported lifecycle values: `serverless`, `interactive`, or `daemon`.
+- Declare secrets as environment variables instead of hardcoding them.
+- Use relative paths instead of machine-specific absolute paths.
+
+## Next Step
+
+After validation passes, run locally:
+
+```bash
+charm run . --input "Hello"
+```

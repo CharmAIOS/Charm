@@ -5,13 +5,42 @@ description: Simulate the cloud runtime environment locally with Docker.
 
 # Docker Sandbox
 
-{/* TODO: Write Docker sandbox guide covering:
-  - What it does: simulates the exact Cloud Runner container locally
-  - Prerequisites: Docker Desktop / Engine running, charmos[runner] installed
-  - `charm run . --input "text" --docker`
-  - `--mock-oauth` for simulating OAuth tokens
-  - `--mock-skills` for isolated testing without MCP connections
-  - How it maps to production (runner-standard vs runner-full images)
-  - Debugging container issues
-  - Differences between local Docker and cloud execution
-*/}
+Docker sandbox mode runs your agent in a local container so you can catch runtime issues before publishing.
+
+## Prerequisites
+
+- Docker Desktop or Docker Engine.
+- `charmos[runner]` installed.
+
+## Run in Docker
+
+```bash
+charm run . --input "Hello" --docker
+```
+
+With JSON:
+
+```bash
+charm run . --json '{"message": "Hello"}' --docker
+```
+
+## Mock OAuth and Skills
+
+```bash
+charm run . --json '{"message": "Check my calendar"}' --docker --mock-oauth
+charm run . --json '{"message": "Use a tool"}' --docker --mock-skills
+```
+
+## Why Use It
+
+Docker mode helps catch:
+
+- missing dependencies,
+- Linux/runtime differences,
+- hardcoded local paths,
+- missing environment variables,
+- mode mismatches between `standard` and `full`.
+
+## Limits
+
+Local Docker is close to the cloud runtime, but not identical. Always run a staging or Store smoke test before relying on production behavior.

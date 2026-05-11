@@ -7,12 +7,6 @@ description: API, SDK, CLI, and manifest reference material for Charm.
 
 This section will collect reference material that should be easy to scan and stable across releases.
 
-{/* TODO:
-  - Decide final grouping between CLI, SDK, manifest, and platform APIs.
-  - Add generated API references where possible.
-  - Link reference pages to versioned docs once docs versioning is enabled.
-*/}
-
 ## Planned Reference Areas
 
 - CLI commands.
@@ -20,4 +14,17 @@ This section will collect reference material that should be easy to scan and sta
 - `charm.yaml` manifest schema.
 - Runner and platform API surfaces.
 - Adapter and lifecycle compatibility.
+
+## Available References
+
+- [SDK Reference](/references/sdk): public Python package surface and versioning guidance.
+- [Platform API Reference](/references/api): API groups used by the Store, runner, billing, and integrations.
+- [Manifest Reference](/references/manifest): `charm.yaml` fields and configuration model.
+- [CLI Commands](/cli/init): command-specific reference pages.
+
+## Reference Philosophy
+
+Guides explain how to complete a workflow. References explain exact fields, commands, endpoints, and compatibility expectations.
+
+When adding new public behavior, update the relevant reference page or leave an explicit placeholder until generated docs are available.
 

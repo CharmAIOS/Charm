@@ -5,12 +5,72 @@ description: Set up your local development environment for contributing to Charm
 
 # Development Environment
 
-{/* TODO: Write dev setup guide covering (extract from CONTRIBUTING.md):
-  - Prerequisites: Python 3.10+, git, uv, Docker
-  - Fork & clone
-  - Create virtual environment (uv venv)
-  - Install dev dependencies: `uv pip install -e ".[runner,dev]"`
-  - Build base image: `docker build -f Dockerfile.base -t charm-runner-base:latest .`
-  - Run tests: `pytest`
-  - Pre-commit hooks
-*/}
+Use this guide to set up the `Charm` repository for local development.
+
+## Prerequisites
+
+- Python 3.10 or newer.
+- Git.
+- [`uv`](https://github.com/astral-sh/uv).
+- Docker Desktop or Docker Engine for runner and sandbox testing.
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/CharmAIOS/Charm.git
+cd Charm
+```
+
+If you plan to submit a pull request, fork the repository first and clone your fork.
+
+## Create a Virtual Environment
+
+```bash
+uv venv
+```
+
+Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+On Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+## Install Development Dependencies
+
+```bash
+uv pip install -e ".[runner,dev]"
+```
+
+## Build the Local Runner Base Image
+
+Some runner tests and Docker sandbox flows require the base image:
+
+```bash
+docker build -f Dockerfile.base -t charm-runner-base:latest .
+```
+
+## Run Tests
+
+```bash
+pytest
+```
+
+## Validate a Template
+
+```bash
+charm init /tmp/my-agent --template python
+charm validate /tmp/my-agent
+```
+
+## Before Opening a PR
+
+- Run relevant tests.
+- Update docs when behavior changes.
+- Avoid committing secrets or local environment files.
+- Fill out the PR template with test evidence and release notes.

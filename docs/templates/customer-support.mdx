@@ -5,4 +5,37 @@ description: A conversational support agent template with multi-turn thread hand
 
 # Customer Support Agent Template
 
-{/* TODO: Document the customer-support-agent template from src/charm/templates/customer-support-agent.yaml */}
+Use this template for agents that triage customer requests, draft replies, or guide users through support workflows.
+
+## Use Case
+
+- FAQ answering.
+- Ticket triage.
+- Reply drafting.
+- Troubleshooting flows.
+
+## Typical Inputs
+
+- Customer message.
+- Product area.
+- Urgency.
+- Optional account or context fields.
+
+## Runtime Notes
+
+Support agents should produce clear, empathetic, and safe responses. If the agent depends on private account data, declare OAuth or API key requirements explicitly.
+
+## Development Flow
+
+```bash
+charm init support-agent --template customer-support
+cd support-agent
+charm validate .
+charm run . --json '{"message": "I cannot log in"}'
+```
+
+## Publishing Checklist
+
+- Tone is appropriate for customer-facing output.
+- The agent asks clarifying questions when needed.
+- Sensitive account actions require human confirmation.

@@ -5,16 +5,51 @@ description: Choose the right container environment for your agent.
 
 # Base Images
 
-{/* TODO: Write base images guide covering:
-  - Two runtime environments:
-    1. **Standard** (`mode: "standard"`) — Lightweight Python, ~400MB, fast cold start
-       - Pre-installed: pandas, numpy, scipy, requests, beautifulsoup4
-       - Python 3.12, no browser, no Node.js
-    2. **Full** (`mode: "full"`) — Heavy-duty multimedia & polyglot, ~2GB
-       - Node.js 20, Headless Chrome, FFmpeg
-       - For: Selenium, Playwright, Remotion, OpenClaw skills
-  - Configuration: `runtime.mode: "standard" | "full"`
-  - Shared specs: 2GB RAM, 1 vCPU, 600s timeout
-  - When to use which
-  - Contributing custom base images (link to oss/base-image)
-*/}
+Charm runs agents inside managed container images. Choose the smallest image that supports your workload.
+
+## Configure Runtime Mode
+
+```yaml
+runtime:
+  mode: "standard"
+```
+
+Valid values:
+
+- `standard`
+- `full`
+
+## Standard Runtime
+
+Use `standard` for most Python agents.
+
+Best for:
+
+- text processing,
+- API calls,
+- lightweight data workflows,
+- RAG-style agents,
+- simple LangChain/LangGraph/custom agents.
+
+It is optimized for lower cold-start time and smaller dependency footprint.
+
+## Full Runtime
+
+Use `full` when the agent needs browser, multimedia, or Node.js support.
+
+Best for:
+
+- Playwright, Selenium, Puppeteer,
+- FFmpeg or audio/video workflows,
+- OpenClaw agents,
+- Node.js agents,
+- Remotion or browser-rendered output.
+
+## Choosing a Mode
+
+Start with `standard`. Move to `full` only when a dependency requires it.
+
+## Related Pages
+
+- [Execution Modes](/platform/execution-modes)
+- [Base Image Contributions](/oss/base-image)

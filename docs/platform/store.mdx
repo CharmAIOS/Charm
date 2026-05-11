@@ -5,11 +5,46 @@ description: The world's first app store for AI agents.
 
 # Charm Store
 
-{/* TODO: Write Store overview covering:
-  - What the Charm Store is
-  - How users discover and install agents
-  - Agent cards and listing pages
-  - One-click execution
-  - Ratings and reviews (if applicable)
-  - For developers: how publishing works (link to quickstart/publish)
-*/}
+Charm Store is the user-facing marketplace for published Charm agents.
+
+## What Users See
+
+Store listings can include:
+
+- agent name and description,
+- author,
+- tags,
+- pricing,
+- supported inputs,
+- run history or app UI,
+- OAuth requirements,
+- install or execute actions.
+
+## What Developers Publish
+
+Developers publish an agent bundle and manifest with:
+
+```bash
+charm push .
+```
+
+The Store reads metadata from `charm.yaml`, including:
+
+- `persona`,
+- `pricing`,
+- `interface`,
+- `auth`,
+- `runtime`.
+
+## Execution
+
+When a user runs an agent, the Store sends the request to the runner. The runner validates auth, billing, runtime mode, environment variables, and bundle location before starting execution.
+
+## Developer Checklist
+
+- Use clear names and descriptions.
+- Keep input fields understandable for non-technical users.
+- Validate the manifest before publishing.
+- Test the Store page after publishing.
+
+Continue with [Publish](/quickstart/publish).

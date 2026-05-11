@@ -5,16 +5,46 @@ description: Extend your agent with plug-and-play skills from Git, NPM, PyPI, an
 
 # Skills & MCP Tools
 
-{/* TODO: Write skills guide covering:
-  - What skills are (MCP-compatible tools mounted into the runtime)
-  - Supported sources:
-    1. Git: `source: "git:https://github.com/..."`
-    2. Zip: `source: "https://example.com/skill.zip"`
-    3. NPM: `source: "npm:@package/name"`
-    4. PyPI: `source: "pip:package-name"`
-  - Version pinning (branch, tag, commit hash)
-  - Configuration in charm.yaml (runtime.skills array)
-  - Requires mode: "full"
-  - Example configurations
-  - How the skill installer works
-*/}
+Skills extend an agent with external tools or MCP-compatible capabilities.
+
+## When to Use Skills
+
+Use skills when your agent needs capabilities beyond normal Python or Node code, such as:
+
+- browser tools,
+- service integrations,
+- local automation wrappers,
+- MCP servers,
+- reusable task-specific tooling.
+
+## Configure Skills
+
+Skills belong under `runtime.skills` in `charm.yaml`.
+
+```yaml
+runtime:
+  skills:
+    - name: "my-skill"
+      source: "git:https://github.com/example/my-skill"
+```
+
+## Source Types
+
+Supported sources may include:
+
+- Git repositories.
+- HTTPS zip archives.
+- NPM packages.
+- PyPI packages.
+- Local development sources.
+
+## Runtime Mode
+
+Many skills require `mode: "full"` because they need browser, Node.js, or system-level dependencies.
+
+## Best Practices
+
+- Pin versions where possible.
+- Document required secrets.
+- Keep skill dependencies small.
+- Test with Docker before publishing.

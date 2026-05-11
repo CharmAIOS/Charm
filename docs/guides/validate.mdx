@@ -5,12 +5,38 @@ description: Validate your agent configuration before deployment.
 
 # Validation
 
-{/* TODO: Write validation guide covering:
-  - `charm validate` — what it checks
-  - Schema validation (UAC spec compliance)
-  - Path portability scan (no absolute paths)
-  - Entry point verification (import + signature check)
-  - Node.js readiness (package.json validation)
-  - How to fix common validation errors
-  - Relationship to `charm push` (push runs validate automatically)
-*/}
+Validation checks whether your project is ready to run and publish.
+
+## Run Validation
+
+```bash
+charm validate .
+```
+
+## What Validation Covers
+
+- `charm.yaml` exists.
+- Manifest schema is valid.
+- Adapter type is supported.
+- Entry point is importable or executable.
+- Auth providers are recognized.
+- Policies and pricing are well-formed.
+- Paths are portable.
+- Interface schema is valid.
+
+## Common Fixes
+
+- Put `charm.yaml` at the project root.
+- Match `runtime.adapter.entry_point` to your actual module/object.
+- Use relative paths.
+- Declare required environment variables.
+- Update `persona.version` before publishing a new version.
+
+## Before Publishing
+
+Always run:
+
+```bash
+charm validate .
+charm run . --input "Hello"
+```

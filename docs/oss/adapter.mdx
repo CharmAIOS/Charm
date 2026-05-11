@@ -5,12 +5,39 @@ description: Build and contribute a new agent framework adapter for Charm.
 
 # Write a Custom Adapter
 
-{/* TODO: Write adapter plugin guide covering:
-  - The BaseAdapter interface (src/charm/adapters/base.py)
-  - Required methods: invoke(), stream(), get_state(), set_tools()
-  - Helper methods: _smart_invoke(), _smart_instantiate()
-  - Step-by-step: create a new adapter class
-  - Register it in the adapter loader
-  - Testing your adapter locally
-  - Submitting a PR
-*/}
+Adapters let Charm support different agent frameworks behind a shared runner interface.
+
+## When to Add an Adapter
+
+Add an adapter when a framework has a distinct execution model that cannot be cleanly handled by the existing adapters.
+
+## Adapter Responsibilities
+
+An adapter should define how to:
+
+- load the user's entry point,
+- pass inputs into the framework,
+- stream or return output,
+- surface errors,
+- handle tools or state when supported.
+
+## Development Steps
+
+1. Study the closest existing adapter.
+2. Add the adapter implementation.
+3. Register the adapter type.
+4. Add or update manifest validation.
+5. Add a minimal template or example.
+6. Add tests.
+7. Update docs.
+
+## Testing
+
+Test locally with:
+
+```bash
+charm validate path/to/example
+charm run path/to/example --input "Hello"
+```
+
+Use Docker mode if the adapter depends on runtime image behavior.

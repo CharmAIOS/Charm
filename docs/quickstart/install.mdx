@@ -5,11 +5,97 @@ description: Install the Charm CLI and set up your local development environment
 
 # Installation
 
-{/* TODO: Write installation guide covering:
-  - Prerequisites (Python 3.10+, uv recommended)
-  - Standard Setup: `uv add charmos` / `pip install charmos`
-  - Advanced Setup (Runner): `uv add charmos[runner]` / `pip install charmos[runner]`
-  - Docker requirement for sandbox mode
-  - Verify installation: `charm --version`
-  - IDE setup for charm.yaml auto-completion (VS Code + YAML extension)
-*/}
+Install Charm locally so you can create, validate, run, and publish agents from your terminal.
+
+## Prerequisites
+
+Before installing Charm, make sure you have:
+
+- Python 3.10 or newer.
+- `pip` or [`uv`](https://github.com/astral-sh/uv).
+- Git.
+- Docker Desktop or Docker Engine if you want to test agents in the local container sandbox.
+
+`uv` is recommended because it creates fast, reproducible Python environments.
+
+## Install with uv
+
+For agent development:
+
+```bash
+uv add charmos
+```
+
+For local runner and Docker sandbox testing:
+
+```bash
+uv add "charmos[runner]"
+```
+
+## Install with pip
+
+For agent development:
+
+```bash
+pip install charmos
+```
+
+For local runner and Docker sandbox testing:
+
+```bash
+pip install "charmos[runner]"
+```
+
+## Verify the CLI
+
+Run:
+
+```bash
+charm --help
+```
+
+You should see the available Charm commands, including `init`, `run`, `validate`, `push`, `logs`, and `auth`.
+
+## Optional: Create a Project Virtual Environment
+
+If you are working inside an agent repository, create and activate a virtual environment first.
+
+```bash
+python -m venv .venv
+```
+
+On macOS or Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+On Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Then install Charm:
+
+```bash
+pip install "charmos[runner]"
+```
+
+## Optional: Docker Sandbox
+
+Charm can run agents locally in a container that more closely matches the cloud runtime.
+
+To use sandbox mode:
+
+1. Install `charmos[runner]`.
+2. Start Docker.
+3. Run your agent with `--docker`.
+
+```bash
+charm run . --input "Hello from Docker" --docker
+```
+
+## Next Step
+
+Continue to [Build Your First Agent](/quickstart/first-app).

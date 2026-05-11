@@ -5,12 +5,37 @@ description: Coding standards, linting, and quality tools used in the Charm proj
 
 # Code Style & Standards
 
-{/* TODO: Write code style guide covering:
-  - Ruff (linter + formatter): config in pyproject.toml
-  - mypy (type checking): strict mode settings
-  - pytest (testing): test structure and conventions
-  - pre-commit hooks
-  - Line length: 100
-  - Python target: 3.11
-  - Import ordering (isort via ruff)
-*/}
+This page documents the expected code quality standards for Charm contributions.
+
+## General Principles
+
+- Keep changes focused.
+- Prefer readable code over clever code.
+- Match nearby patterns.
+- Add tests for behavior changes.
+- Avoid unrelated refactors in feature or bugfix PRs.
+
+## Python
+
+Use the repository's configured tooling from `pyproject.toml`.
+
+Expected checks may include:
+
+- linting,
+- formatting,
+- type checking,
+- tests.
+
+## Tests
+
+Use focused tests for the changed behavior. Critical paths such as auth, billing, runner execution, package publishing, and migrations should have stronger coverage.
+
+## Imports and Dependencies
+
+- Avoid adding dependencies unless necessary.
+- Prefer standard library or existing project dependencies.
+- Keep runtime dependencies separate from development-only dependencies.
+
+## Docs and Examples
+
+If a public API, CLI command, manifest field, or template behavior changes, update docs in the same PR or leave a clear follow-up issue.

@@ -1,0 +1,67 @@
+---
+title: Features
+description: High-level index of Charm platform capabilities.
+---
+
+# Features
+
+This page is a placeholder index for Charm's platform feature documentation.
+
+Use this page as a map of the major product capabilities available to agent builders and users.
+
+## Planned Feature Areas
+
+## Server-Driven UI
+
+Charm uses the `interface` section of `charm.yaml` to render user input forms and structure agent output. This lets builders ship useful app surfaces without writing a full frontend for every agent.
+
+See [UI Protocol](/platform/ui-protocol).
+
+## Managed Keys and Secrets
+
+Agents can declare required environment variables in the manifest. The platform resolves managed keys at runtime instead of requiring users to hardcode secrets.
+
+See [Keys](/platform/keys).
+
+## OAuth Integrations
+
+Agents can require user-authorized accounts such as Google or GitHub. Charm Store prompts users to connect accounts, and the runner injects provider tokens into the runtime.
+
+See [OAuth](/platform/oauth).
+
+## Threads and Memory
+
+Threaded runs allow interactive agents to keep conversation context and display prior messages in the Store UI.
+
+See [Threads](/platform/threads).
+
+## Observability and Run History
+
+Charm records runs, status events, logs, and usage metadata so creators can debug production behavior.
+
+See [Observability](/platform/observability).
+
+## Payments and Creator Revenue
+
+Charm supports pricing metadata, wallet balance checks, checkout flows, and creator revenue tracking for commercial agents.
+
+See [Earn as You Go](/platform/earn-as-you-go).
+
+## Interactive Runs
+
+Interactive lifecycle agents stream real-time responses through the interactive worker.
+
+See [Interactive Agent Template](/templates/interactive).
+
+## Daemon Runs
+
+Daemon lifecycle agents run as long-lived machines for persistent background behavior.
+
+See [Daemon Agent Template](/templates/daemon).
+
+## Ambient Desktop Companion
+
+Charm's desktop companion direction is intended for agents that need local context, file access, hardware awareness, or persistent desktop workflows.
+
+See [Ambient Desktop Companion](/platform/ambient-desktop-companion).
+

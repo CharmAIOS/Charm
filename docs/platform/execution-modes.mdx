@@ -5,15 +5,61 @@ description: Understand serverless, interactive, and daemon execution lifecycles
 
 # Execution Modes
 
-{/* TODO: Write execution modes guide covering:
-  - Three lifecycle modes:
-    1. **Serverless** (default): Fire-and-forget task execution. Cold start → run → terminate.
-    2. **Interactive**: Multi-turn conversational mode with thread-based state.
-    3. **Daemon**: 24/7 always-on agent. Ideal for monitoring, Slack bots, long-running services.
-  - Configuration: `runtime.lifecycle: "serverless" | "interactive" | "daemon"`
-  - Infrastructure mapping:
-    - Serverless → Google Cloud Run (auto-scaling)
-    - Daemon → Fly.io (persistent VMs)
-  - Comparison table (startup time, state, cost, use cases)
-  - Choosing the right mode for your agent
-*/}
+Charm supports three execution lifecycles. Choose the lifecycle that matches how your agent should behave for users.
+
+## Configure Lifecycle
+
+```yaml
+runtime:
+  lifecycle: "serverless"
+```
+
+Valid values:
+
+- `serverless`
+- `interactive`
+- `daemon`
+
+## Comparison
+
+| Lifecycle | Best For | Runtime Behavior | State |
+| --- | --- | --- | --- |
+| `serverless` | One-off tasks, reports, transformations | Start, run, stop | Short-lived |
+| `interactive` | Chat, streaming, multi-turn UX | Route through interactive worker | Thread-based |
+| `daemon` | Background workers, bots, monitors | Long-lived machine | Persistent process |
+
+## Serverless
+
+Serverless is the default lifecycle. Use it for tasks that can complete within a bounded execution window.
+
+Examples:
+
+- summarize a document,
+- generate a report,
+- transform data,
+- call external APIs.
+
+## Interactive
+
+Interactive agents stream responses back to the user and work well for conversational interfaces.
+
+Use this for:
+
+- chat agents,
+- multi-turn assistants,
+- agents that need immediate UI feedback.
+
+## Daemon
+
+Daemon agents run as long-lived machines. Use them when the agent needs to keep running after the initial request.
+
+Use this for:
+
+- Slack or Discord bots,
+- monitors,
+- scheduled or event-driven agents,
+- persistent background workflows.
+
+## Choosing a Mode
+
+Start with `serverless` unless you specifically need streaming or always-on behavior. Move to `interactive` for chat UX and to `daemon` for background processes.

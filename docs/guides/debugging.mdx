@@ -5,14 +5,54 @@ description: Troubleshoot common issues when developing Charm agents.
 
 # Debugging
 
-{/* TODO: Write debugging guide covering:
-  - `--debug` global flag (verbose logging, stack traces)
-  - Common error patterns and solutions
-  - Connection errors
-  - Import errors (entry_point misconfigured)
-  - OOM crashes (exceeding 2GB RAM)
-  - Timeout issues (600s limit)
-  - Docker-specific debugging
-  - Using `charm logs` for cloud execution issues
-  - Discord community for support
-*/}
+Use this guide to troubleshoot common local and cloud execution issues.
+
+## Start with Validation
+
+```bash
+charm validate .
+```
+
+Fix manifest and entry point issues before debugging runtime behavior.
+
+## Run with Debug Logs
+
+```bash
+charm run . --input "Hello" --debug
+```
+
+## Common Issues
+
+### Import or Entry Point Error
+
+Check `runtime.adapter.entry_point` and make sure the module/object exists.
+
+### Missing Environment Variable
+
+Declare required keys in `charm.yaml` and provide local values in `.env`.
+
+### Timeout
+
+Reduce long-running work or move persistent behavior to daemon lifecycle.
+
+### Out of Memory
+
+Avoid loading large local models or large datasets into memory.
+
+### Works Locally but Fails in Cloud
+
+Run Docker sandbox mode:
+
+```bash
+charm run . --input "Hello" --docker
+```
+
+Then check cloud logs:
+
+```bash
+charm logs --path .
+```
+
+## Getting Help
+
+If you are blocked, open an issue or ask in Discord with validation output, logs, and reproduction steps.

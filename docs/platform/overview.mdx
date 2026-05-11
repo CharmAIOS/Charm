@@ -5,14 +5,56 @@ description: An overview of the Charm cloud infrastructure and what it provides.
 
 # The Charm Platform
 
-{/* TODO: Write platform overview covering:
-  - What the Charm Platform is (Cloud Runner + Store + Desktop)
-  - Key capabilities:
-    1. Isolated container execution
-    2. Secret injection and OAuth
-    3. Server-driven UI rendering
-    4. Billing and monetization
-    5. Observability and logging
-  - Infrastructure stack (Google Cloud Run, Fly.io, Supabase)
-  - SLA and reliability
-*/}
+The Charm Platform turns agent projects into hosted applications. It provides the runtime, publishing, billing, authentication, and observability layers around your agent code.
+
+## What the Platform Includes
+
+Charm is made of several coordinated surfaces:
+
+- **Charm CLI**: creates, validates, runs, and publishes agents.
+- **Charm Store**: hosts published agents and user-facing app pages.
+- **Cloud Runner**: executes serverless and interactive agents in isolated runtimes.
+- **Daemon Runtime**: runs long-lived agents on Fly.io-backed machines.
+- **Studio and Observability**: tracks runs, logs, usage, and revenue.
+- **Docs and Templates**: help builders create compatible agents quickly.
+
+## Core Capabilities
+
+### Isolated Execution
+
+Agents run in managed environments so users do not need to provision infrastructure for every app.
+
+### Secrets and OAuth
+
+Charm can inject platform-managed API keys and user-authorized OAuth tokens into the runtime when declared in `charm.yaml`.
+
+### Server-Driven UI
+
+The manifest defines the input schema and output expectations so the Store can render a usable app without custom frontend code.
+
+### Billing and Monetization
+
+Charm supports wallet balance checks, pricing metadata, subscriptions or one-time purchase flows, and creator revenue tracking.
+
+### Observability
+
+Runs, logs, traces, and status events help creators understand how their agents behave in production.
+
+## Runtime Lifecycles
+
+- **Serverless**: short-lived task execution.
+- **Interactive**: real-time streaming conversations.
+- **Daemon**: always-on or long-running background agents.
+
+See [Execution Modes](/platform/execution-modes) for details.
+
+## Infrastructure
+
+Charm currently uses a combination of:
+
+- Google Cloud Run for the runner services,
+- Supabase for auth and application data,
+- Fly.io for daemon machines,
+- Docker images for standard and full runtimes.
+
+The exact production architecture may evolve, but the developer-facing contract is the manifest, CLI, and Store publishing flow.

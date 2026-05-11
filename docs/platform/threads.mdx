@@ -5,14 +5,32 @@ description: Manage conversational memory and thread-based state for interactive
 
 # Threads & State
 
-{/* TODO: Write threads guide covering:
-  - What threads are (persistent conversation sessions)
-  - Thread ID management
-  - State snapshots and recovery
-  - Workspace isolation:
-    - Serverless/Interactive: per-thread workspace
-    - Daemon: shared workspace across all threads
-  - Chat history injection (__charm_history__, CHARM_HISTORY env var)
-  - State persistence via __charm_state__
-  - Use cases: multi-turn conversations, follow-up queries
-*/}
+Threads represent ongoing user-agent sessions. They are especially important for interactive agents that need conversation history.
+
+## What Threads Provide
+
+- Multi-turn context.
+- Message history.
+- Run grouping.
+- Follow-up questions.
+- User-visible conversation state.
+
+## Thread IDs
+
+The Store passes a thread ID when a run belongs to an existing conversation. Agents can use this ID to associate output with a specific user session.
+
+## State Snapshots
+
+Some runtimes may receive state snapshots or history payloads. Agents should treat these as user/session context, not as global memory.
+
+## Workspace Isolation
+
+- Serverless and interactive runs should treat each run/thread as isolated.
+- Daemon agents may share a longer-lived workspace depending on implementation.
+
+## Use Cases
+
+- Chat assistants.
+- Iterative research.
+- Follow-up edits.
+- Support conversations.

@@ -5,10 +5,34 @@ description: Use LangGraph stateful graphs with the Charm platform.
 
 # LangGraph Adapter
 
-{/* TODO: Document LangGraph adapter covering:
-  - Configuration: `adapter.type: "langgraph"` + `entry_point: "module:graph"`
-  - How Charm wraps LangGraph's compiled graph
-  - State management and checkpointing
-  - Input/output mapping
-  - Example charm.yaml + agent code
-*/}
+Use the LangGraph adapter for stateful graph-based agents.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "langgraph"
+    entry_point: "src.main:graph"
+```
+
+## Runtime Behavior
+
+Charm loads the compiled graph and invokes it with the input payload from the Store. Thread or state behavior depends on how your graph is configured.
+
+## Best For
+
+- Multi-step workflows.
+- Graph-based agent control flow.
+- Stateful assistants.
+- Agents with conditional routing.
+
+## State Notes
+
+If your graph needs durable state, document the expected storage/checkpointing behavior clearly and test it in the target lifecycle.
+
+## Tips
+
+- Keep graph inputs aligned with `interface.input`.
+- Validate state shape before publishing.
+- Use interactive lifecycle for chat UX and daemon lifecycle for persistent background behavior.

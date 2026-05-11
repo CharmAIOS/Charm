@@ -5,10 +5,44 @@ description: Manage your Charm developer authentication and credentials.
 
 # charm auth
 
-{/* TODO: Document charm auth commands:
-  - `charm auth login` — browser OAuth flow
-  - `charm auth whoami` — check current session
-  - `charm auth manual --token <TOKEN>` — headless/CI authentication
-  - `charm auth logout` — purge local credentials
-  - Credential storage: ~/.charm/config.toml
-*/}
+Manage the local credentials used by the Charm CLI.
+
+## Sign In
+
+```bash
+charm auth login
+```
+
+This opens the browser-based login flow and stores a local token for future commands such as `charm push` and `charm logs`.
+
+## Check Current User
+
+```bash
+charm auth whoami
+```
+
+Use this before publishing if you are unsure which account the CLI will use.
+
+## Manual Token
+
+For headless environments or CI-style workflows:
+
+```bash
+charm auth manual --token <TOKEN>
+```
+
+Only use manual tokens in trusted environments.
+
+## Sign Out
+
+```bash
+charm auth logout
+```
+
+This removes local Charm credentials.
+
+## Credential Storage
+
+The CLI stores local configuration under the user's Charm config directory, commonly `~/.charm/config.toml`.
+
+Do not commit local credential files.

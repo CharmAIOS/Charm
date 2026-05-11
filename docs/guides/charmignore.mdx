@@ -5,11 +5,40 @@ description: Control which files are excluded from your agent bundle.
 
 # .charmignore
 
-{/* TODO: Write .charmignore documentation covering:
-  - What .charmignore is (gitignore-style exclusion for charm push)
-  - Default exclusions (.venv, node_modules, .git, __pycache__)
-  - Syntax rules (glob patterns)
-  - Maximum bundle size: 50 MB
-  - Example .charmignore file
-  - Tips for reducing bundle size
-*/}
+`.charmignore` controls which files are excluded when `charm push` bundles your project.
+
+## Why It Matters
+
+Exclude files that are large, private, generated, or irrelevant to runtime execution.
+
+## Example
+
+```gitignore
+.env
+.venv/
+node_modules/
+__pycache__/
+.git/
+dist/
+build/
+*.log
+*.csv
+```
+
+## Best Practices
+
+- Never publish secrets.
+- Exclude virtual environments.
+- Exclude local datasets unless the agent truly needs them.
+- Exclude build caches.
+- Keep bundles small and reproducible.
+
+## Before Publishing
+
+Use:
+
+```bash
+charm push . --dry-run
+```
+
+to inspect what will be uploaded.

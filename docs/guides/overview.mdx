@@ -5,9 +5,60 @@ description: The complete developer workflow for building, testing, and deployin
 
 # Developer Guide
 
-{/* TODO: Write developer guide overview covering:
-  - The build cycle: Init → Configure → Develop → Test → Deploy
-  - Diagram of the developer workflow
-  - Links to each sub-section
-  - Prerequisites recap
-*/}
+This guide covers the normal workflow for building Charm agents.
+
+## Developer Workflow
+
+```text
+Initialize -> Configure -> Develop -> Validate -> Run -> Publish -> Observe
+```
+
+## 1. Initialize
+
+Start from a template:
+
+```bash
+charm init my-agent --template python
+```
+
+See [Build Your First Agent](/quickstart/first-app).
+
+## 2. Configure
+
+Edit `charm.yaml` to define identity, inputs, runtime, pricing, auth, and policies.
+
+See [Configuration](/guides/manifest).
+
+## 3. Develop
+
+Write agent logic in the entry point declared in the manifest.
+
+See [Local Execution](/guides/local-run).
+
+## 4. Validate
+
+```bash
+charm validate .
+```
+
+See [Validation](/guides/validate).
+
+## 5. Run
+
+```bash
+charm run . --input "Hello"
+```
+
+Use Docker mode to simulate the cloud runtime.
+
+## 6. Publish
+
+```bash
+charm push .
+```
+
+See [Publishing](/guides/push).
+
+## 7. Observe
+
+Use Store, Studio, and CLI logs to inspect production behavior.

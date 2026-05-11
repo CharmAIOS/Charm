@@ -5,11 +5,36 @@ description: Run JavaScript/TypeScript agents on the Charm platform.
 
 # Node.js Adapter
 
-{/* TODO: Document Node.js adapter covering:
-  - Configuration: `adapter.type: "node"` + `entry_point: "npm start"`
-  - Requires mode: "full" (Node.js 20 LTS pre-installed)
-  - package.json requirements
-  - How the runner executes Node processes
-  - Use cases: Remotion, Puppeteer, Vercel AI SDK
-  - Example charm.yaml + package.json + agent code
-*/}
+Use the Node.js adapter for JavaScript or TypeScript agents.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "node"
+    entry_point: "npm start"
+  mode: "full"
+```
+
+The full runtime is recommended because it includes Node.js and system dependencies commonly needed by browser or media workflows.
+
+## Requirements
+
+- `package.json`.
+- A start script or command that runs the agent.
+- Clear input/output contract.
+
+## Best For
+
+- Vercel AI SDK projects.
+- Browser automation.
+- Remotion or multimedia workflows.
+- Existing Node.js agent code.
+
+## Tips
+
+- Keep install size reasonable.
+- Commit lockfiles when possible.
+- Use environment variables for secrets.
+- Prefer `mode: "standard"` only if the runtime supports your Node requirements.

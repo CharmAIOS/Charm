@@ -5,11 +5,38 @@ description: Use pure Python functions or classes as Charm agents.
 
 # Custom Python Adapter
 
-{/* TODO: Document Custom adapter covering:
-  - Configuration: `adapter.type: "custom"` + `entry_point: "module:function_or_class"`
-  - Function signature: `def run(inputs, callbacks=None) -> dict`
-  - Class signature: class with invoke() method
-  - Auto-instantiation behavior
-  - Input/output mapping
-  - Example charm.yaml + agent code
-*/}
+Use the custom adapter when your agent is a plain Python function or class.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+```
+
+## Supported Shape
+
+The entry point can be an object with an `invoke` method:
+
+```python
+class Agent:
+    def invoke(self, inputs: dict, **kwargs) -> dict:
+        return {"output": "Hello"}
+
+agent = Agent()
+```
+
+Or a callable function, depending on the template and runtime wrapper.
+
+## Input and Output
+
+Inputs come from `interface.input` and are passed as a dictionary. Return a JSON-serializable dictionary so the Store can render the result.
+
+## Best For
+
+- Lightweight agents.
+- API wrappers.
+- Text transformation.
+- Existing Python code you want to publish quickly.

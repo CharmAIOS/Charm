@@ -5,18 +5,49 @@ description: Securely connect your agent to user accounts via Google, GitHub, an
 
 # OAuth & Identity
 
-{/* TODO: Write OAuth guide covering:
-  - What OAuth integration provides (user's tokens injected at runtime)
-  - Supported providers: Google, GitHub (extensible)
-  - Configuration in charm.yaml:
-    ```yaml
-    auth:
-      providers:
-        - name: "google"
-          scopes: ["https://www.googleapis.com/auth/calendar.readonly"]
-    ```
-  - How tokens are injected (env vars: GOOGLE_OAUTH_TOKEN, etc.)
-  - Scope strings: use official provider scope URIs
-  - User consent flow on Charm Store
-  - Testing locally: `--mock-oauth` flag
-*/}
+OAuth lets an agent ask the user to connect an external account before the agent runs.
+
+## Configure OAuth
+
+Declare providers in `charm.yaml`:
+
+```yaml
+auth:
+  providers:
+    - name: "google"
+      scopes:
+        - openid
+        - https://www.googleapis.com/auth/userinfo.email
+```
+
+The provider `name` should match the integration key configured in the OAuth provider layer.
+
+## User Flow
+
+1. The Store reads `auth.providers` from the published version.
+2. If the user has not connected the provider, the Store opens an auth modal.
+3. The user completes OAuth.
+4. The runner fetches the provider token for that user.
+5. The token is injected into the agent runtime.
+
+## Runtime Tokens
+
+Provider access tokens are exposed as environment variables such as:
+
+- `GOOGLE_ACCESS_TOKEN`
+- `GITHUB_ACCESS_TOKEN`
+- `SLACK_ACCESS_TOKEN`
+
+Do not print or store these tokens in agent output.
+
+## Local Testing
+
+Use mock OAuth locally when you need to test token-dependent code without a full provider connection:
+
+```bash
+charm run . --json '{"message": "Test"}' --mock-oauth
+```
+
+## Production Notes
+
+Production OAuth requires provider-side configuration, such as Google Cloud OAuth consent screen settings and redirect URIs.

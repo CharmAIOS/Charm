@@ -1,0 +1,51 @@
+---
+title: Docs Versioning
+description: Skeleton policy for versioned Charm documentation.
+---
+
+# Docs Versioning
+
+This page defines the planned versioning model for Charm documentation.
+
+Docs versioning keeps users from reading instructions that do not match their installed SDK or deployed platform version.
+
+## Planned Model
+
+- `latest`: follows mainline docs.
+- `vX.Y`: pinned docs for stable package releases.
+- Older versions: retained according to the support policy.
+
+## Required Links
+
+- SDK package version.
+- GitHub Release.
+- Changelog entry.
+- Upgrade notes.
+
+## Source of Truth
+
+Until a formal version switcher is implemented, `latest` docs should describe the current supported public behavior. Release notes should call out version-specific differences.
+
+## Version Mapping
+
+Each stable docs version should map to:
+
+- a Git tag,
+- a package version,
+- a changelog entry,
+- upgrade notes when needed.
+
+## Retention Policy
+
+Initial recommendation:
+
+- Keep `latest`.
+- Keep the most recent stable minor release.
+- Keep one previous stable release line when breaking changes exist.
+
+Older versions can be archived once they are no longer supported.
+
+## Deprecation Notices
+
+When behavior changes, old pages should link to the new recommended path and clearly mark deprecated commands, fields, or workflows.
+

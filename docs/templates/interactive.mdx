@@ -1,0 +1,67 @@
+---
+title: Interactive Agent Template
+description: Skeleton documentation for agents that stream real-time conversations through the interactive worker.
+---
+
+# Interactive Agent Template
+
+Interactive agents are designed for real-time conversations and streaming responses. They are routed through Charm's interactive worker instead of the standard serverless execution path.
+
+## Use Case
+
+Use this template for chat-style agents that need low-latency streaming, thread history, and real-time user interaction.
+
+## Prerequisites
+
+- Charm CLI.
+- A supported interactive runtime.
+- Published version available in Charm Store for end-to-end UI testing.
+
+## Configuration Surface
+
+Document these fields:
+
+- `runtime.lifecycle: interactive`
+- `runtime.adapter.type`
+- `interface.input`
+- `runtime.adapter.environment_variables`
+
+Example:
+
+```yaml
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:agent"
+    environment_variables:
+      - OPENAI_API_KEY
+  mode: "standard"
+  lifecycle: "interactive"
+```
+
+## How Interactive Runs Work
+
+1. The Store sends the user's message to the runner.
+2. The runner authenticates the user and creates a run record.
+3. The runner forwards the request to the interactive worker.
+4. The worker streams assistant output back to the browser.
+5. Completion callbacks persist the run and messages.
+
+## Local and Staging Testing
+
+- Use the Store UI to test thread behavior.
+- Confirm the published version has `runtime.lifecycle: interactive`.
+- Confirm the runner has `CHARM_INTERACTIVE_WORKER_URL` configured in staging or production.
+- Confirm required environment variables are available to the worker.
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+
+## Limitations
+
+Interactive agents should return quickly and stream user-facing output. Long-running background tasks are a better fit for [Daemon Agent](/templates/daemon).
+

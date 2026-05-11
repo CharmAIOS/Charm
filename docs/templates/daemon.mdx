@@ -1,0 +1,69 @@
+---
+title: Daemon Agent Template
+description: Skeleton documentation for always-on agents that run through the daemon lifecycle.
+---
+
+# Daemon Agent Template
+
+Daemon agents are always-on or long-lived agents. They are used when a task should keep running beyond a single request, maintain state between events, or respond to external triggers.
+
+## Use Case
+
+Use this template for agents that need persistent background execution, scheduled behavior, or long-lived state.
+
+## Prerequisites
+
+- Charm CLI.
+- A daemon-capable adapter such as OpenClaw.
+- Production runner configured with Fly.io daemon settings.
+
+## Configuration Surface
+
+Document these fields:
+
+- `runtime.lifecycle: daemon`
+- `runtime.mode`
+- `runtime.adapter.type`
+- `policies`
+
+Example:
+
+```yaml
+runtime:
+  adapter:
+    type: "openclaw"
+  mode: "full"
+  lifecycle: "daemon"
+```
+
+## How Daemon Runs Work
+
+1. The runner receives a daemon lifecycle request.
+2. The runner prepares the agent bundle and environment variables.
+3. A machine is created or reused in the configured Fly.io app.
+4. The daemon process starts and continues running until paused, restarted, or terminated.
+
+## Production Requirements
+
+The production runner must be configured with:
+
+- `FLY_API_TOKEN`
+- `FLY_APP_NAME`
+- optional `FLY_REGION`
+
+The Fly app acts as the machine pool for daemon agents. Individual daemon machines are created by the runner through the Fly Machines API.
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+
+## Operational Notes
+
+- Daemon agents can cost more than serverless agents because machines may stay alive.
+- Always test pause, restart, and terminate behavior.
+- Avoid hardcoded local paths.
+- Keep secrets in platform-managed environment variables, not source code.
+

@@ -5,11 +5,40 @@ description: Manage agent versions, semantic versioning, and the agentic merge u
 
 # Version Control & Upgrades
 
-{/* TODO: Write version control guide covering:
-  - Semantic versioning in charm.yaml (persona.version)
-  - How version bumps trigger upgrades for installed users
-  - Agentic Merge: what it is, how it works (bundle diff analysis)
-  - Upgrade flow: Cloud Runner detects new version → rebuilds container → redeploys
-  - Auto-restart for daemon agents
-  - Best practices for non-breaking updates
-*/}
+Charm versions are driven by the agent manifest and the published bundle.
+
+## Agent Version
+
+Update `persona.version` in `charm.yaml` when publishing a new agent version:
+
+```yaml
+persona:
+  version: "0.2.0"
+```
+
+Use semantic versioning where possible:
+
+- patch: bug fixes,
+- minor: new compatible features,
+- major: breaking changes.
+
+## Upgrade Safety
+
+Before publishing:
+
+- run validation,
+- test locally,
+- test Docker mode for runtime changes,
+- document breaking changes,
+- keep previous version available for rollback.
+
+## Daemon Agents
+
+Daemon agents may need restart or upgrade handling because they run persistently. Test daemon upgrades in staging before production.
+
+## Best Practices
+
+- Publish small changes.
+- Avoid changing input schemas without migration notes.
+- Keep changelog entries user-facing.
+- Use Git tags for important releases.

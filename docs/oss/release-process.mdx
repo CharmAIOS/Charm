@@ -1,0 +1,70 @@
+---
+title: Release Process
+description: Skeleton runbook for publishing Charm releases.
+---
+
+# Release Process
+
+This page will become the public-facing release runbook for maintainers.
+
+Charm releases should be repeatable, auditable, and driven by CI instead of local maintainer machines.
+
+## Planned Flow
+
+1. Merge approved changes.
+2. Cut release candidate.
+3. Validate staging.
+4. Generate changelog draft.
+5. Publish package artifacts.
+6. Create GitHub Release.
+7. Update docs.
+
+## Required Checks
+
+- Package build.
+- Tests.
+- Changelog draft.
+- Docs build.
+- Staging smoke tests.
+
+## Release Candidate Checklist
+
+Before publishing:
+
+- Required PR checks pass.
+- Package artifacts build successfully.
+- Docs navigation builds without missing pages.
+- Staging deploy is healthy.
+- Database migrations, if any, were validated in staging.
+- Changelog draft is generated.
+- Release owner approves the candidate.
+
+## Package Publishing
+
+Official package releases should be published from CI. Local publishing is reserved for experiments and should not be used for official releases.
+
+Preferred model:
+
+```text
+git tag vX.Y.Z -> GitHub Actions -> build -> verify -> publish -> GitHub Release
+```
+
+## Hotfixes
+
+Hotfixes should be narrow and traceable:
+
+1. Identify the broken release or deploy.
+2. Create a patch branch.
+3. Apply the smallest safe fix.
+4. Run required checks.
+5. Publish a patch release or redeploy.
+6. Document the fix in release notes.
+
+## Rollback Options
+
+- Revert and redeploy.
+- Roll back a Cloud Run revision.
+- Publish a patch package.
+- Yank a bad PyPI package if appropriate.
+- Apply a database mitigation migration.
+

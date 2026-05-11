@@ -5,11 +5,41 @@ description: Monitor your agent's cloud execution with real-time logs and the St
 
 # Observability & Logs
 
-{/* TODO: Write observability guide covering:
-  - CLI: `charm logs` for terminal-based log tailing
-  - Studio Dashboard: web-based execution monitoring
-  - What gets logged: SSE events, execution steps, errors
-  - Structured log format
-  - Debugging production issues
-  - Access control (only agent owner can read logs)
-*/}
+Charm records execution data so builders can debug and improve published agents.
+
+## What You Can Inspect
+
+- Run status.
+- Runtime logs.
+- Status events.
+- Errors.
+- Token or usage metadata when available.
+- Revenue and billing events where applicable.
+
+## CLI Logs
+
+Use:
+
+```bash
+charm logs --path . --limit 50
+```
+
+This is the fastest way to inspect recent cloud behavior from your terminal.
+
+## Studio
+
+Charm Studio provides a web dashboard for run history, usage, debugging, and revenue visibility.
+
+## Debugging Production Issues
+
+When a cloud run fails:
+
+1. Confirm the same input works locally.
+2. Run `charm validate`.
+3. Check logs.
+4. Confirm required environment variables or OAuth connections.
+5. Test in Docker if the issue looks runtime-specific.
+
+## Access Control
+
+Execution logs should only be visible to authorized owners and maintainers.

@@ -5,11 +5,96 @@ description: Create, test, and run your first Charm agent in under 5 minutes.
 
 # Build Your First Agent
 
-{/* TODO: Write 5-minute quickstart tutorial covering:
-  1. `charm init my-first-agent --template python`
-  2. Explore the generated project structure
-  3. Understand the charm.yaml manifest
-  4. `charm run . --input "Hello world"`
-  5. See the output
-  6. Next steps: publish to store, try different adapters
-*/}
+This guide creates a minimal Charm agent, runs it locally, and shows how the project is structured.
+
+## 1. Create a Project
+
+Run:
+
+```bash
+charm init my-first-agent --template python
+cd my-first-agent
+```
+
+The `python` template is the smallest starting point. It is best when you want to learn the shape of a Charm project before choosing a larger framework such as LangChain, LangGraph, CrewAI, or OpenClaw.
+
+## 2. Inspect the Project
+
+A Charm project usually has this structure:
+
+```text
+my-first-agent/
+├── charm.yaml
+├── requirements.txt or pyproject.toml
+└── src/
+    └── main.py
+```
+
+The important files are:
+
+- `charm.yaml`: the manifest that describes your agent, input form, runtime, pricing, auth, and publishing metadata.
+- `src/main.py`: the agent implementation.
+- `requirements.txt` or `pyproject.toml`: Python dependencies installed when the agent runs.
+
+## 3. Understand `charm.yaml`
+
+`charm.yaml` is the contract between your code and the Charm platform.
+
+It defines:
+
+- the name, version, description, and store metadata,
+- the input schema shown to users,
+- the runtime adapter and entry point,
+- required environment variables,
+- execution mode and lifecycle,
+- policies such as internet access and max steps.
+
+For a full schema walkthrough, see [Manifest Reference](/references/manifest).
+
+## 4. Run Locally
+
+If the template accepts a simple text input, run:
+
+```bash
+charm run . --input "Hello world"
+```
+
+If your template expects structured JSON, run:
+
+```bash
+charm run . --json '{"message": "Hello world"}'
+```
+
+Charm loads the manifest, prepares the input payload, runs the entry point, and prints the result.
+
+## 5. Validate the Manifest
+
+Before publishing, validate the project:
+
+```bash
+charm validate .
+```
+
+Validation catches common issues such as:
+
+- invalid `charm.yaml` fields,
+- missing entry points,
+- unsupported adapter configuration,
+- problematic paths,
+- pricing or auth configuration mistakes.
+
+## 6. Test in Docker
+
+If you installed `charmos[runner]` and Docker is running, test in the local sandbox:
+
+```bash
+charm run . --input "Hello world" --docker
+```
+
+Use Docker mode before publishing if your agent depends on system packages, browser support, or cloud-runtime behavior.
+
+## 7. Next Steps
+
+- Learn how publishing works in [Publish](/quickstart/publish).
+- Browse starter projects in [Templates](/templates/overview).
+- Review platform execution modes in [Execution Modes](/platform/execution-modes).

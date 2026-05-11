@@ -5,13 +5,54 @@ description: Bundle and deploy your agent to the Charm Store with a single comma
 
 # Publishing (charm push)
 
-{/* TODO: Write publishing guide covering:
-  - `charm push` workflow
-  - What gets bundled (.charmignore exclusions)
-  - Bundle size limit (50 MB)
-  - `--dry-run` option
-  - Auto-restart for existing installations
-  - Store URL auto-copy to clipboard
-  - Pre-flight validation (runs charm validate automatically)
-  - Deployment states (Active, Pending_Platform_Support)
-*/}
+Publishing uploads a versioned agent bundle to Charm Store.
+
+## Authenticate
+
+```bash
+charm auth login
+```
+
+## Validate
+
+```bash
+charm validate .
+```
+
+## Dry Run
+
+Preview without publishing:
+
+```bash
+charm push . --dry-run
+```
+
+## Publish
+
+```bash
+charm push .
+```
+
+## What Gets Bundled
+
+Charm bundles the project source, manifest, and dependency files needed to run your agent.
+
+Use `.charmignore` to exclude:
+
+- `.env`,
+- virtual environments,
+- large local datasets,
+- build output,
+- cache directories,
+- private files.
+
+## Versioning
+
+Each published version should use a unique `persona.version` in `charm.yaml`.
+
+## After Publishing
+
+- Open the Store listing.
+- Run a smoke test.
+- Confirm required OAuth or API keys are available.
+- Check logs if the run fails.

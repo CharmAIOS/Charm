@@ -5,4 +5,39 @@ description: An ETL-style data pipeline agent template for automated data proces
 
 # Data Pipeline Agent Template
 
-{/* TODO: Document the data-pipeline-agent template from src/charm/templates/data-pipeline-agent.yaml */}
+Use this template for agents that transform, validate, summarize, or route structured data.
+
+## Use Case
+
+- CSV or JSON cleanup.
+- Data validation.
+- ETL-style transformations.
+- Report generation.
+- API-to-API data movement.
+
+## Typical Inputs
+
+- File or data payload.
+- Transformation instructions.
+- Output format.
+- Validation rules.
+
+## Runtime Notes
+
+Data pipeline agents should keep memory and runtime limits in mind. For large files or long-running jobs, consider splitting the workflow or using a daemon-oriented design.
+
+## Development Flow
+
+```bash
+charm init data-agent --template data-pipeline
+cd data-agent
+charm validate .
+charm run . --json '{"task": "clean this CSV"}'
+```
+
+## Publishing Checklist
+
+- Input schema describes accepted data.
+- Output format is predictable.
+- Errors are returned clearly.
+- Large local files are excluded from bundles with `.charmignore`.

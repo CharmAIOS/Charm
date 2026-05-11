@@ -1,0 +1,78 @@
+---
+title: OAuth Integration Agent Template
+description: Skeleton documentation for agents that require user-authorized OAuth connections.
+---
+
+# OAuth Integration Agent Template
+
+OAuth integration agents require a user to connect an external account before the agent runs. Charm uses the `auth.providers` block in `charm.yaml` to declare those requirements.
+
+## Use Case
+
+Use this template when an agent needs user-authorized access to external services such as Google, GitHub, Slack, or Notion.
+
+## Prerequisites
+
+- Charm CLI.
+- Nango configured for the provider.
+- Store and runner configured with matching Nango environment variables.
+
+## Configuration Surface
+
+Document these fields:
+
+- `auth.providers`
+- `auth.providers[].name`
+- `auth.providers[].scopes`
+- provider-specific access token environment variables
+
+Example:
+
+```yaml
+auth:
+  providers:
+    - name: google
+      scopes:
+        - openid
+        - https://www.googleapis.com/auth/userinfo.email
+        - https://www.googleapis.com/auth/userinfo.profile
+```
+
+When a user opens the agent, Charm Store checks whether the required provider connection exists. If not, it prompts the user to connect through OAuth.
+
+## Runtime Environment
+
+After the user connects an account, the runner can inject provider tokens into the agent runtime. For example:
+
+- `GOOGLE_ACCESS_TOKEN`
+- `GITHUB_ACCESS_TOKEN`
+- `SLACK_ACCESS_TOKEN`
+
+The exact token name depends on the provider name.
+
+## Production Requirements
+
+OAuth requires both the Store and runner to use the same Nango environment:
+
+- `NEXT_PUBLIC_NANGO_HOST`
+- `NEXT_PUBLIC_NANGO_PUBLIC_KEY`
+- `NANGO_SERVER_URL`
+- `NANGO_SECRET_KEY`
+
+Provider settings must also be configured in the provider dashboard, such as Google Cloud OAuth client settings for Google integrations.
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+
+## Testing Checklist
+
+- The agent version includes `auth.providers` in `charm.yaml`.
+- The Store shows the OAuth connection modal.
+- The provider redirects back successfully.
+- The runner logs show that the provider token was injected.
+- The agent handles missing or expired tokens gracefully.
+

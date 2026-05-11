@@ -5,11 +5,75 @@ description: Bundle and deploy your agent to the Charm Store.
 
 # charm push
 
-{/* TODO: Document charm push command:
-  - Usage: `charm push [path] [--dry-run]`
-  - Bundle process
-  - .charmignore exclusions
-  - 50 MB size limit
-  - --dry-run option
-  - Post-push: auto-restart, URL clipboard copy
-*/}
+Publish a Charm agent version to Charm Store.
+
+`charm push` validates the manifest, bundles the project, uploads it, and creates or updates the published agent version.
+
+## Usage
+
+```bash
+charm push [path] [--dry-run]
+```
+
+If no path is provided, Charm pushes the current directory.
+
+```bash
+charm push .
+```
+
+## Before Pushing
+
+Authenticate first:
+
+```bash
+charm auth login
+```
+
+Validate the project:
+
+```bash
+charm validate .
+```
+
+Run locally:
+
+```bash
+charm run . --input "Hello"
+```
+
+## Dry Run
+
+Preview the payload without publishing:
+
+```bash
+charm push . --dry-run
+```
+
+Use this to inspect metadata and bundle behavior before creating a Store version.
+
+## Bundle Rules
+
+Charm packages your project source and manifest into a bundle.
+
+Use `.charmignore` to exclude files that should not be uploaded, such as:
+
+- local virtual environments,
+- large generated files,
+- secrets,
+- local datasets,
+- build artifacts.
+
+Never commit or publish private credentials.
+
+## Versioning
+
+Update `persona.version` in `charm.yaml` when publishing a new version. If the same version already exists, the Store may reject the push.
+
+## After Publishing
+
+After a successful push:
+
+- open the agent in Charm Store,
+- run a smoke test,
+- verify required keys/OAuth connections,
+- check logs if execution fails.

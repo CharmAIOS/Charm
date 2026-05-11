@@ -5,10 +5,28 @@ description: Revert your agent to a previous version using workspace snapshots.
 
 # Rollback
 
-{/* TODO: Write rollback guide covering:
-  - What rollback does (workspace snapshot recovery)
-  - When to use rollback (broken upgrade, data loss)
-  - How it works: Cloud Runner restores pre-upgrade state
-  - Limitations and caveats
-  - Relationship to version control
-*/}
+Rollback restores users or agents to a safer previous state when an upgrade fails or produces unexpected behavior.
+
+## When to Use Rollback
+
+Use rollback when:
+
+- a new agent version breaks execution,
+- an upgrade changes behavior unexpectedly,
+- a daemon agent is unstable after deployment,
+- users need to return to a previous working version.
+
+## Relationship to Version Control
+
+Rollback is not a replacement for Git. Keep source history clean and tag important releases. Rollback is an operational safety mechanism for deployed agents.
+
+## Recommended Practice
+
+- Publish small version changes.
+- Document breaking changes.
+- Keep previous working versions available.
+- Smoke test after every publish.
+
+## Limitations
+
+Rollback cannot undo every external side effect, such as emails sent, third-party API writes, or irreversible database changes. Agents should be designed with idempotency and safe retries where possible.

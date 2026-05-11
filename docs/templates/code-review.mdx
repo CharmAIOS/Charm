@@ -5,4 +5,37 @@ description: An automated code review agent template for pull request analysis.
 
 # Code Review Agent Template
 
-{/* TODO: Document the code-review-agent template from src/charm/templates/code-review-agent.yaml */}
+Use this template for agents that inspect code changes and return review feedback.
+
+## Use Case
+
+- Pull request summaries.
+- Risk analysis.
+- Style and maintainability feedback.
+- Test gap suggestions.
+
+## Typical Inputs
+
+- Repository or diff content.
+- Review focus.
+- Language or framework.
+- Optional style guide.
+
+## Runtime Notes
+
+Code review agents often need access to repository files, diffs, or pasted snippets. Keep the input schema explicit so users know what context to provide.
+
+## Development Flow
+
+```bash
+charm init my-review-agent --template code-review
+cd my-review-agent
+charm validate .
+charm run . --json '{"diff": "..."}'
+```
+
+## Publishing Checklist
+
+- Output separates findings by severity.
+- The agent avoids exposing secrets from reviewed code.
+- The prompt encourages actionable review comments.

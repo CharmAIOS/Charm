@@ -6,3 +6,6 @@ contact_links:
   - name: Get Help
     url: https://discord.gg/gdakynHUEb
     about: Ask questions and chat with the team & community.
+  - name: Report a Security Vulnerability
+    url: https://github.com/CharmAIOS/Charm/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately instead of opening a public issue.

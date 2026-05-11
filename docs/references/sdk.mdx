@@ -1,0 +1,57 @@
+---
+title: SDK Reference
+description: Skeleton reference for the public Charm Python package.
+---
+
+# SDK Reference
+
+This page is the landing page for Charm's Python SDK reference. It is intentionally concise until generated API reference pages are added.
+
+## Planned Sections
+
+- Installation.
+- Public modules.
+- Agent interfaces.
+- Runtime helpers.
+- Adapter APIs.
+- Version compatibility.
+
+## Install
+
+```bash
+pip install charmos
+```
+
+For runner and local sandbox support:
+
+```bash
+pip install "charmos[runner]"
+```
+
+## Public Surfaces
+
+The stable SDK surface should include:
+
+- CLI commands exposed through `charm`.
+- Manifest validation models.
+- Runtime adapters.
+- Runner protocol helpers.
+- Template scaffolding.
+
+Internal implementation modules may change without a public compatibility guarantee until the open-source release policy is finalized.
+
+## Compatibility
+
+SDK compatibility is tied to the `version` field in `charm.yaml`.
+
+When publishing a package release, update:
+
+- package version,
+- docs version,
+- changelog,
+- manifest compatibility notes.
+
+## Future Generated Docs
+
+This page should eventually link to generated Python API documentation from docstrings or type annotations.
+

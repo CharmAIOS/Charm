@@ -1,0 +1,40 @@
+---
+title: Daemon Agent Template
+description: Skeleton documentation for always-on agents that run through the daemon lifecycle.
+---
+
+# Daemon Agent Template
+
+{/* TODO:
+  - Explain daemon lifecycle and Fly.io-backed execution.
+  - Document cost and availability expectations.
+  - Add example `charm.yaml`.
+  - Add production readiness checklist.
+*/}
+
+## Use Case
+
+Use this template for agents that need persistent background execution, scheduled behavior, or long-lived state.
+
+## Prerequisites
+
+- Charm CLI.
+- A daemon-capable adapter such as OpenClaw.
+- Production runner configured with Fly.io daemon settings.
+
+## Configuration Surface
+
+Document these fields:
+
+- `runtime.lifecycle: daemon`
+- `runtime.mode`
+- `runtime.adapter.type`
+- `policies`
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+

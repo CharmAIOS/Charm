@@ -1,0 +1,40 @@
+---
+title: Interactive Agent Template
+description: Skeleton documentation for agents that stream real-time conversations through the interactive worker.
+---
+
+# Interactive Agent Template
+
+{/* TODO:
+  - Explain when to use interactive lifecycle versus serverless.
+  - Add template source path.
+  - Add frontend/threading expectations.
+  - Document worker-specific limitations and testing flow.
+*/}
+
+## Use Case
+
+Use this template for chat-style agents that need low-latency streaming, thread history, and real-time user interaction.
+
+## Prerequisites
+
+- Charm CLI.
+- A supported interactive runtime.
+- Published version available in Charm Store for end-to-end UI testing.
+
+## Configuration Surface
+
+Document these fields:
+
+- `runtime.lifecycle: interactive`
+- `runtime.adapter.type`
+- `interface.input`
+- `runtime.adapter.environment_variables`
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+

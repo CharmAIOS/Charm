@@ -1,0 +1,40 @@
+---
+title: OAuth Integration Agent Template
+description: Skeleton documentation for agents that require user-authorized OAuth connections.
+---
+
+# OAuth Integration Agent Template
+
+{/* TODO:
+  - Explain `auth.providers` in `charm.yaml`.
+  - Document supported providers and Nango mapping.
+  - Add Google/GitHub examples.
+  - Add local and production testing steps.
+*/}
+
+## Use Case
+
+Use this template when an agent needs user-authorized access to external services such as Google, GitHub, Slack, or Notion.
+
+## Prerequisites
+
+- Charm CLI.
+- Nango configured for the provider.
+- Store and runner configured with matching Nango environment variables.
+
+## Configuration Surface
+
+Document these fields:
+
+- `auth.providers`
+- `auth.providers[].name`
+- `auth.providers[].scopes`
+- provider-specific access token environment variables
+
+## Run and Publish
+
+```bash
+charm validate
+charm push
+```
+

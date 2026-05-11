@@ -66,6 +66,7 @@
                     {
                         "group": "Quickstart",
                         "pages": [
+                            "quickstart/overview",
                             "quickstart/install",
                             "quickstart/first-app",
                             "quickstart/publish"
@@ -75,12 +76,16 @@
                         "group": "Templates",
                         "pages": [
                             "templates/overview",
+                            "templates/python",
                             "templates/research",
                             "templates/code-review",
                             "templates/customer-support",
                             "templates/data-pipeline",
                             "templates/slack-bot",
-                            "templates/openclaw"
+                            "templates/openclaw",
+                            "templates/interactive",
+                            "templates/daemon",
+                            "templates/oauth-integration"
                         ]
                     }
                 ]
@@ -143,6 +148,25 @@
                 ]
             },
             {
+                "tab": "References",
+                "groups": [
+                    {
+                        "group": " ",
+                        "pages": [
+                            "references/overview"
+                        ]
+                    },
+                    {
+                        "group": "Reference",
+                        "pages": [
+                            "references/sdk",
+                            "references/api",
+                            "references/manifest"
+                        ]
+                    }
+                ]
+            },
+            {
                 "tab": "Adapters",
                 "groups": [
                     {
@@ -183,6 +207,7 @@
                     {
                         "group": "Features",
                         "pages": [
+                            "platform/features",
                             "platform/ui-protocol",
                             "platform/observability",
                             "platform/keys",
@@ -222,7 +247,9 @@
                         "pages": [
                             "oss/contributing",
                             "oss/dev-setup",
-                            "oss/code-style"
+                            "oss/code-style",
+                            "oss/code-of-conduct",
+                            "oss/governance"
                         ]
                     },
                     {
@@ -231,6 +258,25 @@
                             "oss/adapter",
                             "oss/base-image",
                             "oss/documentation"
+                        ]
+                    },
+                    {
+                        "group": "Release",
+                        "pages": [
+                            "oss/release-process",
+                            "oss/docs-versioning"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Changelog",
+                "groups": [
+                    {
+                        "group": " ",
+                        "pages": [
+                            "changelog/overview",
+                            "changelog/release-notes"
                         ]
                     }
                 ]

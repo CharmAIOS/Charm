@@ -9,7 +9,9 @@
 
 **Charm** is a **Unified Application Layer** that provides a standardized architecture that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
 
-## Getting started
+## Getting Started
+
+Start with the public docs: [docs.charmos.io](https://docs.charmos.io/).
 
 ### Installation
 
@@ -37,13 +39,29 @@ pip install charmos[runner]
 
 > **Note:** To use the docker simulation mode, you must have Docker Desktop or Docker Engine running on your machine.
 >
-### Register your agent
+### Build and publish your first agent
 
-Read our simple [tutorial](https://github.com/CharmAIOS/Charm/blob/main/docs/getting-started/charm-store.md) to learn how to register your agent on the Charm Store.
+Use the quickstart docs to install the CLI, build a starter agent, validate `charm.yaml`, and publish to Charm Store:
+
+- [Installation](https://docs.charmos.io/quickstart/install)
+- [Build Your First Agent](https://docs.charmos.io/quickstart/first-app)
+- [Publish](https://docs.charmos.io/quickstart/publish)
+
+## Documentation
+
+- [Templates](https://docs.charmos.io/templates/overview)
+- [Platform Features](https://docs.charmos.io/platform/features)
+- [CLI Reference](https://docs.charmos.io/cli/init)
+- [SDK Reference](https://docs.charmos.io/references/sdk)
+- [Open Source](https://docs.charmos.io/oss/overview)
 
 ## Contributing
 
 To know how to contribute to Charm, please read our [contribution guide](https://github.com/CharmAIOS/Charm/blob/main/CONTRIBUTING.md).
+
+## Security
+
+Please report vulnerabilities privately using the process in [SECURITY.md](./SECURITY.md).
 
 ## Contact
 

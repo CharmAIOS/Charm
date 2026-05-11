@@ -1,0 +1,36 @@
+name: Documentation Issue
+description: Report missing, confusing, or outdated documentation
+title: "[Docs]: "
+labels: [documentation]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or Section
+      description: Link to the page or describe the docs section.
+      placeholder: "https://docs.charmos.io/..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What needs to change?
+      description: Describe what is missing, confusing, incorrect, or outdated.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix
+      description: Optional proposal for how to improve the page.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues before opening this one.
+          required: true
+

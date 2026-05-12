@@ -1,51 +1,123 @@
 ---
 title: Release Process
-summary: Skeleton runbook for publishing Charm releases.
+summary: Maintainer runbook for publishing Charm package releases.
 ---
 
-This page will become the public-facing release runbook for maintainers.
-
 Charm releases should be repeatable, auditable, and driven by CI instead of local maintainer machines.
+The Python SDK package is published as `charmos` on PyPI.
 
-## Planned Flow
+## Release Flow
 
 1. Merge approved changes.
-2. Cut release candidate.
-3. Validate staging.
-4. Generate changelog draft.
-5. Publish package artifacts.
-6. Create GitHub Release.
-7. Update docs.
+2. Confirm required checks pass on `main`.
+3. Review the generated draft GitHub Release.
+4. Bump the package version in `pyproject.toml`.
+5. Publish to TestPyPI for a package dry run.
+6. Create and push a `vX.Y.Z` tag.
+7. Let GitHub Actions publish to PyPI from the tag.
+8. Publish the GitHub Release and update docs links if needed.
 
 ## Required Checks
 
-- Package build.
-- Tests.
-- Changelog draft.
-- Docs build.
-- Staging smoke tests.
-
-## Release Candidate Checklist
-
-Before publishing:
-
-- Required PR checks pass.
-- Package artifacts build successfully.
-- Docs navigation builds without missing pages.
-- Staging deploy is healthy.
-- Database migrations, if any, were validated in staging.
-- Changelog draft is generated.
-- Release owner approves the candidate.
+- `lint`
+- `typecheck`
+- `tests`
+- `package-build`
+- `docs-validation`
+- `build-validation`
+- `release-label`
+- TestPyPI publish for release candidates.
 
 ## Package Publishing
 
-Official package releases should be published from CI. Local publishing is reserved for experiments and should not be used for official releases.
+Official package releases must be published from GitHub Actions.
+Do not upload wheels or source distributions from a local maintainer machine for official releases.
 
 Preferred model:
 
 ```text
-git tag vX.Y.Z -> GitHub Actions -> build -> verify -> publish -> GitHub Release
+git tag vX.Y.Z -> GitHub Actions -> build -> verify -> publish to PyPI
 ```
+
+The publish workflow validates that the Git tag matches the version in `pyproject.toml`.
+For example, `version = "0.4.22"` must be released from tag `v0.4.22`.
+
+## Trusted Publishing Setup
+
+Charm uses PyPI Trusted Publishing through GitHub OIDC.
+This avoids storing long-lived PyPI API tokens in GitHub secrets.
+
+Configure these trusted publishers in PyPI:
+
+- PyPI project: `charmos`
+- Owner: `CharmAIOS`
+- Repository: `Charm`
+- Workflow: `publish-pypi.yml`
+- Environment: `pypi`
+
+Configure these trusted publishers in TestPyPI:
+
+- TestPyPI project: `charmos`
+- Owner: `CharmAIOS`
+- Repository: `Charm`
+- Workflow: `publish-testpypi.yml`
+- Environment: `testpypi`
+
+In GitHub repository settings, create two environments:
+
+- `testpypi` for package dry runs.
+- `pypi` for production package publishing.
+
+The `pypi` environment should require maintainer approval.
+
+## TestPyPI Dry Run
+
+Use TestPyPI before publishing a production package:
+
+1. Confirm the release branch is merged into `main`.
+2. Run the `Publish to TestPyPI` workflow manually.
+3. Confirm the workflow builds both package artifacts.
+4. Confirm the package appears on TestPyPI.
+5. Install from TestPyPI in a clean virtual environment:
+
+```bash
+python -m venv .venv-testpypi
+source .venv-testpypi/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ charmos
+charm --help
+```
+
+TestPyPI is allowed to skip already-published files for the same version.
+If you need a fully fresh dry run, bump to the next release candidate version before testing.
+
+## Production PyPI Release
+
+After the TestPyPI dry run succeeds:
+
+1. Confirm `pyproject.toml` contains the intended version.
+2. Confirm the draft GitHub Release has the correct changelog.
+3. Create and push the version tag:
+
+```bash
+git checkout main
+git pull
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+4. Wait for `Publish to PyPI` to complete.
+5. Install the published package in a clean environment:
+
+```bash
+python -m venv .venv-pypi
+source .venv-pypi/bin/activate
+python -m pip install --upgrade pip
+python -m pip install charmos
+charm --help
+```
+
+6. Publish the GitHub Release for the same tag.
 
 ## Hotfixes
 
@@ -55,8 +127,9 @@ Hotfixes should be narrow and traceable:
 2. Create a patch branch.
 3. Apply the smallest safe fix.
 4. Run required checks.
-5. Publish a patch release or redeploy.
-6. Document the fix in release notes.
+5. Run the TestPyPI dry run.
+6. Publish a patch release or redeploy.
+7. Document the fix in release notes.
 
 ## Rollback Options
 
@@ -65,3 +138,6 @@ Hotfixes should be narrow and traceable:
 - Publish a patch package.
 - Yank a bad PyPI package if appropriate.
 - Apply a database mitigation migration.
+
+PyPI does not allow reusing a deleted version.
+If a package is broken, publish a new patch version rather than trying to replace the same version.

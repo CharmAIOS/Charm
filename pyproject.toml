@@ -34,7 +34,10 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://charmos.io"
+Documentation = "https://docs.charmos.io"
 Repository = "https://github.com/CharmAIOS/Charm"
+Changelog = "https://github.com/CharmAIOS/Charm/releases"
+Issues = "https://github.com/CharmAIOS/Charm/issues"
 
 [project.optional-dependencies]
 runner = [

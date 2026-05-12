@@ -1,0 +1,72 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+
+categories:
+  - title: "Breaking Changes"
+    labels:
+      - "release:breaking"
+  - title: "Features"
+    labels:
+      - "release:feature"
+  - title: "Fixes"
+    labels:
+      - "release:fix"
+  - title: "Security"
+    labels:
+      - "release:security"
+  - title: "Infrastructure and Migrations"
+    labels:
+      - "release:infra"
+  - title: "Documentation"
+    labels:
+      - "release:docs"
+  - title: "Internal Maintenance"
+    labels:
+      - "release:chore"
+
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+change-title-escapes: '\<*_&'
+
+exclude-labels:
+  - "release:skip"
+
+version-resolver:
+  major:
+    labels:
+      - "release:breaking"
+      - "release:major"
+  minor:
+    labels:
+      - "release:feature"
+      - "release:minor"
+  patch:
+    labels:
+      - "release:fix"
+      - "release:docs"
+      - "release:infra"
+      - "release:security"
+      - "release:chore"
+      - "release:patch"
+  default: patch
+
+template: |
+  ## Summary
+
+  _Write the release summary before publishing. Keep it user-facing and include who should upgrade._
+
+  ## Changes
+
+  $CHANGES
+
+  ## Upgrade Notes
+
+  - Migration required: TBD
+  - Deploy order: TBD
+  - Rollback or mitigation: TBD
+
+  ## Release Checklist
+
+  - [ ] CI is green on the release branch/tag.
+  - [ ] Runtime images are built when runner behavior changed.
+  - [ ] Docs are deployed when public behavior changed.
+  - [ ] Breaking changes and migration notes are called out above.

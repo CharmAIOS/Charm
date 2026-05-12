@@ -7,11 +7,11 @@
 
 # Charm: The Unified Platform for Agentic Intelligence
 
-**Charm** is a **Unified Application Layer** that provides a standardized architecture that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
+**Charm** is a **Unified Application Layer** that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
 
 ## Getting Started
 
-Start with the public docs: [docs.charmos.io](https://docs.charmos.io/).
+For a step-by-step walk through of Charm concepts and code, check out [overview](https://docs.charmos.io) in our documentation.
 
 ### Installation
 
@@ -66,7 +66,7 @@ Please report vulnerabilities privately using the process in [SECURITY.md](./SEC
 ## Contact
 
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)
-- Join us: [Chat with us](mailto:uc@charmos.io)
+- Join us: [Chat with the team](mailto:team@charmos.io)
 
 ## Changelog
 

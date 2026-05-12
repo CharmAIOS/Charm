@@ -39,8 +39,28 @@ Before upgrading, check:
 
 ## Release Notes
 
-Use the [Release Notes Template](/changelog/release-notes) until automated changelog generation is finalized.
+Charm uses Release Drafter to prepare draft GitHub Releases from merged pull requests.
+Release owners should review the generated draft, fill in the summary and upgrade notes, then publish it from GitHub Releases.
 
 ## Source of Truth
 
-Future releases should generate this page from PR metadata and GitHub Releases. Until then, release owners should update it manually during release preparation.
+GitHub Releases are the source of truth for published changelogs.
+The docs changelog should link to published releases and only duplicate release text when a docs-native archive is needed.
+
+## Pull Request Labels
+
+Every user-facing pull request should include one release label:
+
+- `release:feature` for new capabilities.
+- `release:fix` for bug fixes.
+- `release:breaking` for incompatible API, CLI, runtime, or manifest changes.
+- `release:security` for security fixes or hardening.
+- `release:infra` for deployment, runner, billing, auth, or migration changes.
+- `release:docs` for documentation-only changes.
+- `release:chore` for internal maintenance that should still appear in release notes.
+- `release:skip` for changes that should not appear in release notes.
+
+Use `release:major`, `release:minor`, or `release:patch` only when the default version bump from the category label is not correct.
+
+The release label check requires exactly one category label on every pull request.
+The label sync workflow creates and updates these labels in GitHub when the workflow runs.

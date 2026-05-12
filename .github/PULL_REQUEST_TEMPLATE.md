@@ -8,7 +8,12 @@
 
 ## Release Notes
 
-<!-- Choose one once labels are configured: release:feature, release:fix, release:breaking, release:infra, release:docs, release:chore, release:skip. -->
+<!--
+Release Drafter builds the draft GitHub Release from merged PRs.
+Add exactly one user-facing release label unless this PR should be excluded:
+release:feature, release:fix, release:breaking, release:security, release:infra, release:docs, release:chore, release:skip.
+Use release:major, release:minor, or release:patch only when the default version bump needs overriding.
+-->
 
 - Release label:
 - User-facing summary:

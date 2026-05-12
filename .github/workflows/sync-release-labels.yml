@@ -1,0 +1,110 @@
+name: Sync Release Labels
+
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync-release-labels:
+    name: sync-release-labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure release labels exist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              {
+                name: "release:feature",
+                color: "0E8A16",
+                description: "User-facing feature or capability.",
+              },
+              {
+                name: "release:fix",
+                color: "D73A4A",
+                description: "User-facing bug fix.",
+              },
+              {
+                name: "release:breaking",
+                color: "B60205",
+                description: "Breaking API, CLI, runtime, or manifest change.",
+              },
+              {
+                name: "release:security",
+                color: "C5DEF5",
+                description: "Security fix or hardening.",
+              },
+              {
+                name: "release:infra",
+                color: "5319E7",
+                description: "Infrastructure, deployment, migration, billing, or auth change.",
+              },
+              {
+                name: "release:docs",
+                color: "0075CA",
+                description: "Documentation-only change.",
+              },
+              {
+                name: "release:chore",
+                color: "D4C5F9",
+                description: "Internal maintenance included in release notes.",
+              },
+              {
+                name: "release:skip",
+                color: "BFDADC",
+                description: "Exclude this pull request from release notes.",
+              },
+              {
+                name: "release:major",
+                color: "B60205",
+                description: "Force the next release draft to resolve as a major version.",
+              },
+              {
+                name: "release:minor",
+                color: "FBCA04",
+                description: "Force the next release draft to resolve as a minor version.",
+              },
+              {
+                name: "release:patch",
+                color: "C2E0C6",
+                description: "Force the next release draft to resolve as a patch version.",
+              },
+            ];
+
+            const { owner, repo } = context.repo;
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.updateLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  new_name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                core.info(`Updated label ${label.name}`);
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                core.info(`Created label ${label.name}`);
+              }
+            }

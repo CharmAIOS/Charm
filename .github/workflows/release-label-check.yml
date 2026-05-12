@@ -11,6 +11,7 @@ on:
       - ready_for_review
 
 permissions:
+  contents: read
   pull-requests: read
 
 jobs:
@@ -32,6 +33,24 @@ jobs:
               "release:chore",
               "release:skip",
             ]);
+
+            const { owner, repo } = context.repo;
+            const existingLabels = await github.paginate(github.rest.issues.listLabelsForRepo, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const existingCategoryLabels = existingLabels
+              .map((label) => label.name)
+              .filter((label) => categoryLabels.has(label));
+
+            if (existingCategoryLabels.length === 0) {
+              core.warning(
+                "No release category labels exist in this repository yet. " +
+                "Skipping enforcement until Sync Release Labels has bootstrapped them."
+              );
+              return;
+            }
 
             const labels = context.payload.pull_request.labels.map((label) => label.name);
             const matched = labels.filter((label) => categoryLabels.has(label));

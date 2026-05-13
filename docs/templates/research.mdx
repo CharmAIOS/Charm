@@ -1,6 +1,6 @@
 ---
 title: Research Agent
-summary: A CrewAI-powered research agent template for deep-dive topic analysis.
+summary: An OpenClaw-based research agent template for deep-dive topic analysis.
 ---
 
 The research agent template is for agents that gather information, synthesize findings, and return a structured answer or report.
@@ -19,8 +19,8 @@ Use this template for:
 
 A research agent usually accepts:
 
-- topic or question,
-- desired depth,
+- research `query` (required in the shipped template),
+- desired `depth` (`brief`, `detailed`, `comprehensive`),
 - audience,
 - optional source constraints,
 - output format.
@@ -42,10 +42,10 @@ runtime:
 ## Development Flow
 
 ```bash
-charm init my-research-agent --template research
+charm init my-research-agent --template research-agent
 cd my-research-agent
 charm validate .
-charm run . --json '{"topic": "AI agent marketplaces"}'
+charm run . --json '{"query": "AI agent marketplaces", "depth": "detailed"}'
 ```
 
 ## Publishing Checklist

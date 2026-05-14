@@ -10,13 +10,13 @@ title: Charm
 
 <CardGroup cols={2}>
   <Card title="Get Started" icon="rocket-launch" color="#E8A694" href="quickstart/install">
-    Install the Charm CLI with pip or uv and publish your first agent in minutes.
+    Install the Charm CLI and publish your first AI agent in minutes.
   </Card>
   <Card title="Onboarding" icon="terminal" color="#E8A694" href="guides/onboarding">
-    Walk through the full CLI workflow — from init to push — with guided examples.
+    Walk through the full workflow with guided examples.
   </Card>
   <Card title="Templates" icon="book-open" color="#E8A694" href="templates/overview">
-    Start from a prebuilt template: research agents, code reviewers, Slack bots, data pipelines, and more.
+    Start from a prebuilt template.
   </Card>
 </CardGroup>
 
@@ -26,17 +26,17 @@ title: Charm
 
 ### Why Charm?
 
-- **Ecosystem Agnostic**: Bring your own framework — CrewAI, LangChain, LangGraph, OpenClaw, or plain Python functions — Charm wraps them all with the same runtime contract.
+- **Ecosystem Agnostic**: Bring your own framework such as CrewAI, LangChain, LangGraph, OpenClaw, or plain Python functions, Charm wraps them all with the same runtime contract.
 - **No Infrastructure**: The Cloud Runner handles isolated container execution, secrets injection, and scaling. You write agent logic, not deployment pipelines.
-- **Server-Driven UI**: Return Markdown or structured JSON from your agent and the Store renders timelines, comparison tables, viral cards, and article layouts automatically — no frontend code needed.
-- **Built-In Monetization**: Set pricing in `charm.yaml` and Charm handles checkout, subscriptions, wallet balance checks, and creator payouts through Stripe.
-- **Open Source**: Charm SDK, CLI, and runtime adapters are open source under AGPLv3. Community contributions drive new adapters, base images, and skills.
+- **Server-Driven UI**: Return Markdown or structured JSON from your agent and the Store renders timelines, comparison tables, viral cards, and article layouts automatically - no frontend code needed.
+- **Built-In Monetization**: Set pricing in `charm.yaml` and Charm handles checkout, subscriptions, balance checks, and payouts.
+- **Open Source**: Charm Core, CLI, and runtime adapters are fully open source. Community contributions drive every part of the ecosystem.
 
 ## Who needs Charm?
 
-- **AI engineers** who have a working agent in CrewAI, LangChain, or custom Python and want to ship it as a product without building infrastructure.
-- **Indie builders** who want to monetize agents through the Charm Store with built-in billing, OAuth, and a hosted runtime.
-- **Teams** that need to standardize how agents are packaged, versioned, deployed, and observed across projects.
+- **AI Developers** who have a working agent in CrewAI, LangChain, OpenClaw, or custom Python and want to ship it as a product without building infrastructure.
+- **AI Builders** who want to monetize agents through the Charm Store with built-in billing, OAuth, and a hosted runtime.
+- **Everyday users** who want agents as apps, not infrastructure. Zero setup, no API keys, and no need to understand how they work. Just natural interaction with the agents you need.
 
 ## What do you need?
 
@@ -59,7 +59,7 @@ title: Charm
   <Tab title="Infra">
     <CardGroup cols={2}>
       <Card title="Configuration" icon="gear" color="#E8A694" href="guides/manifest">
-        Define identity, inputs, runtime adapter, pricing, auth, and policies in a single charm.yaml manifest.
+        Define everything about your agent in a single charm.yaml manifest.
       </Card>
       <Card title="Run & Test" icon="terminal" color="#E8A694" href="guides/local-run">
         Execute your agent locally with charm run, or simulate the cloud environment in Docker with --docker.
@@ -72,7 +72,7 @@ title: Charm
         Publish agents as hosted web apps with auto-generated UI, OAuth prompts, and one-click execution.
       </Card>
       <Card title="Charm Studio" icon="chart-line" color="#E8A694" href="platform/studio">
-        Monitor runs, errors, latency, token usage, installs, and creator revenue from a single dashboard.
+        Monitor runs, errors, latency, token usage, revenue, and more from a single dashboard.
       </Card>
     </CardGroup>
   </Tab>
@@ -85,16 +85,13 @@ title: Charm
     Declare required API keys in charm.yaml. The Cloud Runner injects platform-managed secrets at runtime — no hardcoding needed.
   </Card>
   <Card title="OAuth" icon="shield-halved" color="#E8A694" href="platform/oauth">
-    Require Google, GitHub, Notion, or Slack authorization. The Store prompts users to connect accounts and injects provider tokens into the runtime.
+    Need integration with Google, GitHub, Notion, and more? The Store handles user account connections and automatically injects provider tokens directly into your runtime.
   </Card>
   <Card title="Ambient Desktop Companion" icon="display" color="#E8A694" href="platform/ambient-desktop-companion">
     Run agents as native desktop companions with access to local files, hardware context, and persistent memory.
   </Card>
-  <Card title="Server-Driven UI" icon="palette" color="#E8A694" href="platform/ui-protocol">
-    Return structured JSON to render timelines, comparison tables, viral cards, and articles — zero frontend code required.
-  </Card>
   <Card title="Payments" icon="money-bill-1" color="#E8A694" href="platform/earn-as-you-go">
-    Set free, one-time, or subscription pricing in charm.yaml. Charm handles checkout, wallet balance, and creator payouts via Stripe.
+    Set flexible pricing model in charm.yaml. Charm handles everything from user to builder.
   </Card>
 </CardGroup>
 

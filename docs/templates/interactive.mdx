@@ -34,7 +34,8 @@ runtime:
     type: "custom"
     entry_point: "src.main:agent"
     environment_variables:
-      - OPENAI_API_KEY
+      models:
+        - OPENAI_API_KEY
   mode: "standard"
   lifecycle: "interactive"
 ```

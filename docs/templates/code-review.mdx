@@ -26,10 +26,10 @@ Code review agents often need access to repository files, diffs, or pasted snipp
 ## Development Flow
 
 ```bash
-charm init my-review-agent --template code-review
+charm init my-review-agent --template code-review-agent
 cd my-review-agent
 charm validate .
-charm run . --json '{"diff": "..."}'
+charm run . --json '{"code": "def example(): pass", "focus": "security"}'
 ```
 
 ## Publishing Checklist

@@ -27,10 +27,10 @@ Data pipeline agents should keep memory and runtime limits in mind. For large fi
 ## Development Flow
 
 ```bash
-charm init data-agent --template data-pipeline
+charm init data-agent --template data-pipeline-agent
 cd data-agent
 charm validate .
-charm run . --json '{"task": "clean this CSV"}'
+charm run . --json '{"data": "name,age\\nAlice,30", "task": "clean", "output_format": "csv"}'
 ```
 
 ## Publishing Checklist

@@ -5,9 +5,11 @@ summary: Skeleton documentation for agents that stream real-time conversations t
 
 Interactive agents are designed for real-time conversations and streaming responses. They are routed through Charm's interactive worker instead of the standard serverless execution path.
 
+There is **no** `charm init --template interactive` starter. Use any scaffold (for example `python`), then set `runtime.lifecycle: interactive` in `charm.yaml` as shown below.
+
 ## Use Case
 
-Use this template for chat-style agents that need low-latency streaming, thread history, and real-time user interaction.
+Use this lifecycle for chat-style agents that need low-latency streaming, thread history, and real-time user interaction.
 
 ## Prerequisites
 
@@ -55,7 +57,7 @@ runtime:
 ## Run and Publish
 
 ```bash
-charm validate
+charm validate .
 charm push
 ```
 

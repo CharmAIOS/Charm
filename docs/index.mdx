@@ -13,7 +13,7 @@ title: Charm
     Install the Charm CLI and publish your first AI agent in minutes.
   </Card>
   <Card title="Onboarding" icon="terminal" color="#E8A694" href="guides/onboarding">
-    Walk through the full workflow with guided examples.
+    Walk through setup guide.
   </Card>
   <Card title="Templates" icon="book-open" color="#E8A694" href="templates/overview">
     Start from a prebuilt template.
@@ -42,7 +42,7 @@ title: Charm
 
 - **Python 3.10+** and `pip` or [`uv`](https://github.com/astral-sh/uv) for package management.
 - **Docker Desktop** (optional) if you want to test agents locally in an isolated container sandbox that mirrors the cloud runtime.
-- **A Charm account** for publishing to the Store — sign up at [store.charmos.io](https://store.charmos.io).
+- **A Charm account** for publishing to the Store — sign up at [store](https://store.charmos.io).
 
 
 ## How it works
@@ -62,7 +62,7 @@ title: Charm
         Define everything about your agent in a single charm.yaml manifest.
       </Card>
       <Card title="Run & Test" icon="terminal" color="#E8A694" href="guides/local-run">
-        Execute your agent locally with charm run, or simulate the cloud environment in Docker with --docker.
+        Execute your agent locally or simulate the cloud environment in Docker.
       </Card>
     </CardGroup>
   </Tab>
@@ -82,13 +82,13 @@ title: Charm
 
 <CardGroup cols={2}>
   <Card title="Secrets Management" icon="key" color="#E8A694" href="platform/keys">
-    Declare required API keys in charm.yaml. The Cloud Runner injects platform-managed secrets at runtime — no hardcoding needed.
+    Declare required API keys in charm.yaml. The Cloud Runner injects platform-managed secrets at runtime.
   </Card>
   <Card title="OAuth" icon="shield-halved" color="#E8A694" href="platform/oauth">
-    Need integration with Google, GitHub, Notion, and more? The Store handles user account connections and automatically injects provider tokens directly into your runtime.
+    Integrate with Google, GitHub, and more. The Store handles user account connections and automatically injecting secrets.
   </Card>
   <Card title="Ambient Desktop Companion" icon="display" color="#E8A694" href="platform/ambient-desktop-companion">
-    Run agents as native desktop companions with access to local files, hardware context, and persistent memory.
+    Run agents in your desktop as a native companion.
   </Card>
   <Card title="Payments" icon="money-bill-1" color="#E8A694" href="platform/earn-as-you-go">
     Set flexible pricing model in charm.yaml. Charm handles everything from user to builder.

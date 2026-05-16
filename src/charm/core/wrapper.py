@@ -5,6 +5,7 @@ from ..adapters.base import BaseAdapter
 from .callbacks import CharmCallbackHandler
 from .io import CharmEmitter, StdoutInterceptor
 from .logger import logger
+from .telemetry import TelemetryManager
 
 
 class CharmWrapper:
@@ -37,11 +38,15 @@ class CharmWrapper:
 
         # Track streaming state to avoid double-printing final output
         stream_state = {"has_streamed": False}
-        charm_callback = CharmCallbackHandler(shared_state=stream_state)
+        enabled_telemetry = self.config.runtime.telemetry if self.config and self.config.runtime else []
+        telemetry = TelemetryManager(enabled_exporters=enabled_telemetry)
+        telemetry.dispatch("on_run_start", run_id="local", inputs=inputs)
+        charm_callback = CharmCallbackHandler(shared_state=stream_state, telemetry_manager=telemetry)
 
         try:
             # Execute via Adapter
             result = self.adapter.invoke(inputs, callbacks=[charm_callback])
+            telemetry.dispatch("on_run_end", run_id="local", outputs=result)
 
             # State Broadcasting
             if "charm_state" in result and result["charm_state"]:
@@ -67,12 +72,14 @@ class CharmWrapper:
             else:
                 # Handle logical errors from the agent
                 error_msg = result.get("message", "Unknown error")
+                telemetry.dispatch("on_error", run_id="local", error=Exception(error_msg))
                 CharmEmitter.emit_error(error_msg)
                 sys.exit(0)  # Exit gracefully for the runner
                 return result
 
         except Exception as e:
             # Global Error Handler
+            telemetry.dispatch("on_error", run_id="local", error=e)
             CharmEmitter.emit_error(str(e))
             sys.exit(0)
             return {"status": "error", "error_type": "CharmExecutionError", "message": str(e)}

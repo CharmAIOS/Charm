@@ -21,20 +21,27 @@ class CharmLangGraphAdapter(BaseAdapter):
     def _ensure_instantiated(self):
         self._smart_instantiate()
 
-        # Setup Supabase Checkpointer
-        self.checkpointer = None
-        sb_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-        sb_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-
-        if sb_url and sb_key:
-            try:
-                supabase: Client = create_client(sb_url, sb_key)
-                self.checkpointer = CharmSupabaseCheckpointer(client=supabase)
-                logger.info("💾 [Charm] Supabase Checkpointer Activated.")
-            except Exception as e:
-                logger.error(f"❌ [Charm] Checkpointer init failed: {e}")
+        # Setup Checkpointer via Storage Plugin
+        from ..core.storage import StorageManager
+        
+        provider_name = "local"
+        provider_config = {}
+        
+        # Backward compatibility for legacy env var
+        if os.getenv("NEXT_PUBLIC_SUPABASE_URL") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
+            provider_name = "supabase"
+            
+        if hasattr(self, "config") and self.config and hasattr(self.config, "memory"):
+            provider_name = self.config.memory.provider
+            provider_config = self.config.memory.config
+            
+        provider = StorageManager.get_provider(provider_name, provider_config)
+        self.checkpointer = provider.get_langgraph_checkpointer()
+        
+        if self.checkpointer:
+            logger.info(f"💾 [Charm] Checkpointer Activated via {provider_name}.")
         else:
-            logger.warning("⚠️ [Charm] No DB credentials. HITL will strictly use RAM (volatile).")
+            logger.warning(f"⚠️ [Charm] Memory provider '{provider_name}' does not support LangGraph Checkpointing. HITL will use volatile RAM.")
 
         # Unwrap Wrapper Classes
         if not hasattr(self.agent, "invoke"):
@@ -99,18 +106,24 @@ class CharmLangGraphAdapter(BaseAdapter):
             return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
 
         # Success Handling
-        output_str = str(result)
+        output = str(result)
         if isinstance(result, dict):
-            if "messages" in result and result["messages"]:
-                output_str = str(result["messages"][-1].content)
+            if "_charm_render_type" in result:
+                output = result
+            elif "messages" in result and result["messages"]:
+                output = str(result["messages"][-1].content)
             elif "generation" in result:
-                output_str = str(result["generation"])
+                output = str(result["generation"])
             elif "output" in result:
-                output_str = str(result["output"])
+                val = result["output"]
+                if isinstance(val, dict) and "_charm_render_type" in val:
+                    output = val
+                else:
+                    output = str(val)
 
         return {
             "status": "success",
-            "output": output_str,
+            "output": output,
             "thread_id": thread_id,
             "charm_state": "",
         }

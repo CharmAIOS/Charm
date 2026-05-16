@@ -15,7 +15,78 @@ Outputs are rendered into native UI components automatically by the Charm Univer
 
 Supports direct string streaming with rich formatting, including titles, lists, code blocks, bold/italic text, and links.
 
-### Structured JSON
+### Structured JSON (Explicit Rendering)
+
+The preferred way to trigger rich UI is to explicitly declare a `_charm_render_type` in your JSON output. This bypasses heuristic guessing and guarantees consistent, robust rendering.
+
+#### Chart Components
+
+```jsonc
+// 1. Bar Chart
+{
+  "_charm_render_type": "bar_chart",
+  "title": "Revenue by Region",
+  "data": [
+    { "name": "NA", "value": 125000 },
+    { "name": "EU", "value": 85000 }
+  ]
+}
+
+// 2. Line Chart (Sparkline style)
+{
+  "_charm_render_type": "line_chart",
+  "title": "User Growth",
+  "data": [
+    { "name": "Mon", "value": 10 },
+    { "name": "Tue", "value": 25 },
+    { "name": "Wed", "value": 40 }
+  ]
+}
+
+// 3. Pie Chart
+{
+  "_charm_render_type": "pie_chart",
+  "title": "Traffic Sources",
+  "data": [
+    { "name": "Organic", "value": 45 },
+    { "name": "Direct", "value": 30 }
+  ]
+}
+```
+
+#### Data Grid
+
+Renders a clean, scrollable table. Automatically extracts column headers from the keys of the first row object.
+
+```jsonc
+{
+  "_charm_render_type": "data_grid",
+  "title": "Recent Transactions",
+  "rows": [
+    { "id": "TX-1", "amount": "$450", "status": "Paid" },
+    { "id": "TX-2", "amount": "$120", "status": "Pending" }
+  ]
+}
+```
+
+#### Metric Card
+
+Renders a dashboard-style grid of metric cards with optional trend indicators.
+
+```jsonc
+{
+  "_charm_render_type": "metric_card",
+  "title": "Performance Dashboard",
+  "metrics": [
+    { "label": "Active Users", "value": 1204, "change": 12, "unit": "users" },
+    { "label": "Churn Rate", "value": "2.4", "change": -0.5, "unit": "%" }
+  ]
+}
+```
+
+### Structured JSON (Heuristic Rendering)
+
+If an explicit `_charm_render_type` is not provided, the Charm Store will attempt to infer the best UI representation based on the presence of certain keys.
 
 #### Viral Card
 
@@ -138,8 +209,27 @@ Suitable for long-form content, automatically extracts headings and optimizes fo
 }
 ```
 
+### Custom UI (HTML & SVG via Markdown)
+
+If the standard components don't fit your needs, you can still deliver completely custom UI elements.
+
+Because the default format for Charm is Markdown, and the Store's Markdown renderer natively supports **HTML and SVG elements** (safely sanitized via DOMPurify), your Agent can generate and return raw HTML/SVG strings as its text output.
+
+```html
+<!-- Example: Custom SVG Visualization returned as a string -->
+<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="50" rx="10" fill="#4CAF50"/>
+  <text x="100" y="30" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">
+    System Operational
+  </text>
+</svg>
+```
+
+> **Security Note:** The Charm Store frontend uses DOMPurify to strip `<script>`, `<iframe>`, and other potentially malicious vectors. Keep your custom UI elements constrained to static HTML, CSS classes (Tailwind is supported on the Store), and SVGs.
+
 ### Best Practices
 
-- Keep JSON flat: Minimize deep nesting. The Universal Renderer performs best with flat objects.
-- Use standard keywords: Since the system relies on heuristic detection, using standard English field names (e.g., date instead of d_time, title instead of header_text) ensures the correct UI is triggered.
-- Mix in Markdown: You can still use Markdown syntax (e.g., Bold, Link￼) in JSON values. The renderer will parse it correctly.
+- **Explicit is better than implicit:** Use `_charm_render_type` whenever possible instead of relying on heuristics.
+- **Keep JSON flat:** Minimize deep nesting. The Universal Renderer performs best with flat objects.
+- **Use standard keywords:** When using heuristic detection, using standard English field names (e.g., `date` instead of `d_time`) ensures the correct UI is triggered.
+- **Mix in Markdown:** You can still use Markdown syntax in JSON string values. The renderer will parse it correctly.

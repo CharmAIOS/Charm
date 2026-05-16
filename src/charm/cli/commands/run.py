@@ -29,7 +29,19 @@ console = Console()
 app = typer.Typer()
 
 # Valid adapter types
-VALID_ADAPTER_TYPES = ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+def get_valid_adapter_types() -> List[str]:
+    import sys
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import entry_points
+    else:
+        from importlib_metadata import entry_points
+    try:
+        eps = entry_points(group="charm.adapters")
+        return [ep.name for ep in eps]
+    except Exception:
+        return ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+
+VALID_ADAPTER_TYPES = get_valid_adapter_types()
 
 
 async def run_docker_simulation(

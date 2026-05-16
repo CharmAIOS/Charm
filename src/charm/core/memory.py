@@ -1,34 +1,18 @@
-import json
-import os
 from typing import Dict, List
+import warnings
 
-from .logger import logger
-
+from .storage import StorageManager
 
 def load_memory_snapshot() -> List[Dict[str, str]]:
     """
-    Hydrates conversation history from the injected memory file.
+    [DEPRECATED] Hydrates conversation history from the injected memory file.
+    Please use `StorageManager.get_provider(config).load_messages(thread_id)` instead.
     """
-    # Environment variable injected by the Cloud Runner
-    memory_path = os.getenv("CHARM_MEMORY_FILE")
-
-    if not memory_path:
-        logger.debug("No memory file environment variable set.")
-        return []
-
-    if not os.path.exists(memory_path):
-        logger.debug(f"Memory file not found at: {memory_path}")
-        return []
-
-    try:
-        with open(memory_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                logger.info(f"Hydrated {len(data)} messages from memory.")
-                return data
-            else:
-                logger.warning("Memory file format invalid (expected list).")
-                return []
-    except Exception as e:
-        logger.error(f"Failed to load memory snapshot: {e}")
-        return []
+    warnings.warn(
+        "load_memory_snapshot is deprecated. Use StorageManager instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    # Use the default local provider, assuming empty thread_id for legacy behavior
+    provider = StorageManager.get_provider("local", {})
+    return provider.load_messages("default_thread")

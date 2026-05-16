@@ -43,12 +43,29 @@ jobs:
                   username: 'oauth2accesstoken'
                   password: '${{ steps.auth.outputs.access_token }}'
 
-            - name: "Build & Push Standard Image"
+            - name: "Build & Push Base Image"
               run: |
-                  docker build -f Dockerfile.standard -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:prod .
-                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-standard:prod
+                  docker build -f Dockerfile.base -t ucmind/charm-base:latest .
+                  docker tag ucmind/charm-base:latest ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:prod
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:prod
+                  
+                  # Publish to GHCR for community to use as base
+                  OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+                  echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin || true
+                  docker tag ucmind/charm-base:latest ghcr.io/$OWNER/charm-base:latest
+                  docker push ghcr.io/$OWNER/charm-base:latest || echo "GHCR push failed, requires 'packages: write' permission in Workflow settings"
 
-            - name: "Build & Push Full Image"
+            - name: "Build & Push LangChain Image"
               run: |
-                  docker build -f Dockerfile.full -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:prod .
-                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-full:prod
+                  docker build -f Dockerfile.langchain -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:prod .
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:prod
+
+            - name: "Build & Push CrewAI Image"
+              run: |
+                  docker build -f Dockerfile.crewai -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:prod .
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:prod
+
+            - name: "Build & Push OpenClaw Image"
+              run: |
+                  docker build -f Dockerfile.openclaw -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:prod .
+                  docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:prod

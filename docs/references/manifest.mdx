@@ -51,6 +51,12 @@ runtime:
   adapter:
     type: "custom"
     entry_point: "src.main:agent"
+  telemetry:
+    - datadog
+  memory:
+    provider: "redis"
+    config:
+      url: "redis://localhost:6379/0"
   config:
     system_prompt: "You are a helpful assistant."
     model: "gpt-4o"
@@ -83,7 +89,7 @@ JSON Schema-style input, output, and optional state definitions. These control t
 
 ### `runtime`
 
-Adapter, entry point, engine configuration (`config`), lifecycle, mode, skills, and environment variable requirements.
+Adapter, entry point, engine configuration (`config`), lifecycle, mode, skills, telemetry, memory configuration, and environment variable requirements.
 
 ### `policies`
 

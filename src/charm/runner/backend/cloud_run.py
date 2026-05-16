@@ -198,7 +198,11 @@ class CloudRunBackend(ExecutionBackend):
         job.template.template.max_retries = 0
         job.template.template.timeout = f"{timeout_seconds}s"
 
-        if self.storage_bucket:
+        memory_provider = "local"
+        if config.env_vars:
+            memory_provider = config.env_vars.get("CHARM_MEMORY_PROVIDER", "local")
+
+        if self.storage_bucket and memory_provider == "local":
             container["volume_mounts"] = [{"name": "gcs-persistence", "mount_path": "/workspace"}]
             job.template.template.volumes = [
                 {

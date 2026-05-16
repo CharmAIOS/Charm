@@ -73,22 +73,31 @@ class CharmLangChainAdapter(BaseAdapter):
                 return {"status": "error", "message": str(e)}
 
         try:
-            output_str = str(result)
+            output = result
             if isinstance(result, dict):
+                # If the agent returned a rich render payload, pass it through as-is.
+                if "_charm_render_type" in result:
+                    return {"status": "success", "output": result}
                 for key in ["output", "text", "result", "generation"]:
                     if key in result:
                         val = result[key]
+                        if isinstance(val, dict) and "_charm_render_type" in val:
+                            return {"status": "success", "output": val}
                         if hasattr(val, "text"):
-                            output_str = val.text
+                            output = val.text
                         else:
-                            output_str = str(val)
+                            output = str(val)
                         break
+                else:
+                    output = str(result)
             elif isinstance(result, str):
-                output_str = result
+                output = result
             elif hasattr(result, "content"):
-                output_str = str(result.content)
+                output = str(result.content)
+            else:
+                output = str(result)
 
-            return {"status": "success", "output": output_str}
+            return {"status": "success", "output": output}
         except Exception as e:
             return {"status": "error", "message": f"Output parsing error: {str(e)}"}
 

@@ -286,15 +286,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": [
-                "langchain",
-                "langgraph",
-                "crewai",
-                "custom",
-                "node",
-                "openclaw"
-              ],
-              "description": "The specific SDK adapter to use. Use 'node' for Node.js agents, 'openclaw' for Skill agents."
+              "description": "The specific SDK adapter to use. Core adapters: 'langchain', 'langgraph', 'crewai', 'openclaw', 'custom', 'node'. You can also use 3rd-party adapters."
             },
             "entry_point": {
               "type": "string",
@@ -344,6 +336,11 @@
             }
           }
         },
+        "telemetry": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of telemetry exporter names to enable."
+        },
         "config": {
           "type": "object",
           "description": "Engine-specific configuration (e.g. for OpenClaw).",
@@ -370,6 +367,10 @@
           },
           "additionalProperties": false
         },
+        "custom_image": {
+          "type": "string",
+          "description": "Custom Docker image URI for the runtime environment."
+        },
         "mode": {
           "type": "string",
           "enum": [
@@ -377,7 +378,7 @@
             "full"
           ],
           "default": "standard",
-          "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js."
+          "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js. (Deprecated)"
         },
         "lifecycle": {
           "type": "string",

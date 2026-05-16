@@ -91,13 +91,15 @@ class CharmCrewAIAdapter(BaseAdapter):
                 return {"status": "error", "message": str(e)}
 
         try:
-            output_str = ""
-            if hasattr(result, "raw"):
-                output_str = result.raw
+            output = ""
+            if isinstance(result, dict) and "_charm_render_type" in result:
+                output = result
+            elif hasattr(result, "raw"):
+                output = result.raw
             else:
-                output_str = str(result)
+                output = str(result)
 
-            return {"status": "success", "output": output_str, "charm_state": ""}
+            return {"status": "success", "output": output, "charm_state": ""}
         except Exception as e:
             return {"status": "error", "message": f"Output parsing error: {e}"}
 

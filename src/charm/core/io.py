@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 # The string used to identify system events in the stdout stream.
 EVENT_PREFIX = "__CHARM_EVENT__"
@@ -34,8 +34,23 @@ class CharmEmitter:
         CharmEmitter._write("delta", {"content": content})
 
     @staticmethod
-    def emit_final(content: str, format: str = "markdown"):
-        """Emit the final result of the execution."""
+    def emit_final(content: Union[str, Dict[str, Any], list], format: str = "auto"):
+        """Emit the final result of the execution.
+
+        When *format* is ``"auto"`` (default) the method inspects *content*:
+        - dict with ``_charm_render_type`` → ``"rich_component"``
+        - other dict / list                → ``"json"``
+        - plain string                     → ``"markdown"``
+
+        Callers may still pass an explicit *format* to override.
+        """
+        if format == "auto":
+            if isinstance(content, dict) and "_charm_render_type" in content:
+                format = "rich_component"
+            elif isinstance(content, (dict, list)):
+                format = "json"
+            else:
+                format = "markdown"
         CharmEmitter._write("final", {"content": content, "format": format})
 
     @staticmethod

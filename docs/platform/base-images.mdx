@@ -16,6 +16,7 @@ Valid values:
 
 - `standard`
 - `full`
+- `custom` (when paired with `custom_image`)
 
 ## Standard Runtime
 
@@ -42,11 +43,22 @@ Best for:
 - OpenClaw agents,
 - browser-rendered output.
 
+## Custom Images
+
+If neither `standard` nor `full` meet your needs (e.g. you need specialized system libraries or you are building your own adapter), you can provide a `custom_image` URL. 
+
+```yaml
+runtime:
+  mode: "custom"
+  custom_image: "ghcr.io/your-org/your-custom-runtime:latest"
+```
+
 ## Choosing a Mode
 
-Start with `standard`. Move to `full` only when a dependency requires it.
+Start with `standard`. Move to `full` only when a dependency requires it. If you need a fully custom environment, build a custom image based on our provided base images.
 
 ## Related Pages
 
 - [Execution Modes](/platform/execution-modes)
 - [Base Image Contributions](/oss/base-image)
+- [Building Custom Runtimes](/guides/custom-runtimes)

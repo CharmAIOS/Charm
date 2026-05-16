@@ -104,6 +104,11 @@
                         "pages": [
                             "guides/manifest",
                             "guides/interface",
+                            "guides/custom-runtimes",
+                            "guides/custom-adapters",
+                            "guides/telemetry-exporters",
+                            "guides/output-renderers",
+                            "guides/state-and-memory",
                             "guides/charmignore"
                         ]
                     },
@@ -121,6 +126,12 @@
                         "pages": [
                             "guides/push",
                             "guides/version-control"
+                        ]
+                    },
+                    {
+                        "group": "Ecosystem & Community",
+                        "pages": [
+                            "guides/community-templates"
                         ]
                     }
                 ]

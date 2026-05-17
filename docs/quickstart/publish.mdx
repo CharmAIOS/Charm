@@ -35,7 +35,7 @@ Please read this section carefully. Most deployment failures are caused by viola
    - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.
    - **Solution**: Use relative paths (e.g., `./data/...`) or `os.getcwd()`.
 
-> If you hit any issues, feel free to open an [issue](https://github.com/CharmAIOS/Charm/issues/new/choose) or ask in our [community](https://discord.gg/gdakynHUEb). It really helps us make the docs and product better.
+> If you hit any issues, feel free to open an [issue](https://github.com/CharmAIOS/Charm/issues/new/choose) or ask in our [community]({discord_url}). It really helps us make the docs and product better.
 
 ## Zero-Ops Publishing
 
@@ -47,9 +47,7 @@ Register your agent on the Charm Store.
 
 Sign in to the Charm platform and link your account.
 
-```bash
-charm auth login
-```
+<Snippet file="snippets/auth-login.mdx" />
 
 #### Preparing your UAC manifest
 

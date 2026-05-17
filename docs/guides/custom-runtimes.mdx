@@ -43,7 +43,7 @@ docker push ghcr.io/your-org/my-agent-image:latest
 Once your image is publicly accessible, you can tell the Charm Cloud Runner to use it by adding the `custom_image` field under the `runtime` configuration block in your `charm.yaml`:
 
 ```yaml
-version: "0.4.2"
+version: "{manifest_version}"
 persona:
   name: "My Custom Agent"
 

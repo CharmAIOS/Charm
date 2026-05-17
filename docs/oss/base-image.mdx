@@ -9,10 +9,7 @@ Base images define the runtime environment used to execute agents.
 
 Charm currently provides several pre-built base images depending on the adapter type:
 
-- `runner-base`: minimal Python environment.
-- `runner-langchain`: pre-installed with LangChain dependencies.
-- `runner-crewai`: pre-installed with CrewAI dependencies.
-- `runner-openclaw`: heavier runtime for browser automation and OpenClaw workflows.
+<Snippet file="snippets/base-image-mapping.mdx" />
 
 Agents automatically select the correct base image based on their `adapter.type`, or explicitly override it using `custom_image`:
 

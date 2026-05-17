@@ -17,7 +17,8 @@ interface:
         type: "string"
         title: "Message"
         description: "What should the agent do?"
-        x-ui-widget: "textarea"
+  ui:
+    message: { "ui:widget": "textarea" }
   output:
     type: "object"
   state:
@@ -41,16 +42,17 @@ Use standard JSON Schema concepts:
 - `description`
 - `default`
 
-## Widget Hints
+## UI Schema (Component Registry)
 
-`x-ui-widget` can help the Store choose a better input control.
+The `ui` block maps data fields to specific frontend React components, keeping the data schema clean.
+(Note: The legacy `x-ui-widget` property is now deprecated.)
 
-Common examples:
+Common widgets:
 
-- `textarea`
-- `password`
-- `file`
-- `color`
+- `textarea`: Multi-line text input
+- `password`: Masked input
+- `file`: File upload zone
+- `color`: Color picker
 
 ## State Schema (Optional)
 

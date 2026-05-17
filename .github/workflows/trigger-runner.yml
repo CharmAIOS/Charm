@@ -6,7 +6,7 @@ on:
             - develop
         paths:
             - 'src/**'
-            - 'Dockerfile*'
+            - 'docker/Dockerfile*'
 
 jobs:
     notify-runner:

@@ -22,7 +22,7 @@ Canonical ownership:
 | `src/charm/runner/backend/` | Docker, Cloud Run, Fly.io, and related execution backends |
 | `src/charm/templates/` | Built-in starter manifests and agent templates |
 | `docs/` | Public docs source for docs.charmos.io |
-| `Dockerfile.standard` / `Dockerfile.full` | Runtime image build definitions |
+| `docker/` | Runtime image build definitions (`Dockerfile.base`, `.langchain`, etc.) |
 
 Do not move behavior across these boundaries without updating imports, docs,
 tests, and release notes together.
@@ -93,8 +93,8 @@ python -m twine check dist/*
 ### Runtime Images
 
 ```bash
-docker build -f Dockerfile.standard -t charm-runner-standard:ci .
-docker build -f Dockerfile.full -t charm-runner-full:ci .
+docker build -f docker/Dockerfile.base -t charm-runner-base:ci .
+docker build -f docker/Dockerfile.langchain -t charm-runner-langchain:ci .
 ```
 
 ## Docs Rules

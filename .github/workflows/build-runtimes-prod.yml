@@ -7,7 +7,7 @@ on:
             - main
         paths:
             - 'src/**'
-            - 'Dockerfile*'
+            - 'docker/Dockerfile*'
             # Re-run when this workflow or related CI changes (paths filter otherwise skips workflow-only edits)
             - '.github/workflows/**'
 
@@ -45,7 +45,7 @@ jobs:
 
             - name: "Build & Push Base Image"
               run: |
-                  docker build -f Dockerfile.base -t ucmind/charm-base:latest .
+                  docker build -f docker/Dockerfile.base -t ucmind/charm-base:latest .
                   docker tag ucmind/charm-base:latest ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:prod
                   docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:prod
                   
@@ -57,15 +57,15 @@ jobs:
 
             - name: "Build & Push LangChain Image"
               run: |
-                  docker build -f Dockerfile.langchain -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:prod .
+                  docker build -f docker/Dockerfile.langchain -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:prod .
                   docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:prod
 
             - name: "Build & Push CrewAI Image"
               run: |
-                  docker build -f Dockerfile.crewai -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:prod .
+                  docker build -f docker/Dockerfile.crewai -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:prod .
                   docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:prod
 
             - name: "Build & Push OpenClaw Image"
               run: |
-                  docker build -f Dockerfile.openclaw -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:prod .
+                  docker build -f docker/Dockerfile.openclaw -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:prod .
                   docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:prod

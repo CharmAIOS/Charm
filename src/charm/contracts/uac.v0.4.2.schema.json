@@ -1,435 +1,691 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://charm.ai/contracts/uac.v0.4.2.schema.json",
-  "title": "Unified Agent Contract (UAC) v0.4.2",
-  "description": "The definitive definition for Charm Agents. Combines Runtime Execution specs with Store Presentation metadata.",
-  "type": "object",
+  "$defs": {
+    "AuthConfig": {
+      "description": "Global authentication requirements for the agent.",
+      "properties": {
+        "providers": {
+          "items": {
+            "$ref": "#/$defs/AuthProvider"
+          },
+          "title": "Providers",
+          "type": "array"
+        }
+      },
+      "title": "AuthConfig",
+      "type": "object"
+    },
+    "AuthProvider": {
+      "description": "Configuration for OAuth requirements.",
+      "properties": {
+        "name": {
+          "description": "Provider name (e.g. 'google', 'github', 'twitter')",
+          "title": "Name",
+          "type": "string"
+        },
+        "scopes": {
+          "description": "List of required OAuth scopes",
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AuthProvider",
+      "type": "object"
+    },
+    "EnvVars": {
+      "description": "Environment variables split logically to support backend validation flows.",
+      "properties": {
+        "models": {
+          "description": "LLM/Model API keys",
+          "items": {
+            "type": "string"
+          },
+          "title": "Models",
+          "type": "array"
+        },
+        "tools": {
+          "description": "Tool/Skill API keys",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "title": "EnvVars",
+      "type": "object"
+    },
+    "HumanInTheLoop": {
+      "description": "Configuration for human oversight.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "triggers": {
+          "description": "Keywords or tool names that trigger approval",
+          "items": {
+            "type": "string"
+          },
+          "title": "Triggers",
+          "type": "array"
+        }
+      },
+      "title": "HumanInTheLoop",
+      "type": "object"
+    },
+    "InterfaceConfig": {
+      "description": "Defines Inputs, Outputs, and State structure.",
+      "properties": {
+        "input": {
+          "additionalProperties": true,
+          "description": "JSON Schema for input parameters",
+          "title": "Input",
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": true,
+          "description": "JSON Schema for output format",
+          "title": "Output",
+          "type": "object"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ui": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "UI schema for dynamic form rendering",
+          "title": "Ui"
+        }
+      },
+      "required": [
+        "input",
+        "output"
+      ],
+      "title": "InterfaceConfig",
+      "type": "object"
+    },
+    "InterfaceState": {
+      "description": "Schema of the persistent state.",
+      "properties": {
+        "format": {
+          "default": "json",
+          "enum": [
+            "json",
+            "binary",
+            "pydantic_model"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "schema": {
+          "additionalProperties": true,
+          "description": "Structure of the state object",
+          "title": "Schema",
+          "type": "object"
+        }
+      },
+      "title": "InterfaceState",
+      "type": "object"
+    },
+    "MemoryConfig": {
+      "description": "Configuration for the state/memory storage plugin.",
+      "properties": {
+        "provider": {
+          "default": "local",
+          "description": "The memory provider plugin name (e.g., 'local', 'redis', 'postgres').",
+          "title": "Provider",
+          "type": "string"
+        },
+        "config": {
+          "additionalProperties": true,
+          "description": "Provider-specific configuration (e.g., connection URLs).",
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "title": "MemoryConfig",
+      "type": "object"
+    },
+    "OpenClawConfig": {
+      "description": "Configuration specific to the OpenClaw runtime engine.",
+      "properties": {
+        "system_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The core personality or instruction set for the agent (writes to IDENTITY.md).",
+          "title": "System Prompt"
+        },
+        "model": {
+          "default": "gpt-4o",
+          "description": "The LLM model ID to use (e.g. gpt-4o, claude-3-5-sonnet).",
+          "title": "Model",
+          "type": "string"
+        },
+        "temperature": {
+          "default": 0.0,
+          "description": "LLM sampling temperature.",
+          "title": "Temperature",
+          "type": "number"
+        },
+        "auto_install_dependencies": {
+          "default": true,
+          "description": "If True, recursively installs requirements.txt/package.json found in local skills.",
+          "title": "Auto Install Dependencies",
+          "type": "boolean"
+        }
+      },
+      "title": "OpenClawConfig",
+      "type": "object"
+    },
+    "Persona": {
+      "description": "Identity and metadata for Store display and Search.",
+      "properties": {
+        "name": {
+          "description": "The public name of the agent shown in the store",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "default": "0.1.0",
+          "description": "Semantic version (e.g. 1.0.0)",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Version",
+          "type": "string"
+        },
+        "description": {
+          "description": "Short tagline for card view (max 100 chars)",
+          "title": "Description",
+          "type": "string"
+        },
+        "full_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Long markdown description for the detail page",
+          "title": "Full Description"
+        },
+        "authors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "license": {
+          "default": "Free",
+          "description": "Usage license (e.g. 'Proprietary', 'MIT')",
+          "title": "License",
+          "type": "string"
+        },
+        "assets": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StoreAssets"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "title": "Persona",
+      "type": "object"
+    },
+    "Policies": {
+      "description": "Governance and safety rules.",
+      "properties": {
+        "allow_internet_access": {
+          "default": true,
+          "title": "Allow Internet Access",
+          "type": "boolean"
+        },
+        "human_in_the_loop": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HumanInTheLoop"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "max_steps": {
+          "default": 20,
+          "description": "Max execution steps",
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "budget_limit": {
+          "default": 0.0,
+          "description": "Max USD cost per run",
+          "title": "Budget Limit",
+          "type": "number"
+        },
+        "execution_timeout_seconds": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional serverless execution timeout override in seconds.",
+          "title": "Execution Timeout Seconds"
+        }
+      },
+      "title": "Policies",
+      "type": "object"
+    },
+    "Pricing": {
+      "description": "Commercial model for the Charm Store.",
+      "properties": {
+        "model": {
+          "default": "free",
+          "enum": [
+            "free",
+            "subscription",
+            "one_time"
+          ],
+          "title": "Model",
+          "type": "string"
+        },
+        "amount": {
+          "default": 0.0,
+          "description": "Price in USD",
+          "title": "Amount",
+          "type": "number"
+        },
+        "billing_period": {
+          "anyOf": [
+            {
+              "enum": [
+                "monthly",
+                "annual"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Billing Period"
+        },
+        "trial": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrialConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Pricing",
+      "type": "object"
+    },
+    "RuntimeAdapter": {
+      "description": "Instructs the Loader how to bootstrap this agent.",
+      "properties": {
+        "type": {
+          "description": "The specific SDK adapter to use",
+          "title": "Type",
+          "type": "string"
+        },
+        "entry_point": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Python import path (src.main:app) OR Shell command. Optional for 'openclaw'.",
+          "title": "Entry Point"
+        },
+        "environment_variables": {
+          "$ref": "#/$defs/EnvVars",
+          "description": "Required env vars to be injected"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "RuntimeAdapter",
+      "type": "object"
+    },
+    "RuntimeConfig": {
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/RuntimeAdapter"
+        },
+        "skills": {
+          "description": "List of MCP Skills to mount.",
+          "items": {
+            "$ref": "#/$defs/SkillConfig"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "telemetry": {
+          "description": "List of telemetry exporter names to enable.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Telemetry",
+          "type": "array"
+        },
+        "memory": {
+          "$ref": "#/$defs/MemoryConfig",
+          "description": "Configuration for persistent memory and state storage."
+        },
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenClawConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Engine-specific configuration (e.g. for OpenClaw)."
+        },
+        "custom_image": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom Docker image URI for the runtime environment.",
+          "title": "Custom Image"
+        },
+        "mode": {
+          "default": "standard",
+          "description": "Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime. (Deprecated)",
+          "enum": [
+            "standard",
+            "full"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "lifecycle": {
+          "default": "serverless",
+          "description": "Execution mode: 'serverless' (max 10 mins), 'daemon' (24/7 always-on), or 'interactive' (real-time streaming).",
+          "enum": [
+            "serverless",
+            "daemon",
+            "interactive"
+          ],
+          "title": "Lifecycle",
+          "type": "string"
+        }
+      },
+      "required": [
+        "adapter"
+      ],
+      "title": "RuntimeConfig",
+      "type": "object"
+    },
+    "SkillConfig": {
+      "description": "Configuration for an external Skill/MCP Server.",
+      "properties": {
+        "name": {
+          "description": "Unique identifier for the skill (e.g. 'google-search')",
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Source: 'smithery:@org/pkg', 'git:https://...', 'pip:package', or 'local:./path'",
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Specific version or commit hash",
+          "title": "Version"
+        },
+        "config": {
+          "additionalProperties": true,
+          "description": "Environment variables or config overrides for this skill",
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "source"
+      ],
+      "title": "SkillConfig",
+      "type": "object"
+    },
+    "StoreAssets": {
+      "description": "Visual assets for the Storefront.",
+      "properties": {
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL to square icon (512x512)",
+          "title": "Icon"
+        },
+        "banner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "URL to wide banner image",
+          "title": "Banner"
+        },
+        "screenshots": {
+          "description": "List of screenshot URLs",
+          "items": {
+            "type": "string"
+          },
+          "title": "Screenshots",
+          "type": "array"
+        }
+      },
+      "title": "StoreAssets",
+      "type": "object"
+    },
+    "TrialConfig": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "days": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Days"
+        }
+      },
+      "title": "TrialConfig",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "version": {
+      "description": "Contract version (Compatible with 0.4.x SDK)",
+      "pattern": "^0\\.4(\\.\\d+)?$",
+      "title": "Version",
+      "type": "string"
+    },
+    "id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Unique UUID for the agent. Generated by CLI.",
+      "title": "Id"
+    },
+    "persona": {
+      "$ref": "#/$defs/Persona"
+    },
+    "pricing": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Pricing"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "auth": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuthConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "goals": {
+      "description": "Semantic goals for search indexing",
+      "items": {
+        "type": "string"
+      },
+      "title": "Goals",
+      "type": "array"
+    },
+    "interface": {
+      "$ref": "#/$defs/InterfaceConfig"
+    },
+    "runtime": {
+      "$ref": "#/$defs/RuntimeConfig"
+    },
+    "policies": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Policies"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "workflow": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Workflow"
+    }
+  },
   "required": [
     "version",
     "persona",
     "interface",
     "runtime"
   ],
-  "additionalProperties": false,
-  "properties": {
-    "id": {
-      "type": "string",
-      "description": "System-generated unique identifier. Do not edit manually."
-    },
-    "version": {
-      "type": "string",
-      "const": "^0\\.4(\\.\\d+)?$",
-      "description": "Compatible with Charm SDK 0.4.x"
-    },
-    "persona": {
-      "type": "object",
-      "description": "Identity and metadata for Store display and Search.",
-      "required": [
-        "name",
-        "description"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "title": "Display Name",
-          "description": "The public name of the agent shown in the store."
-        },
-        "version": {
-          "type": "string",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$",
-          "description": "The semantic version of this Agent (e.g. 1.0.0).",
-          "default": "0.1.0"
-        },
-        "description": {
-          "type": "string",
-          "description": "Short tagline for card view (max 100 chars)."
-        },
-        "full_description": {
-          "type": "string",
-          "description": "Long markdown description for the detail page."
-        },
-        "authors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "license": {
-          "type": "string",
-          "description": "Usage license (e.g. 'Proprietary', 'MIT', 'Free-for-personal').",
-          "default": "Free"
-        },
-        "assets": {
-          "type": "object",
-          "description": "Visual assets for the Storefront.",
-          "properties": {
-            "icon": {
-              "type": "string",
-              "format": "uri",
-              "description": "URL to square icon (512x512)"
-            },
-            "banner": {
-              "type": "string",
-              "format": "uri",
-              "description": "URL to wide banner image"
-            },
-            "screenshots": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uri"
-              }
-            }
-          }
-        }
-      }
-    },
-    "pricing": {
-      "type": "object",
-      "description": "Commercial model for the Charm Store. Controls agent access billing (separate from platform usage quota).",
-      "properties": {
-        "model": {
-          "type": "string",
-          "enum": [
-            "free",
-            "subscription",
-            "one_time"
-          ],
-          "default": "free",
-          "description": "Pricing model. 'free' = open access, 'subscription' = recurring payment, 'one_time' = single purchase."
-        },
-        "amount": {
-          "type": "number",
-          "description": "Price in USD. Ignored when model is 'free'."
-        },
-        "billing_period": {
-          "type": "string",
-          "enum": [
-            "monthly",
-            "annual"
-          ],
-          "description": "Billing cycle for subscriptions. Only used when model is 'subscription'."
-        },
-        "trial": {
-          "type": "object",
-          "description": "Free trial configuration. Card is required upfront; if not cancelled, billing starts automatically after the trial period.",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false,
-              "description": "Whether a free trial is offered before the first charge."
-            },
-            "days": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 30,
-              "default": 7,
-              "description": "Number of trial days."
-            }
-          }
-        },
-        "currency": {
-          "type": "string",
-          "default": "USD",
-          "description": "Currency code. Currently only USD is supported."
-        }
-      }
-    },
-    "auth": {
-      "type": "object",
-      "description": "Global authentication requirements.",
-      "properties": {
-        "providers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "name"
-            ],
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "e.g. google, github"
-              },
-              "scopes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "goals": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Semantic goals. Used by the Store for search indexing and by other agents for planning."
-    },
-    "interface": {
-      "type": "object",
-      "description": "Defines Inputs, Outputs, and State structure. Supports UI hints for auto-generated forms.",
-      "required": [
-        "input",
-        "output"
-      ],
-      "properties": {
-        "input": {
-          "type": "object",
-          "description": "JSON Schema for input parameters. Defines the form fields shown to the user.",
-          "properties": {
-            "type": {
-              "type": "string",
-              "enum": [
-                "object"
-              ]
-            },
-            "required": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "properties": {
-              "type": "object",
-              "description": "Map of parameter names. IMPORTANT: The key names defined here MUST match exactly the keys your Agent expects in its input dictionary (e.g., inputs={'project_text': ...}).",
-              "additionalProperties": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "string",
-                      "number",
-                      "integer",
-                      "boolean",
-                      "array",
-                      "object"
-                    ]
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "default": {},
-                  "enum": {
-                    "type": "array"
-                  },
-                  "x-ui-widget": {
-                    "type": "string",
-                    "enum": [
-                      "textarea",
-                      "password",
-                      "color",
-                      "file",
-                      "files"
-                    ],
-                    "description": "UI Rendering Hint. Use 'file' to enable file upload and auto-injection."
-                  }
-                },
-                "additionalProperties": true
-              }
-            }
-          },
-          "additionalProperties": true
-        },
-        "output": {
-          "type": "object",
-          "description": "JSON Schema for output format.",
-          "additionalProperties": true
-        },
-        "state": {
-          "type": "object",
-          "description": "Schema of the persistent state. Required for Runtime to perform snapshot/resume.",
-          "properties": {
-            "format": {
-              "type": "string",
-              "enum": [
-                "json",
-                "binary",
-                "pydantic_model"
-              ],
-              "default": "json"
-            },
-            "schema": {
-              "type": "object",
-              "description": "Structure of the state object"
-            }
-          }
-        }
-      }
-    },
-    "runtime": {
-      "type": "object",
-      "description": "Configuration for the Charm Runtime Adapter and Dependency Injection.",
-      "required": [
-        "adapter"
-      ],
-      "properties": {
-        "adapter": {
-          "type": "object",
-          "description": "Instructs the Loader how to bootstrap this agent.",
-          "required": [
-            "type"
-          ],
-          "properties": {
-            "type": {
-              "type": "string",
-              "description": "The specific SDK adapter to use. Core adapters: 'langchain', 'langgraph', 'crewai', 'openclaw', 'custom', 'node'. You can also use 3rd-party adapters."
-            },
-            "entry_point": {
-              "type": "string",
-              "description": "Python import path (e.g., 'src.agent:my_crew') OR Shell command. Optional for openclaw."
-            },
-            "environment_variables": {
-              "type": "object",
-              "description": "Environment variables required by the Agent.",
-              "properties": {
-                "models": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "List of required LLM API keys (e.g., OPENAI_API_KEY)."
-                },
-                "tools": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "List of required Tool API keys (e.g., SERPER_API_KEY)."
-                }
-              },
-              "additionalProperties": false
-            }
-          }
-        },
-        "skills": {
-          "type": "array",
-          "description": "List of MCP Skills to mount.",
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "source"
-            ],
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "version": {
-                "type": "string"
-              },
-              "config": {
-                "type": "object"
-              }
-            }
-          }
-        },
-        "telemetry": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of telemetry exporter names to enable."
-        },
-        "config": {
-          "type": "object",
-          "description": "Engine-specific configuration (e.g. for OpenClaw).",
-          "properties": {
-            "system_prompt": {
-              "type": "string",
-              "description": "Global system instruction for the agent."
-            },
-            "model": {
-              "type": "string",
-              "default": "gpt-4o",
-              "description": "LLM model ID."
-            },
-            "temperature": {
-              "type": "number",
-              "default": 0.0,
-              "description": "Sampling temperature."
-            },
-            "auto_install_dependencies": {
-              "type": "boolean",
-              "default": true,
-              "description": "Automatically install dependencies for local skills."
-            }
-          },
-          "additionalProperties": false
-        },
-        "custom_image": {
-          "type": "string",
-          "description": "Custom Docker image URI for the runtime environment."
-        },
-        "mode": {
-          "type": "string",
-          "enum": [
-            "standard",
-            "full"
-          ],
-          "default": "standard",
-          "description": "Runtime Environment selection. Use 'standard' (Default) for lightweight Python tasks. Use 'full' if you need Chrome, FFmpeg, or Node.js. (Deprecated)"
-        },
-        "lifecycle": {
-          "type": "string",
-          "enum": [
-            "serverless",
-            "daemon"
-          ],
-          "default": "serverless",
-          "description": "Execution mode: 'serverless' (max 10 mins) or 'daemon' (24/7 always-on)."
-        }
-      }
-    },
-    "policies": {
-      "type": "object",
-      "description": "Governance and safety rules enforced by the Runtime.",
-      "properties": {
-        "allow_internet_access": {
-          "type": "boolean",
-          "default": true
-        },
-        "human_in_the_loop": {
-          "type": "object",
-          "description": "Configuration for human oversight.",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": false
-            },
-            "triggers": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Keywords or tool names that trigger a pause for approval."
-            }
-          }
-        },
-        "max_steps": {
-          "type": "integer",
-          "default": 20
-        },
-        "budget_limit": {
-          "type": "number",
-          "description": "Max USD cost per run"
-        },
-        "execution_timeout_seconds": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Optional serverless execution timeout override in seconds."
-        }
-      }
-    }
-  }
+  "title": "CharmConfig",
+  "type": "object",
+  "$id": "https://charm.ai/contracts/uac.v0.4.2.schema.json"
 }

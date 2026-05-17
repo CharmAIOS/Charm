@@ -39,6 +39,8 @@ interface:
         title: "Message"
   output:
     type: "object"
+  ui:
+    message: { "ui:widget": "textarea" }
   state:
     format: "json"
     schema:
@@ -85,7 +87,11 @@ Optional OAuth requirements. The Store uses this to prompt users to connect prov
 
 ### `interface`
 
-JSON Schema-style input, output, and optional state definitions. These control the generated UI and persistent memory structures.
+JSON Schema-style input, output, and optional state definitions. These control the generated forms and persistent memory structures.
+
+### `ui`
+
+Component definitions that map input keys to specific frontend rendering widgets (e.g. `textarea`, `file`, `date-picker`).
 
 ### `runtime`
 

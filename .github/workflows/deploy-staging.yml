@@ -6,7 +6,7 @@ on:
       - develop
     paths:
       - 'src/**'
-      - 'Dockerfile*'
+      - 'docker/Dockerfile*'
 
 env:
   PROJECT_ID: charm-cloud-runner
@@ -32,21 +32,21 @@ jobs:
 
       - name: "Build & Push Base Image"
         run: |
-          docker build -f Dockerfile.base -t ucmind/charm-base:latest .
+          docker build -f docker/Dockerfile.base -t ucmind/charm-base:latest .
           docker tag ucmind/charm-base:latest ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:staging
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-base:staging
 
       - name: "Build & Push LangChain Image"
         run: |
-          docker build -f Dockerfile.langchain -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:staging .
+          docker build -f docker/Dockerfile.langchain -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:staging .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-langchain:staging
 
       - name: "Build & Push CrewAI Image"
         run: |
-          docker build -f Dockerfile.crewai -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:staging .
+          docker build -f docker/Dockerfile.crewai -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:staging .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-crewai:staging
 
       - name: "Build & Push OpenClaw Image"
         run: |
-          docker build -f Dockerfile.openclaw -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:staging .
+          docker build -f docker/Dockerfile.openclaw -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:staging .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/runner-openclaw:staging

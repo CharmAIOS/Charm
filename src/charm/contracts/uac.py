@@ -57,6 +57,9 @@ class InterfaceConfig(BaseModel):
     input: Dict[str, Any] = Field(..., description="JSON Schema for input parameters")
     output: Dict[str, Any] = Field(..., description="JSON Schema for output format")
     state: Optional[InterfaceState] = None
+    ui: Optional[Dict[str, Any]] = Field(
+        None, description="UI schema for dynamic form rendering"
+    )
 
 
 # Skill Configuration

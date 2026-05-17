@@ -1,114 +1,251 @@
 ---
 title: Manifest Reference
-summary: Skeleton reference for the Charm `charm.yaml` schema.
+summary: The complete UAC Manifest Schema Reference
 ---
 
 `charm.yaml` is the manifest that tells Charm how to display, run, price, and publish an agent.
 
-## Planned Sections
+## Annotated Reference
 
-- `version`
-- `persona`
-- `pricing`
-- `auth`
-- `interface`
-- `runtime`
-- `policies`
-- `workflow`
-
-## Minimal Shape
+This is a fully annotated example to understand specific capabilities or customization options.
 
 ```yaml
-version: "0.4.3"
 
+# ==================================================================
+# Charm Agent Manifest (Annotated Reference)
+# ==================================================================
+
+version: "0.4.2"  # [System] The UAC Spec version (Do not change manually).
+
+# ------------------------------------------------------------------
+# 1. Identity & Store Metadata
+# ------------------------------------------------------------------
 persona:
-  name: "My Agent"
-  version: "0.1.0"
-  description: "A short description."
-  authors: ["Your Name"]
-  tags: ["productivity"]
+  name: "My Charm Agent" # Display Project Name (Max 50 chars)
+  version: "0.1.0" # [Agent] Your Agent's Semantic Version. Update this when publishing updates.
+  description: "A short description of this agent." # Tagline (Card view, Max 100 chars)
+  
+  # Full description supports Markdown. Used for the Info Page.
+  full_description: |
+    # My Charm Agent
+    ...
+  # Describe usage, available capabilities, and expected deliverables.
+    
+  authors: ["Brand, Company, or Individual Name"]
+  tags: ["research", "productivity"] # We use tags to categorize agents for users, so please make sure your first tag is one of Productivity, Developer, Creative, Learning, Lifestyle, Search & News, or Others.
   license: "MIT"
+  
+  # Assets for the Storefront
+  assets:
+    icon: "https://your-site.com/assets/icon.png" # 512x512 Square
+    banner: "https://your-site.com/assets/banner.png"  # 1200x600 Wide
 
+pricing:
+  model: "free"  # Options: free, subscription, one_time.
+  amount: 0      # Price in USD. Ignored when model is 'free'.
+  # billing_period: "monthly" # Options: monthly, annual (for subscription)
+  # trial:
+  #   enabled: true
+  #   days: 7
+
+# ------------------------------------------------------------------
+# 2. UI Generation
+# ------------------------------------------------------------------
+# Defines the input form shown to users.
+# It uses standard JSON Schema.
 interface:
   input:
     type: "object"
-    required: ["message"]
+    required: ["topic"] # Mandatory fields
     properties:
-      message:
+      # Example 1: Simple Text Input
+      topic:
         type: "string"
-        title: "Message"
+        title: "Research Topic"
+        default: "AI Agents"
+      
+      # Example 2: Large Text Area
+      details:
+        type: "string"
+        title: "Extra Details"
+        description: "Paste any background info here."
+      
+      # Example 3: File Upload
+      # The Runner will download the file and inject the filename into this variable.
+      document:
+        type: "string"
+        title: "Upload Document"
+
+      # Example 4: Number Input
+      depth:
+        type: "integer"
+        title: "Search Depth"
+        default: 3
+        minimum: 1
+        maximum: 5
+
+  # Maps input fields to frontend UI components
+  ui:
+    details: { "ui:widget": "textarea" }
+    document: { "ui:widget": "file" }
+
   output:
     type: "object"
-  ui:
-    message: { "ui:widget": "textarea" }
+    description: "The structure of the final result."
+
+  # Optional: For agents that persist state across runs
   state:
     format: "json"
     schema:
       type: "object"
       properties:
-        memory:
-          type: "string"
+        history:
+          type: "array"
+      additionalProperties: false
 
+# ------------------------------------------------------------------
+# 3. Runtime Configuration
+# ------------------------------------------------------------------
 runtime:
   adapter:
-    type: "custom"
-    entry_point: "src.main:agent"
-  telemetry:
-    - datadog
-  memory:
-    provider: "redis"
-    config:
-      url: "redis://localhost:6379/0"
+    # - crewai / langchain / langgraph : Standard Python Frameworks
+    # - openclaw : Configuration-driven Agent
+    # - custom : Pure Python functions
+    type: "crewai"
+    
+    # --------------------------------------------------------------
+    # ENTRY POINT: Where is your agent object?
+    # Format: <python_module_path>:<variable_or_function_name>
+    # --------------------------------------------------------------
+    # [Case A] For Frameworks (CrewAI, LangChain): Point to the agent instance.
+    entry_point: "src.main:my_crew"
+    
+    # [Case B] For Custom (Pure Python): Point to a function or class instance.
+    entry_point: "src.my_script:run_pipeline"
+
+    # [Case C] For OpenClaw: Optional (uses default host if empty)
+    entry_point: ""
+    
+    # --------------------------------------------------------------
+    # SECURE ENV VARS: List keys your agent needs.
+    # DO NOT put values here. The Runner injects them securely.
+    # --------------------------------------------------------------
+    environment_variables:
+      models:
+        - "OPENAI_API_KEY"
+      tools:
+        - "SERPER_API_KEY"
+
+  # --------------------------------------------------------------
+  # ENGINE CONFIG: For OpenClaw or specific engines
+  # --------------------------------------------------------------
   config:
-    system_prompt: "You are a helpful assistant."
+    system_prompt: "You are an expert researcher."
     model: "gpt-4o"
     temperature: 0.0
-  mode: "standard"
+    auto_install_dependencies: true
+
+  # --------------------------------------------------------------
+  # SKILLS & MCP TOOLS
+  # --------------------------------------------------------------
+  skills:
+    
+    # [Source: Git] 
+    - name: "research-flow"
+      source: "git:https://github.com/openclaw/skill-researcher"
+      version: "main" # Or Commit Hash / Tag (If you want to pin the version)
+
+    # [Source: Zip] 
+    - name: "finance-analyst"
+      source: "https://clawhub.ai/download/skills/finance-v1.2.0.zip"
+
+    # [Source: NPM] 
+    - name: "google-search"
+      source: "npm:@modelcontextprotocol/server-google-search"
+
+    # [Source: PyPI] 
+    - name: "local-time"
+      source: "pip:mcp-server-time"
+  
+  # --------------------------------------------------------------
+  # Memory & State Storage (Optional)
+  # --------------------------------------------------------------
+  memory:
+    provider: "local" # Options: local, redis, postgres (Requires custom memory plugin)
+    
+  # --------------------------------------------------------------
+  # Observability (Optional)
+  # --------------------------------------------------------------
+  telemetry:
+    - "datadog" # Enable custom telemetry exporters
+  
+  # --------------------------------------------------------------
+  # Base Image
+  # --------------------------------------------------------------
+   # Override standard images with your own custom Docker image
+  # custom_image: "ghcr.io/your-org/my-agent-image:latest"
+
+  # --------------------------------------------------------------
+  # Execution Mode
+  # --------------------------------------------------------------
+   # "serverless": Runs once and shuts down. Perfect for one-time tasks, async workflows, or heavy batch processing.
+   # "interactive": Built for continuous dialogue. Keeps context alive for seamless, back-and-forth interactions.
+   # "daemon": 24/7 always-on. Ideal for monitoring, event listeners, or continuous background services.
   lifecycle: "serverless"
+
+# ------------------------------------------------------------------
+# 4. Authentication
+# ------------------------------------------------------------------
+# Declare if your agent needs user's OAuth tokens.
+# NOTE: Use the official scope strings defined by the provider.
+auth:
+  providers:
+    # [OAuth: Google]
+    - name: "google"
+      scopes: 
+        - "https://www.googleapis.com/auth/calendar.readonly"
+        - "https://www.googleapis.com/auth/gmail.send"
+
+    # [OAuth: GitHub]
+    - name: "github"
+      scopes: 
+        - "repo"
+        - "read:user"
+
+# ------------------------------------------------------------------
+# 5. Governance (Policies)
+# ------------------------------------------------------------------
+policies:
+  allow_internet_access: true
+  max_steps: 20
+  # Optional: Override serverless run timeout for this agent (seconds).
+  # execution_timeout_seconds: 600
 ```
 
-## Field Groups
+### Field Reference Table
 
-### `version`
-
-The manifest contract version supported by the installed SDK.
-
-### `persona`
-
-Public metadata used in the Store, docs, and release history.
-
-### `pricing`
-
-Optional commercial metadata such as free, one-time, or subscription pricing.
-
-### `auth`
-
-Optional OAuth requirements. The Store uses this to prompt users to connect provider accounts before a run.
-
-### `interface`
-
-JSON Schema-style input, output, and optional state definitions. These control the generated forms and persistent memory structures.
-
-### `ui`
-
-Component definitions that map input keys to specific frontend rendering widgets (e.g. `textarea`, `file`, `date-picker`).
-
-### `runtime`
-
-Adapter, entry point, engine configuration (`config`), lifecycle, mode, skills, telemetry, memory configuration, and environment variable requirements.
-
-### `policies`
-
-Execution limits and permissions, such as internet access or max steps.
-
-## Lifecycle Values
-
-- `serverless`: short-lived execution.
-- `interactive`: real-time streaming.
-- `daemon`: long-running background execution.
-
-## Related Pages
-
-- [Configuration Guide](/guides/manifest)
-- [Execution Modes](/platform/execution-modes)
-- [OAuth integration](/templates/oauth-integration)
+|Section|Field|Type|Description|
+|--------|-----------|--------------------------|-------------------------|
+| Persona   | name | String|Public display name of the agent.  |
+|  |  version  | String |The semantic version of the agent (e.g., 1.0.0). |
+|  |  description  | String |Short tagline for search results and cards. |
+|  |  assets.icon   | URL|512x512px PNG/JPG image.|
+| Pricing   | model | Enum | free, subscription, one_time. |
+|  |  amount | Number | Price in USD. Ignored if free. |
+|  |  billing_period | Enum | monthly, annual (for subscription). |
+|  |  trial.enabled | Boolean | Whether trial is offered. |
+|  |  trial.days | Integer | Number of trial days. |
+| Interface  | input| Schema|Standard JSON Schema defining user inputs.  |
+|  |  ui | Object| Maps input keys to UI widgets (e.g. textarea, file). |
+|  |  state | Schema |Optional JSON Schema defining persistent state.|
+|Runtime| adapter.type| Enum |crewai, langchain, langgraph, custom, openclaw.|
+| |entry_point| String| Python path (module:obj). Optional for openclaw.|
+| |environment_variables |Object |Map of 'models' and 'tools' requiring Env keys (e.g., OPENAI_API_KEY).|
+| |config |Object |Engine-specific configuration (e.g. OpenClaw system_prompt, model).|
+| |skills |List |List of MCP Skills to mount.|
+| |custom_image |String |Custom Docker image URI for the runtime environment.|
+| |memory |Object |Configuration for persistent memory and state storage (e.g., provider).|
+| |telemetry |List |List of telemetry exporter names to enable.|
+| |mode |Enum |standard (Default), full. Selects the container environment (Deprecated).|
+| Auth|providers |List |List of OAuth providers.|
+|Policies| max_steps |Integer |Maximum execution steps to prevent infinite loops.|

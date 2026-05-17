@@ -7,7 +7,7 @@ Please make sure to review our current technical specifications and limitations 
 
 ### Runtime Environments
 
-Charm provides two optimized runtime environments. You can select the environment by configuring the `runtime.mode` field in your `charm.yaml`. See [Base Images](https://docs.charmos.io/platform/base-images) for more information.
+Charm automatically selects the optimal container base image depending on your framework (`adapter.type`). See [Base Images](/platform/base-images) for more information on available runtimes and how to inject your own custom Docker image.
 
 ### Hard Limitations (CRITICAL)
 
@@ -29,7 +29,7 @@ Please read this section carefully. Most deployment failures are caused by viola
 
 4. **System Installs Disabled**
    - `apt-get` is disabled. You cannot install system-level packages at runtime.
-   - **Solution**: If you need **FFmpeg**, **Chrome**, or **Node.js/OpenClaw**, you **MUST** set `mode: "full"` in your `charm.yaml`.
+   - **Solution**: If you need system binaries like **FFmpeg** or **Chrome**, you must either use an adapter that provides them (e.g., `adapter.type: "openclaw"`) or build and provide a `custom_image`.
 
 5. **No Absolute Paths**
    - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.
@@ -53,7 +53,7 @@ charm auth login
 
 #### Preparing your UAC manifest
 
-Refer to [this document](https://github.com/CharmAIOS/Charm/blob/main/docs/contracts/uac/configuration.md) for guidance on how to author a charm.yaml.
+Refer to the [Manifest Configuration Guide](/guides/manifest) and [Manifest Reference](/references/manifest) for guidance on how to author a charm.yaml.
 
 #### Local Validation & Development
 

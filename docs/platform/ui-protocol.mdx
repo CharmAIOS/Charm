@@ -211,21 +211,11 @@ Suitable for long-form content, automatically extracts headings and optimizes fo
 
 ### Custom UI (HTML & SVG via Markdown)
 
-If the standard components don't fit your needs, you can still deliver completely custom UI elements.
+The Charm Universal Renderer is built on top of Markdown. The renderer natively supports **HTML and SVG elements**, safely sanitized via DOMPurify. This enables agents to deliver custom UI by returning valid HTML or SVG strings inside their markdown response.
 
-Because the default format for Charm is Markdown, and the Store's Markdown renderer natively supports **HTML and SVG elements** (safely sanitized via DOMPurify), your Agent can generate and return raw HTML/SVG strings as its text output.
+*For code examples on how to dynamically stream HTML or SVG strings from your agent, see the [How to Render Rich UI](/guides/output-renderers) guide.*
 
-```html
-<!-- Example: Custom SVG Visualization returned as a string -->
-<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="50" rx="10" fill="#4CAF50"/>
-  <text x="100" y="30" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">
-    System Operational
-  </text>
-</svg>
-```
-
-> **Security Note:** The Charm Store frontend uses DOMPurify to strip `<script>`, `<iframe>`, and other potentially malicious vectors. Keep your custom UI elements constrained to static HTML, CSS classes (Tailwind is supported on the Store), and SVGs.
+> **Security Note:** The Charm Store frontend uses DOMPurify to strip `<script>`, `<iframe>`, and other potentially malicious vectors. Supported capabilities are constrained to static HTML, CSS classes (Tailwind is supported on the Store), and SVGs.
 
 ### Best Practices
 

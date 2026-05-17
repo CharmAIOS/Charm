@@ -1,11 +1,15 @@
 ---
-title: UI Schema
-summary: Define dynamic input forms for your agent using JSON Schema.
+title: How to Build Input Forms (UI Schema)
+summary: A practical guide to configuring dynamic input forms for your agent.
 ---
 
-The `interface` block defines the input form users see in Charm Store.
+The `interface` block in your `charm.yaml` generates the input form users see in the Charm Store. 
 
-## Basic Example
+For the complete list of supported schema fields, please check the [Manifest Reference](/references/manifest).
+
+## How to Create Text Inputs
+
+You can easily request strings from the user. 
 
 ```yaml
 interface:
@@ -17,68 +21,63 @@ interface:
         type: "string"
         title: "Message"
         description: "What should the agent do?"
-  ui:
-    message: { "ui:widget": "textarea" }
-  output:
-    type: "object"
-  state:
-    format: "json"
-    schema:
-      type: "object"
-      properties:
-        history:
-          type: "array"
-      additionalProperties: false
 ```
 
-## JSON Schema Basics
+## How to Add Validation Rules
 
-Use standard JSON Schema concepts:
-
-- `type`
-- `required`
-- `properties`
-- `title`
-- `description`
-- `default`
-
-## UI Schema (Component Registry)
-
-The `ui` block maps data fields to specific frontend React components, keeping the data schema clean.
-(Note: The legacy `x-ui-widget` property is now deprecated.)
-
-Common widgets:
-
-- `textarea`: Multi-line text input
-- `password`: Masked input
-- `file`: File upload zone
-- `color`: Color picker
-
-## State Schema (Optional)
-
-If your agent is interactive or long-running (daemon), you can define a state schema using `interface.state`.
+To prevent users from submitting invalid data, use JSON schema constraints:
 
 ```yaml
-interface:
-  state:
-    format: "json"
-    schema:
-      type: "object"
-      properties:
-        conversation_history:
-          type: "array"
-      additionalProperties: false
+      depth:
+        type: "integer"
+        title: "Search Depth"
+        default: 3
+        minimum: 1
+        maximum: 5
 ```
 
-This ensures the platform maintains your required state structure between executions.
+## How to Assign Custom UI Widgets
 
-## Agent Inputs
+The `ui` block maps your data fields to specific frontend React components. This keeps your data schema clean while allowing rich UI.
 
-The values submitted by the user are passed to your agent as a dictionary. Field names should match what your agent code expects.
+```yaml
+  ui:
+    # Render a large multi-line text input
+    message: { "ui:widget": "textarea" }
+    
+    # Render a secure masked input
+    api_key: { "ui:widget": "password" }
+    
+    # Render a file upload zone. 
+    # (The runner will automatically inject the uploaded filename here)
+    document: { "ui:widget": "file" }
+    
+    # Render a color picker
+    brand_color: { "ui:widget": "color" }
+```
 
-## Best Practices
+## How to Access Inputs in Code
 
-- Keep labels user-friendly.
-- Add descriptions for ambiguous inputs.
-- Avoid exposing internal implementation names.
-- Use required fields only when the agent cannot run without them.
+The values submitted by the user are passed to your agent as a dictionary. 
+
+```python
+def agent(inputs):
+    # Fetch the input exactly as named in the schema
+    message = inputs.get("message")
+    search_depth = inputs.get("depth", 3)
+```
+
+## For Platform Contributors: Adding New Widgets
+
+If you are contributing to the Charm platform and want to support a new widget type (e.g., a map selector), you do not need to modify the core `uac` (Universal Agent Contract). The UI schema is decoupled via a `WidgetRegistry` in the frontend application (`charm-store`).
+
+**How to add a new widget:**
+1. **Create the Component:** Build a new standard React component in `charm-store/app/components/` that accepts standard props (such as `value` and `onChange`).
+2. **Register the Component:** Open `charm-store/app/components/DynamicForm.tsx` and add your new component to the `WidgetRegistry`:
+   ```tsx
+   const WidgetRegistry: Record<string, React.FC<WidgetProps>> = {
+       "textarea": TextareaWidget,
+       "map-selector": MapSelectorWidget, // Your new widget
+   };
+   ```
+3. **Update Documentation:** Add the new widget name to the supported list in the Reference so Agent Creators know they can use it.

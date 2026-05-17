@@ -5,18 +5,20 @@ summary: Build and contribute a custom container base image for the Charm Cloud 
 
 Base images define the runtime environment used to execute agents.
 
-## Existing Modes
+## Existing Base Images
 
-Charm currently distinguishes between:
+Charm currently provides several pre-built base images depending on the adapter type:
 
-- `standard`: smaller runtime for most Python agents.
-- `full`: heavier runtime for browser, multimedia, or OpenClaw workflows.
+- `runner-base`: minimal Python environment.
+- `runner-langchain`: pre-installed with LangChain dependencies.
+- `runner-crewai`: pre-installed with CrewAI dependencies.
+- `runner-openclaw`: heavier runtime for browser automation and OpenClaw workflows.
 
-Agents select the runtime with:
+Agents automatically select the correct base image based on their `adapter.type`, or explicitly override it using `custom_image`:
 
 ```yaml
 runtime:
-  mode: "standard"
+  custom_image: "ghcr.io/your-org/my-custom-image:latest"
 ```
 
 ## Contribution Requirements

@@ -119,7 +119,7 @@ class CloudRunBackend(ExecutionBackend):
 
     async def _get_or_create_job(self, config: RunConfig) -> str:
         default_fallback = (
-            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
+            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-base:latest"
         )
         worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
         timeout_seconds = self._resolve_timeout_seconds(config)

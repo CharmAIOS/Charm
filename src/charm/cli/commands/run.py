@@ -76,6 +76,7 @@ async def run_docker_simulation(
     skills = []
     runtime_mode = "standard"
     lifecycle = "serverless"
+    custom_image = None
     try:
         import yaml
 
@@ -89,6 +90,7 @@ async def run_docker_simulation(
             skills = runtime.get("skills", [])
             runtime_mode = runtime.get("mode", "standard")
             lifecycle = runtime.get("lifecycle", "serverless")
+            custom_image = runtime.get("custom_image")
     except Exception:
         pass
 
@@ -97,12 +99,17 @@ async def run_docker_simulation(
         console.print(f"[bold red]Warning:[/bold red] Unknown adapter type '{adapter_type}'. Using 'custom'.")
         adapter_type = "custom"
 
-    # Select correct Docker image based on adapter type and mode
-    image = None
-    if adapter_type in ("openclaw", "node") or runtime_mode == "full":
-        image = "ucmind/runner-full:latest"
+    # Select correct Docker image based on custom image or adapter type
+    if custom_image and isinstance(custom_image, str):
+        image = custom_image
     else:
-        image = "ucmind/runner-base:latest"
+        IMAGE_BASE = os.getenv("CHARM_IMAGE_BASE", "ucmind/runner-base:latest")
+        ADAPTER_IMAGES = {
+            "langchain": os.getenv("CHARM_IMAGE_LANGCHAIN", "ucmind/runner-langchain:latest"),
+            "crewai": os.getenv("CHARM_IMAGE_CREWAI", "ucmind/runner-crewai:latest"),
+            "openclaw": os.getenv("CHARM_IMAGE_OPENCLAW", "ucmind/runner-openclaw:latest"),
+        }
+        image = ADAPTER_IMAGES.get(adapter_type, IMAGE_BASE)
 
     # Build env vars with mock tokens if requested
     final_env_vars = env_vars.copy()

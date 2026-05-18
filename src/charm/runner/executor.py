@@ -30,6 +30,64 @@ except ImportError:
 logger = logging.getLogger("charm.runner")
 
 TEMP_DIR = tempfile.gettempdir()
+
+# Maps adapter type names to the env var that holds the corresponding image URI.
+# The env vars are set by the deploy workflow (deploy-prod.yml / deploy-staging.yml).
+# Community adapters installed as plugins can extend this by setting their own
+# CHARM_IMAGE_<ADAPTER> env var — the fallback logic below picks them up automatically.
+_ADAPTER_IMAGE_ENV: Dict[str, str] = {
+    "langchain":  "CHARM_IMAGE_LANGCHAIN",
+    "langgraph":  "CHARM_IMAGE_LANGCHAIN",  # LangGraph shares the LangChain image
+    "crewai":     "CHARM_IMAGE_CREWAI",
+    "openclaw":   "CHARM_IMAGE_OPENCLAW",
+    # python / custom / node all fall through to the base image
+}
+
+_DEFAULT_IMAGE_FALLBACK = (
+    "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-base:latest"
+)
+
+
+def _resolve_image(adapter_type: str, custom_image: Optional[str]) -> Optional[str]:
+    """Return the Docker image to use for this run.
+
+    Priority order:
+    1. ``custom_image`` declared in charm.yaml (agent-level override).
+    2. Adapter-specific image from ``CHARM_IMAGE_<ADAPTER>`` env var.
+    3. Generic ``CHARM_WORKER_IMAGE`` env var (legacy / single-image deployments).
+    4. ``CHARM_IMAGE_BASE`` env var (explicit base image).
+    5. Hardcoded fallback (used only in local dev when nothing is configured).
+    """
+    if custom_image:
+        logger.debug("[Executor] Using custom_image override: %s", custom_image)
+        return custom_image
+
+    # Adapter-specific lookup — check the known map first, then try a
+    # convention-based env var (CHARM_IMAGE_<ADAPTER_TYPE_UPPER>) so community
+    # adapters can register their own images without modifying core code.
+    env_key = _ADAPTER_IMAGE_ENV.get(adapter_type) or f"CHARM_IMAGE_{adapter_type.upper()}"
+    adapter_image = os.getenv(env_key)
+    if adapter_image:
+        logger.debug(
+            "[Executor] Resolved adapter '%s' → image from %s: %s",
+            adapter_type, env_key, adapter_image,
+        )
+        return adapter_image
+
+    # Legacy single-image env var
+    worker_image = os.getenv("CHARM_WORKER_IMAGE")
+    if worker_image:
+        logger.debug("[Executor] Using CHARM_WORKER_IMAGE: %s", worker_image)
+        return worker_image
+
+    # Explicit base image env var
+    base_image = os.getenv("CHARM_IMAGE_BASE")
+    if base_image:
+        logger.debug("[Executor] Using CHARM_IMAGE_BASE: %s", base_image)
+        return base_image
+
+    logger.debug("[Executor] No image env var found for adapter '%s'; using hardcoded fallback", adapter_type)
+    return None  # cloud_run.py will apply its own fallback constant
 HOST_CACHE_DIR = os.path.join(TEMP_DIR, "charm_uv_cache")
 HOST_ARTIFACTS_ROOT = os.path.join(TEMP_DIR, "charm_artifacts_buffer")
 
@@ -197,6 +255,14 @@ class CharmDockerExecutor:
             logger.warning("[Executor] LOCAL_SDK_HOST_PATH=%s is not a directory; ignoring", local_sdk_host_path)
             local_sdk_host_path = None
 
+        # Resolve the Docker image: custom_image > adapter-specific > base fallback.
+        # Skip image resolution for local Docker runs — Docker uses whatever image is
+        # already pulled locally and _resolve_image is only meaningful for Cloud Run.
+        resolved_image = (
+            image if isinstance(backend, DockerBackend)
+            else _resolve_image(adapter_type, image)
+        )
+
         config = RunConfig(
             agent_id=agent_id,
             run_id=run_id,
@@ -209,7 +275,7 @@ class CharmDockerExecutor:
             local_source_path=local_source_path if should_mount_local else None,
             local_sdk_path=local_sdk_host_path if isinstance(backend, DockerBackend) else None,
             bundle_local_path=bundle_local_path if use_bundle_local else None,
-            image=image,
+            image=resolved_image,
             lifecycle=lifecycle,
             timeout_seconds=timeout_seconds,
             supabase_client=supabase_client,

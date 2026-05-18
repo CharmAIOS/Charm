@@ -91,7 +91,7 @@ class CharmCrewAIAdapter(BaseAdapter):
                 return {"status": "error", "message": str(e)}
 
         try:
-            output = ""
+            output: str | Dict[str, Any] = ""
             if isinstance(result, dict) and "_charm_render_type" in result:
                 output = result
             elif hasattr(result, "raw"):

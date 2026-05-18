@@ -74,7 +74,7 @@ class CharmEmitterExporter(BaseTelemetryExporter):
 class TelemetryManager:
     """Manages the lifecycle and event dispatching for telemetry plugins."""
 
-    def __init__(self, enabled_exporters: list[str] = None):
+    def __init__(self, enabled_exporters: list[str] | None = None):
         self.enabled_exporters = enabled_exporters or []
         self.exporters: list[BaseTelemetryExporter] = [CharmEmitterExporter()]
         self._load_plugins()

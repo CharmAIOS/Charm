@@ -60,9 +60,9 @@ async def run_docker_simulation(
         return
 
     try:
-        import docker
+        import docker as _docker
 
-        docker.from_env()
+        _docker.from_env()  # type: ignore[attr-defined]
     except Exception:
         console.print("[bold red]Error:[/bold red] Docker engine is not running.")
         console.print("Please start Docker Desktop and try again.")

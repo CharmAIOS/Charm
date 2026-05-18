@@ -1,8 +1,8 @@
 import sys
 from typing import Any, Dict, Optional
 
-from .base import BaseMemoryStore
 from ..logger import logger
+from .base import BaseMemoryStore
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points

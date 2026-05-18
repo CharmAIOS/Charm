@@ -2,7 +2,7 @@ import json
 import shutil
 import urllib.request
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
@@ -148,7 +148,7 @@ def create_single_file(project_path: Path, create: str, templates: List[Dict[str
         python_tpl = next((t for t in templates if t["id"] == "python"), templates[0])
         file_tpl = next((f for f in python_tpl["files"] if f["path"] == "charm.yaml"), None)
         if not file_tpl:
-            console.print(f"[bold red]Error:[/bold red] Template does not contain charm.yaml")
+            console.print("[bold red]Error:[/bold red] Template does not contain charm.yaml")
             raise typer.Exit(1)
             
         target_file.write_text(file_tpl["content"], encoding="utf-8")

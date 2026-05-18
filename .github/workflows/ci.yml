@@ -148,7 +148,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build base runtime image
-        run: docker build -f docker/Dockerfile.base -t charm-runner-base:ci .
+        run: docker build -f docker/Dockerfile.base -t charm-runner-base:ci -t ucmind/charm-base:latest .
 
       - name: Build langchain runtime image
         run: docker build -f docker/Dockerfile.langchain -t charm-runner-langchain:ci .

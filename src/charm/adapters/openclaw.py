@@ -23,7 +23,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def __init__(self, config: CharmConfig):
         super().__init__(None)
-        self.config = config
+        self.config: CharmConfig = config
         self.work_dir = os.getcwd()  # Directory where code is located (/app/agent_code)
 
         # --- [1. Persistence Strategy] ---
@@ -541,7 +541,7 @@ class CharmOpenClawAdapter(BaseAdapter):
         if is_upgrade:
             final_output = f"UPGRADE_COMPLETE: {final_output}"
 
-        output = final_output or "Task completed successfully."
+        output: str | Dict[str, Any] = final_output or "Task completed successfully."
         if isinstance(output, str) and "_charm_render_type" in output:
             try:
                 parsed = json.loads(output)

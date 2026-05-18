@@ -1,9 +1,6 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from supabase import Client, create_client
-
-from ..core.checkpoint import CharmSupabaseCheckpointer
 from ..core.logger import logger
 from .base import BaseAdapter
 
@@ -106,7 +103,7 @@ class CharmLangGraphAdapter(BaseAdapter):
             return {"status": "error", "message": f"Graph Execution Failed: {str(e)}"}
 
         # Success Handling
-        output = str(result)
+        output: str | Dict[str, Any] = str(result)
         if isinstance(result, dict):
             if "_charm_render_type" in result:
                 output = result

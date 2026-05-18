@@ -2,9 +2,11 @@ import os
 from typing import Any, Dict, List
 
 from supabase import Client, create_client
-from .base import BaseMemoryStore
+
 from ..checkpoint import CharmSupabaseCheckpointer
 from ..logger import logger
+from .base import BaseMemoryStore
+
 
 class SupabaseMemory(BaseMemoryStore):
     """
@@ -13,7 +15,7 @@ class SupabaseMemory(BaseMemoryStore):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.supabase: getattr(Client, "None", Any) = None
+        self.supabase: Client | None = None
         
         sb_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or config.get("url")
         sb_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or config.get("key")

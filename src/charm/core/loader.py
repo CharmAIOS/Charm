@@ -1,8 +1,8 @@
 import os
+import sys
 
 import yaml  # type: ignore
 
-import sys
 if sys.version_info >= (3, 10):
     from importlib.metadata import entry_points
 else:

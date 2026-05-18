@@ -1,14 +1,14 @@
 import os
+import sys
 
 import yaml  # type: ignore
 
+if sys.version_info >= (3, 10):
+    from importlib.metadata import entry_points
+else:
+    from importlib_metadata import entry_points  # type: ignore
+
 from ..adapters.base import BaseAdapter
-from ..adapters.crewai import CharmCrewAIAdapter
-from ..adapters.custom import CharmCustomAdapter
-from ..adapters.langchain import CharmLangChainAdapter
-from ..adapters.langgraph import CharmLangGraphAdapter
-from ..adapters.openclaw import CharmOpenClawAdapter
-from ..adapters.process import CharmProcessAdapter
 from ..contracts.uac import CharmConfig
 from .errors import CharmConfigError, CharmValidationError
 from .logger import logger
@@ -41,17 +41,30 @@ class CharmLoader:
 
         adapter: BaseAdapter
 
-        # Adapter Selection Logic
+        # Adapter Selection Logic via entry_points
+        eps = entry_points(group="charm.adapters")
+        adapter_ep = next((ep for ep in eps if ep.name == adapter_type), None)
+
+        if not adapter_ep:
+            raise CharmValidationError(
+                f"Unsupported adapter type: '{adapter_type}'. "
+                "Ensure the adapter package is installed and registered in 'charm.adapters' entry points."
+            )
+
+        try:
+            AdapterClass = adapter_ep.load()
+        except Exception as e:
+            raise CharmValidationError(f"Failed to load adapter '{adapter_type}': {e}") from e
 
         if adapter_type == "openclaw":
-            adapter = CharmOpenClawAdapter(config=config)
+            adapter = AdapterClass(config=config)
 
         elif adapter_type == "node":
             if not config.runtime.adapter.entry_point:
                 raise CharmValidationError(
                     "Node adapter requires 'entry_point' (e.g. 'npm start')."
                 )
-            adapter = CharmProcessAdapter(command=config.runtime.adapter.entry_point)
+            adapter = AdapterClass(command=config.runtime.adapter.entry_point)
 
         else:
             if not config.runtime.adapter.entry_point:
@@ -60,17 +73,13 @@ class CharmLoader:
                 )
 
             agent_instance = dynamic_import(config.runtime.adapter.entry_point, project_path)
-
-            if adapter_type == "crewai":
-                adapter = CharmCrewAIAdapter(agent_instance)
-            elif adapter_type == "langchain":
-                adapter = CharmLangChainAdapter(agent_instance)
-            elif adapter_type == "langgraph":
-                adapter = CharmLangGraphAdapter(agent_instance)
-            elif adapter_type in ("custom", "python"):
-                adapter = CharmCustomAdapter(agent_instance)
-            else:
-                raise CharmValidationError(f"Unsupported adapter type: {adapter_type}")
+            
+            # Instantiate adapter (third party adapters follow this pattern)
+            try:
+                adapter = AdapterClass(agent_instance=agent_instance, config=config)
+            except TypeError:
+                # Fallback to single argument
+                adapter = AdapterClass(agent_instance)
 
         # Return the standardized wrapper
         return CharmWrapper(adapter=adapter, config=config)

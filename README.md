@@ -1,17 +1,23 @@
 <p align="center">
-  <img src="assets/charm-banner.png" alt="Charm Banner" width="100%" />
+  <img src="assets/charm-banner.png" alt="Charm Banner" width="60%" />
 </p>
 
-[![Build](https://img.shields.io/github/actions/workflow/status/CharmAIOS/Charm/deploy-staging.yml?label=BUILD&style=flat-square&color=E8A694)](https://github.com/CharmAIOS/Charm/actions) [![Release](https://img.shields.io/github/v/release/CharmAIOS/Charm?label=RELEASE&style=flat-square&color=007ec6)](https://github.com/CharmAIOS/Charm/releases) [![Discord](https://img.shields.io/badge/DISCORD-JOIN%20US-5865f2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/gdakynHUEb) [![License](https://img.shields.io/github/license/CharmAIOS/Charm?label=LICENSE&style=for-the-badge&color=007ec6)](https://github.com/CharmAIOS/Charm/blob/main/LICENSE) [![X](https://img.shields.io/twitter/follow/charm_labs?label=FOLLOW%20@CHARM_LABS&style=flat-square&color=000000&logo=x&logoColor=white)](https://x.com/charm_labs)
+<p align="center">
+  <a href="https://github.com/CharmAIOS/Charm/actions"><img src="https://img.shields.io/github/actions/workflow/status/CharmAIOS/Charm/deploy-staging.yml?label=BUILD&style=flat-square&color=E8A694" alt="Build" /></a>
+  <a href="https://pypi.org/project/charmos/"><img src="https://img.shields.io/pypi/v/charmos?label=RELEASE&style=flat-square&color=007ec6" alt="PyPI" /></a>
+  <a href="https://discord.gg/gdakynHUEb"><img src="https://img.shields.io/badge/DISCORD-JOIN%20US-5865f2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
+  <a href="https://github.com/CharmAIOS/Charm/blob/main/LICENSE"><img src="https://img.shields.io/github/license/CharmAIOS/Charm?label=LICENSE&style=flat-square&color=007ec6" alt="License" /></a>
+  <a href="https://x.com/charm_labs"><img src="https://img.shields.io/twitter/follow/charm_labs?label=FOLLOW%20@CHARM_LABS&style=flat-square&color=000000&logo=x&logoColor=white" alt="X" /></a>
+</p>
 
 
 # Charm: The Unified Platform for Agentic Intelligence
 
-**Charm** is a **Unified Application Layer** that provides a standardized architecture that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
+**Charm** is a **Unified Application Layer** that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
 
 ## Getting Started
 
-Start with the public docs: [docs.charmos.io](https://docs.charmos.io/).
+For a step-by-step walk through of Charm concepts and code, check out [overview](https://docs.charmos.io) in our documentation.
 
 ### Installation
 
@@ -66,7 +72,7 @@ Please report vulnerabilities privately using the process in [SECURITY.md](./SEC
 ## Contact
 
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)
-- Join us: [Chat with us](mailto:uc@charmos.io)
+- Join us: [Chat with the team](mailto:team@charmos.io)
 
 ## Changelog
 

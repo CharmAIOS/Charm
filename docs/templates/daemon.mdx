@@ -5,9 +5,11 @@ summary: Skeleton documentation for always-on agents that run through the daemon
 
 Daemon agents are always-on or long-lived agents. They are used when a task should keep running beyond a single request, maintain state between events, or respond to external triggers.
 
+There is **no** `charm init --template daemon` starter. Use a daemon-oriented scaffold such as `slack-bot` or `customer-support-agent`, or start from `openclaw` and set `runtime.lifecycle: daemon` as required.
+
 ## Use Case
 
-Use this template for agents that need persistent background execution, scheduled behavior, or long-lived state.
+Use this lifecycle for agents that need persistent background execution, scheduled behavior, or long-lived state.
 
 ## Prerequisites
 
@@ -20,7 +22,6 @@ Use this template for agents that need persistent background execution, schedule
 Document these fields:
 
 - `runtime.lifecycle: daemon`
-- `runtime.mode`
 - `runtime.adapter.type`
 - `policies`
 
@@ -30,7 +31,6 @@ Example:
 runtime:
   adapter:
     type: "openclaw"
-  mode: "full"
   lifecycle: "daemon"
 ```
 
@@ -54,7 +54,7 @@ The Fly app acts as the machine pool for daemon agents. Individual daemon machin
 ## Run and Publish
 
 ```bash
-charm validate
+charm validate .
 charm push
 ```
 

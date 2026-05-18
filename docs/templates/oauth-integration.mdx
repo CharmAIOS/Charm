@@ -3,11 +3,13 @@ title: OAuth Integration Agent Template
 summary: Skeleton documentation for agents that require user-authorized OAuth connections.
 ---
 
+There is **no** `charm init --template oauth-integration` starter in the CLI. OAuth is configured in `charm.yaml` with `auth.providers` on top of any scaffold template (for example `python` or `openclaw`).
+
 OAuth integration agents require a user to connect an external account before the agent runs. Charm uses the `auth.providers` block in `charm.yaml` to declare those requirements.
 
 ## Use Case
 
-Use this template when an agent needs user-authorized access to external services such as Google, GitHub, Slack, or Notion.
+Use this pattern when an agent needs user-authorized access to external services such as Google, GitHub, Slack, or Notion.
 
 ## Prerequisites
 

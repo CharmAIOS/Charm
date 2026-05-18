@@ -1,0 +1,84 @@
+---
+title: Telemetry Exporters
+description: Learn how to monitor and observe your Charm Agents by integrating custom telemetry exporters.
+---
+
+# Telemetry Exporters
+
+Charm provides an open observability framework to track the full lifecycle of your agents—from LLM token generation to tool execution and error handling. 
+
+By default, Charm streams execution events via `stdout` so the Charm Cloud Runner can capture and broadcast them to end-users via Server-Sent Events (SSE). However, you can extend this by building and registering **Custom Telemetry Exporters** to forward events directly to external platforms like DataDog, LangSmith, or Sentry.
+
+## 1. Create your Telemetry Exporter
+
+To create a custom telemetry exporter, create a new Python class that inherits from `charm.core.telemetry.BaseTelemetryExporter`. You can implement whichever lifecycle hooks you need:
+
+Create a file named `my_exporter.py`:
+
+```python
+import os
+from typing import Dict, Any
+from charm.core.telemetry import BaseTelemetryExporter
+
+class DataDogExporter(BaseTelemetryExporter):
+    def __init__(self):
+        # API Keys can be securely injected via environment variables
+        self.api_key = os.getenv("DATADOG_API_KEY")
+        
+    def on_run_start(self, run_id: str, inputs: Dict[str, Any]) -> None:
+        pass
+
+    def on_run_end(self, run_id: str, outputs: Dict[str, Any]) -> None:
+        pass
+
+    def on_error(self, run_id: str, error: Exception) -> None:
+        pass
+
+    def on_tool_start(self, tool_name: str, input_str: str) -> None:
+        # e.g., send a custom Datadog metric
+        pass
+
+    def on_tool_end(self, tool_name: str, output: str) -> None:
+        pass
+
+    def on_tool_error(self, tool_name: str, error: BaseException) -> None:
+        pass
+
+    def on_llm_new_token(self, token: str) -> None:
+        pass
+
+    def on_agent_action(self, tool: str, tool_input: str) -> None:
+        pass
+```
+
+## 2. Register via Entry Points
+
+Just like custom adapters, Charm discovers telemetry exporters dynamically using Python `entry_points`.
+
+In your package's `pyproject.toml`, add an entry to the `charm.telemetry` group:
+
+```toml
+[project.entry-points."charm.telemetry"]
+datadog = "charm_telemetry_datadog.my_exporter:DataDogExporter"
+```
+
+Once installed, Charm's `TelemetryManager` will recognize the `datadog` plugin.
+
+## 3. Enable it in `charm.yaml`
+
+To avoid loading unnecessary plugins, telemetry exporters are **opt-in**. You must explicitly list the exporters you want to activate in your `charm.yaml` configuration file:
+
+```yaml
+runtime:
+  adapter:
+    type: python
+    entry_point: src.main:my_agent
+  telemetry:
+    - datadog
+```
+
+## 4. Deploying to the Cloud Runner
+
+When deploying your agent to the Charm Cloud Runner, ensure that:
+1. You provide a **Custom Image** (`custom_image`) that installs your telemetry python package (e.g., `RUN uv pip install charm-telemetry-datadog`).
+2. You provide the required secrets (e.g., `DATADOG_API_KEY`) via your Agent's Environment Variables settings in the Charm Dashboard. The runner will securely inject these directly into the container execution context.

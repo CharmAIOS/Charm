@@ -57,6 +57,9 @@ class InterfaceConfig(BaseModel):
     input: Dict[str, Any] = Field(..., description="JSON Schema for input parameters")
     output: Dict[str, Any] = Field(..., description="JSON Schema for output format")
     state: Optional[InterfaceState] = None
+    ui: Optional[Dict[str, Any]] = Field(
+        None, description="UI schema for dynamic form rendering"
+    )
 
 
 # Skill Configuration
@@ -124,10 +127,23 @@ class EnvVars(BaseModel):
     tools: List[str] = Field(default_factory=list, description="Tool/Skill API keys")
 
 
+class MemoryConfig(BaseModel):
+    """Configuration for the state/memory storage plugin."""
+
+    provider: str = Field(
+        default="local",
+        description="The memory provider plugin name (e.g., 'local', 'redis', 'postgres').",
+    )
+    config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Provider-specific configuration (e.g., connection URLs).",
+    )
+
+
 class RuntimeAdapter(BaseModel):
     """Instructs the Loader how to bootstrap this agent."""
 
-    type: Literal["python", "langchain", "crewai", "langgraph", "custom", "node", "openclaw"] = Field(
+    type: str = Field(
         ..., description="The specific SDK adapter to use"
     )
     entry_point: Optional[str] = Field(
@@ -159,14 +175,27 @@ class RuntimeConfig(BaseModel):
         default_factory=list, description="List of MCP Skills to mount."
     )
 
+    telemetry: List[str] = Field(
+        default_factory=list, description="List of telemetry exporter names to enable."
+    )
+
+    memory: MemoryConfig = Field(
+        default_factory=MemoryConfig,
+        description="Configuration for persistent memory and state storage.",
+    )
+
     # Add the config field here
     config: Optional[OpenClawConfig] = Field(
         None, description="Engine-specific configuration (e.g. for OpenClaw)."
     )
 
+    custom_image: Optional[str] = Field(
+        None, description="Custom Docker image URI for the runtime environment."
+    )
+
     mode: Literal["standard", "full"] = Field(
         "standard",
-        description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime.",
+        description="Select 'full' if you need Browser(Chrome), FFmpeg, or Node.js runtime. (Deprecated)",
     )
 
     lifecycle: Literal["serverless", "daemon", "interactive"] = Field(

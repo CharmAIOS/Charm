@@ -38,6 +38,31 @@ When a cloud run fails:
 4. Confirm required environment variables or OAuth connections.
 5. Test in Docker if the issue looks runtime-specific.
 
+## Telemetry Architecture
+
+Charm utilizes an event-driven `TelemetryManager` built into the `CharmEmitter` system. When an agent runs, the SDK dispatches a standard set of lifecycle events (e.g., token generation, tool usage, errors) to the internal event bus.
+
+By default, these events are serialized to `stdout` where the Charm Cloud Runner captures them and broadcasts them to end-users via Server-Sent Events (SSE). 
+
+### Pluggable Exporters
+
+To support enterprise observability, Charm allows registering external Telemetry Exporters via Python entry points. The `TelemetryManager` iterates through all activated plugins defined in your `charm.yaml` and executes their lifecycle hooks in isolation, ensuring that a crash in a telemetry exporter does not halt your agent's execution.
+
+### Standard Lifecycle Hooks
+
+The following methods are dispatched by the `BaseTelemetryExporter` interface:
+
+- `on_run_start(run_id, inputs)`: Fired when an agent begins execution.
+- `on_run_end(run_id, outputs)`: Fired upon successful completion.
+- `on_error(run_id, error)`: Fired if the agent crashes globally.
+- `on_tool_start(tool_name, input_str)`: Fired when an agent invokes a tool/skill.
+- `on_tool_end(tool_name, output)`: Fired when a tool returns a result.
+- `on_tool_error(tool_name, error)`: Fired if a tool invocation raises an exception.
+- `on_llm_new_token(token)`: Fired as the LLM streams characters.
+- `on_agent_action(tool, tool_input)`: Generic action tracing.
+
+> **Note:** If you want to build your own exporter, see the [Custom Telemetry Exporters Guide](/guides/telemetry-exporters).
+
 ## Access Control
 
-Execution logs should only be visible to authorized owners and maintainers.
+Execution logs and telemetry data are only visible to authorized project owners and maintainers in the Charm Studio.

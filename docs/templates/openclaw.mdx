@@ -15,13 +15,12 @@ Use this template for OpenClaw agents that rely on tools, skills, browser automa
 
 ## Runtime Configuration
 
-OpenClaw agents commonly use the full runtime:
+OpenClaw agents natively use the heavy openclaw runtime image:
 
 ```yaml
 runtime:
   adapter:
     type: "openclaw"
-  mode: "full"
 ```
 
 Use daemon lifecycle when the agent should stay alive:
@@ -42,6 +41,6 @@ charm validate .
 ## Publishing Checklist
 
 - Required skills and environment variables are declared.
-- Browser or system dependencies require `mode: "full"`.
+- Browser or system dependencies are supported natively by the OpenClaw adapter.
 - Long-running behavior is tested as a daemon.
 - Output is understandable to end users.

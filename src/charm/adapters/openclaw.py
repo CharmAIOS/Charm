@@ -23,7 +23,7 @@ class CharmOpenClawAdapter(BaseAdapter):
 
     def __init__(self, config: CharmConfig):
         super().__init__(None)
-        self.config = config
+        self.config: CharmConfig = config
         self.work_dir = os.getcwd()  # Directory where code is located (/app/agent_code)
 
         # --- [1. Persistence Strategy] ---
@@ -431,6 +431,31 @@ class CharmOpenClawAdapter(BaseAdapter):
                     user_input += f"\n\n[{k}]: {v}"
 
         env["CHARM_WORKSPACE_DIR"] = self.workspace_dir
+        
+        # --- Memory Storage Plugin Sync (PRE-EXECUTION) ---
+        from ..core.storage import StorageManager
+        provider_name = "local"
+        provider_config = {}
+        if hasattr(self, "config") and self.config and hasattr(self.config, "memory"):
+            provider_name = self.config.memory.provider
+            provider_config = self.config.memory.config
+            
+        memory_store = StorageManager.get_provider(provider_name, provider_config)
+        thread_id = inputs.get("__charm_thread_id__", "default")
+        
+        try:
+            db_history = memory_store.load_messages(thread_id)
+            if db_history and provider_name != "local":
+                # Only write to MEMORY.md if using an external provider to inject DB state into OpenClaw
+                with open(self.memory_file, "w", encoding="utf-8") as f:
+                    for msg in db_history:
+                        role = msg.get("role", "system").upper()
+                        content = msg.get("content", "")
+                        f.write(f"[{role}]: {content}\n\n")
+        except Exception as e:
+            logger.warning(f"Failed to sync memory from {provider_name}: {e}")
+        # --------------------------------------------------
+
         cmd = [
             "openclaw",
             "agent",
@@ -516,9 +541,30 @@ class CharmOpenClawAdapter(BaseAdapter):
         if is_upgrade:
             final_output = f"UPGRADE_COMPLETE: {final_output}"
 
+        output: str | Dict[str, Any] = final_output or "Task completed successfully."
+        if isinstance(output, str) and "_charm_render_type" in output:
+            try:
+                parsed = json.loads(output)
+                if isinstance(parsed, dict) and "_charm_render_type" in parsed:
+                    output = parsed
+            except json.JSONDecodeError:
+                pass
+
+        # --- Memory Storage Plugin Sync (POST-EXECUTION) ---
+        try:
+            if provider_name != "local" and os.path.exists(self.memory_file):
+                with open(self.memory_file, "r", encoding="utf-8") as f:
+                    raw_memory = f.read()
+                    
+                # Store the updated raw memory as a single system message snapshot in the DB
+                memory_store.save_messages(thread_id, [{"role": "system", "content": raw_memory}])
+        except Exception as e:
+            logger.warning(f"Failed to extract memory back to {provider_name}: {e}")
+        # ---------------------------------------------------
+
         return {
             "status": "success",
-            "output": final_output or "Task completed successfully.",
+            "output": output,
             "charm_state": "",
         }
 

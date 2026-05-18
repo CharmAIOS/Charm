@@ -119,7 +119,7 @@ class CloudRunBackend(ExecutionBackend):
 
     async def _get_or_create_job(self, config: RunConfig) -> str:
         default_fallback = (
-            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-standard:latest"
+            "us-central1-docker.pkg.dev/charm-cloud-runner/charm/runner-base:latest"
         )
         worker_image = config.image or os.getenv("CHARM_WORKER_IMAGE", default_fallback)
         timeout_seconds = self._resolve_timeout_seconds(config)
@@ -198,7 +198,11 @@ class CloudRunBackend(ExecutionBackend):
         job.template.template.max_retries = 0
         job.template.template.timeout = f"{timeout_seconds}s"
 
-        if self.storage_bucket:
+        memory_provider = "local"
+        if config.env_vars:
+            memory_provider = config.env_vars.get("CHARM_MEMORY_PROVIDER", "local")
+
+        if self.storage_bucket and memory_provider == "local":
             container["volume_mounts"] = [{"name": "gcs-persistence", "mount_path": "/workspace"}]
             job.template.template.volumes = [
                 {

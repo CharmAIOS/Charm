@@ -23,28 +23,30 @@ charm run . --input "Hello"
 
 ## Template Categories
 
+The first seven rows are **CLI scaffolding templates**: use `charm init <dir> --template <id>` with the exact IDs in each linked page (for example `research-agent`, not `research`). Run `charm init --help` or `charm init . --interactive` to see all IDs.
+
+The last three rows are **configuration guides** for common lifecycles and OAuth. They are not separate `charm init` template names—start from any scaffold above and adjust `charm.yaml`.
+
 | Template | Best For | Runtime Shape |
 | --- | --- | --- |
 | [Python Agent](/templates/python) | Minimal custom Python agents | Serverless |
 | [Research Agent](/templates/research) | Topic research and synthesis | Serverless |
 | [Code Review Agent](/templates/code-review) | Developer workflow automation | Serverless |
-| [Customer Support Agent](/templates/customer-support) | Support triage and response drafting | Serverless |
+| [Customer Support Agent](/templates/customer-support) | Support triage and response drafting | Daemon |
 | [Data Pipeline Agent](/templates/data-pipeline) | Structured processing and data workflows | Serverless |
 | [Slack Bot](/templates/slack-bot) | Chat and workspace automation | Daemon or integration-oriented |
 | [OpenClaw Skill Agent](/templates/openclaw) | Browser/tools-heavy agent execution | Full runtime |
 | [Interactive Agent](/templates/interactive) | Real-time chat and streaming | Interactive |
 | [Daemon Agent](/templates/daemon) | Always-on background agents | Daemon |
-| [OAuth Integration Agent](/templates/oauth-integration) | Agents requiring user-authorized accounts | Depends on adapter |
+| [OAuth integration](/templates/oauth-integration) | Agents requiring user-authorized accounts | Any lifecycle (via `auth.providers`) |
 
 ## Choosing a Template
 
 - Choose **Python** first if you are learning Charm.
-- Choose **Interactive** for chat apps that need streaming and thread history.
-- Choose **Daemon** when the agent must stay alive between user requests.
-- Choose **OAuth Integration** when the agent needs access to a user's Google, GitHub, Slack, Notion, or other connected account.
 - Choose **OpenClaw** when the agent needs tool-rich browser or desktop-style automation.
+- Read the **Interactive**, **Daemon**, and **OAuth integration** guides when you need those runtime or auth shapes, then apply them to your manifest (possibly starting from `python`, `openclaw`, `slack-bot`, or `customer-support-agent`).
 
-## What Every Template Includes
+## What Every Scaffolding Template Includes
 
 - `charm.yaml` manifest.
 - Agent entry point.

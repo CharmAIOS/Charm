@@ -23,10 +23,6 @@ dependencies = [
     "gitpython>=3.1.0",
     "python-dotenv>=1.0.0",
     "pyperclip>=1.8.0",
-    "langchain>=0.1.0",
-    "langchain-core",
-    "langgraph",
-    "crewai",
     "google-cloud-run",
     "google-cloud-logging",
     "mcp"
@@ -40,6 +36,17 @@ Changelog = "https://github.com/CharmAIOS/Charm/releases"
 Issues = "https://github.com/CharmAIOS/Charm/issues"
 
 [project.optional-dependencies]
+langchain = [
+    "langchain>=0.1.0",
+    "langchain-core",
+    "langgraph",
+]
+crewai = [
+    "crewai",
+]
+openclaw = [
+    "mcp",
+]
 runner = [
     "docker>=7.0.0",
     "aiohttp>=3.9.0",
@@ -77,6 +84,15 @@ addopts = "--tb=short"
 [project.scripts]
 charm = "charm.cli.app:app"
 
+[project.entry-points."charm.adapters"]
+openclaw = "charm.adapters.openclaw:CharmOpenClawAdapter"
+crewai = "charm.adapters.crewai:CharmCrewAIAdapter"
+langchain = "charm.adapters.langchain:CharmLangChainAdapter"
+langgraph = "charm.adapters.langgraph:CharmLangGraphAdapter"
+custom = "charm.adapters.custom:CharmCustomAdapter"
+python = "charm.adapters.custom:CharmCustomAdapter"
+node = "charm.adapters.process:CharmProcessAdapter"
+
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
@@ -86,4 +102,3 @@ dev = [
 [tool.setuptools.package-data]
 "charm" = ["py.typed"]
 "charm.contracts" = ["*.json"]
-"charm.templates" = ["*.yaml"]

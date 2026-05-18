@@ -1,0 +1,66 @@
+---
+title: Custom Runtimes
+description: Learn how to provide your own Docker image for complete control over your agent's execution environment.
+---
+
+# Custom Runtimes
+
+While Charm provides highly optimized base images for standard frameworks like LangChain, CrewAI, and OpenClaw, you may sometimes need complete control over the execution environment. 
+
+This could be because:
+- You are using a specialized framework like AG2 or AutoGen.
+- You have heavy system dependencies (e.g., custom rendering engines, specific versions of Node.js).
+- You want to pre-install massive ML models inside the image to save boot time.
+
+Charm allows you to define a **Custom Runtime** by pointing to your own Docker image.
+
+## 1. Create a Dockerfile
+
+To ensure compatibility with the Charm Runner, we highly recommend extending the official base image: `ghcr.io/charmaios/charm-base:latest`.
+
+```dockerfile
+# Start from the minimal Charm Base Image
+FROM ghcr.io/charmaios/charm-base:latest
+
+# Example: Install system dependencies
+RUN apt-get update && apt-get install -y ffmpeg
+
+# Example: Install your custom framework
+RUN uv pip install charm-adapter-ag2
+
+# You can also pre-download models or copy proprietary binaries here
+```
+
+Build and push this image to a container registry accessible to the internet (e.g., GitHub Container Registry, Docker Hub, or Google Artifact Registry).
+
+```bash
+docker build -t ghcr.io/your-org/my-agent-image:latest .
+docker push ghcr.io/your-org/my-agent-image:latest
+```
+
+## 2. Declare the Custom Image in `charm.yaml`
+
+Once your image is publicly accessible, you can tell the Charm Cloud Runner to use it by adding the `custom_image` field under the `runtime` configuration block in your `charm.yaml`:
+
+```yaml
+version: "{manifest_version}"
+persona:
+  name: "My Custom Agent"
+
+runtime:
+  adapter:
+    type: "custom"
+    entry_point: "src.main:run"
+  
+  # Inject your custom image URI here
+  custom_image: "ghcr.io/your-org/my-agent-image:latest"
+```
+
+## 3. Deployment
+
+Simply run `charm push` as usual.
+
+The Charm CLI will bundle your code and update the registry. When users trigger your agent, the Cloud Runner will dynamically fetch and launch `ghcr.io/your-org/my-agent-image:latest` instead of the default images, giving your agent the exact environment it needs.
+
+> [!NOTE]
+> Ensure your Docker Registry is public, or that the Charm Cloud Runner has the necessary IAM permissions/Service Accounts configured to pull from your private registry.

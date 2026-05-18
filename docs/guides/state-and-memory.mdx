@@ -1,0 +1,100 @@
+---
+title: Custom Memory Storage
+description: Learn how to persist your agent's memory and state to Redis, Postgres, or other external databases.
+---
+
+# State & Memory Storage
+
+By default, Charm persists your agent's memory and state using the local filesystem (which the Charm Cloud Runner automatically syncs to a Google Cloud Storage bucket). 
+
+However, if you are self-hosting your agents, or if you require an enterprise database like Redis or PostgreSQL for horizontal scaling and faster state retrieval, you can swap out the default memory provider by installing and configuring a **Memory Storage Plugin**.
+
+## Configuring a Memory Provider
+
+To use an external memory provider, specify it in your `charm.yaml` file under the `runtime.memory` section.
+
+```yaml
+runtime:
+  adapter:
+    type: langgraph
+  memory:
+    provider: redis
+    config:
+      url: "redis://localhost:6379/0"
+```
+
+## Creating a Custom Memory Plugin
+
+If a plugin for your database doesn't exist yet, you can easily build one. Just like adapters and telemetry exporters, Memory Storage plugins are discovered dynamically using Python `entry_points`.
+
+### 1. Implement `BaseMemoryStore`
+
+Create a new Python class that inherits from `charm.core.storage.BaseMemoryStore`.
+
+```python
+from typing import Any, Dict, List
+from charm.core.storage import BaseMemoryStore
+import redis
+import json
+
+class RedisMemory(BaseMemoryStore):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        # Initialize connection using the config from charm.yaml
+        redis_url = self.config.get("url", "redis://localhost:6379/0")
+        self.client = redis.Redis.from_url(redis_url)
+
+    def load_messages(self, thread_id: str) -> List[Dict[str, Any]]:
+        raw_data = self.client.get(f"charm:memory:{thread_id}")
+        if raw_data:
+            return json.loads(raw_data)
+        return []
+
+    def save_messages(self, thread_id: str, messages: List[Dict[str, Any]]) -> None:
+        self.client.set(f"charm:memory:{thread_id}", json.dumps(messages))
+
+    def get_langgraph_checkpointer(self) -> Any:
+        # If your agent uses LangGraph, you can optionally return a BaseCheckpointSaver
+        # from the langgraph package.
+        return None
+```
+
+### 2. Register the Plugin
+
+In your package's `pyproject.toml`, add an entry to the `charm.memory` group:
+
+```toml
+[project.entry-points."charm.memory"]
+redis = "charm_memory_redis.plugin:RedisMemory"
+```
+
+When you install this package (`pip install .`), the Charm Runner will automatically discover the `redis` provider name and use it when configured in `charm.yaml`.
+
+## Using Memory in Custom Adapters
+
+If you are writing a custom adapter or a standard Python agent and need to manually read or save the conversation history, you can access the active memory provider via the `StorageManager`:
+
+```python
+from charm.core.storage import StorageManager
+
+def agent(inputs):
+    thread_id = inputs.get("__charm_thread_id__", "default")
+    
+    # Retrieves the active provider (e.g., RedisMemory, if configured)
+    memory_store = StorageManager.get_provider("local", {}) 
+    
+    # Load previous history
+    history = memory_store.load_messages(thread_id)
+    
+    # ... logic ...
+    
+    # Save updated history
+    history.append({"role": "assistant", "content": "Hello!"})
+    memory_store.save_messages(thread_id, history)
+    
+    return "Hello!"
+```
+
+## Cloud Runner Considerations
+
+When deploying to the Charm Cloud Runner, if your `charm.yaml` defines a custom memory provider like `redis`, the Runner will **skip** mounting the default GCS storage bucket. Instead, your agent container will boot immediately and connect directly to your external database, which can significantly reduce cold start times.

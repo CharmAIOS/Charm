@@ -29,7 +29,19 @@ console = Console()
 app = typer.Typer()
 
 # Valid adapter types
-VALID_ADAPTER_TYPES = ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+def get_valid_adapter_types() -> List[str]:
+    import sys
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import entry_points
+    else:
+        from importlib_metadata import entry_points
+    try:
+        eps = entry_points(group="charm.adapters")
+        return [ep.name for ep in eps]
+    except Exception:
+        return ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+
+VALID_ADAPTER_TYPES = get_valid_adapter_types()
 
 
 async def run_docker_simulation(
@@ -48,9 +60,9 @@ async def run_docker_simulation(
         return
 
     try:
-        import docker
+        import docker as _docker
 
-        docker.from_env()
+        _docker.from_env()  # type: ignore[attr-defined]
     except Exception:
         console.print("[bold red]Error:[/bold red] Docker engine is not running.")
         console.print("Please start Docker Desktop and try again.")
@@ -64,6 +76,7 @@ async def run_docker_simulation(
     skills = []
     runtime_mode = "standard"
     lifecycle = "serverless"
+    custom_image = None
     try:
         import yaml
 
@@ -77,6 +90,7 @@ async def run_docker_simulation(
             skills = runtime.get("skills", [])
             runtime_mode = runtime.get("mode", "standard")
             lifecycle = runtime.get("lifecycle", "serverless")
+            custom_image = runtime.get("custom_image")
     except Exception:
         pass
 
@@ -85,12 +99,17 @@ async def run_docker_simulation(
         console.print(f"[bold red]Warning:[/bold red] Unknown adapter type '{adapter_type}'. Using 'custom'.")
         adapter_type = "custom"
 
-    # Select correct Docker image based on adapter type and mode
-    image = None
-    if adapter_type in ("openclaw", "node") or runtime_mode == "full":
-        image = "ucmind/runner-full:latest"
+    # Select correct Docker image based on custom image or adapter type
+    if custom_image and isinstance(custom_image, str):
+        image = custom_image
     else:
-        image = "ucmind/runner-base:latest"
+        IMAGE_BASE = os.getenv("CHARM_IMAGE_BASE", "ucmind/runner-base:latest")
+        ADAPTER_IMAGES = {
+            "langchain": os.getenv("CHARM_IMAGE_LANGCHAIN", "ucmind/runner-langchain:latest"),
+            "crewai": os.getenv("CHARM_IMAGE_CREWAI", "ucmind/runner-crewai:latest"),
+            "openclaw": os.getenv("CHARM_IMAGE_OPENCLAW", "ucmind/runner-openclaw:latest"),
+        }
+        image = ADAPTER_IMAGES.get(adapter_type, IMAGE_BASE)
 
     # Build env vars with mock tokens if requested
     final_env_vars = env_vars.copy()

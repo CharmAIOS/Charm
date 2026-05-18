@@ -12,8 +12,9 @@ except ImportError:
 
 
 class BaseAdapter(ABC):
-    def __init__(self, agent_instance: Any):
+    def __init__(self, agent_instance: Any, config: Optional[Any] = None):
         self.agent = agent_instance
+        self.config = config
         self._pending_inputs: Dict[str, Any] = {}
 
     # Memory & Auth Helpers

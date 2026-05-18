@@ -1,6 +1,13 @@
 {
     "theme": "mint",
     "name": "Charm Docs",
+    "variables": {
+        "store_url": "https://store.charmos.io",
+        "api_base_url": "https://store.charmos.io/api",
+        "discord_url": "https://discord.gg/gdakynHUEb",
+        "cli_package": "charmos",
+        "manifest_version": "0.4.2"
+    },
     "favicon": "/assets/logo.png",
     "logo": {
         "light": "/assets/logo.png",
@@ -42,38 +49,34 @@
             {
                 "label": "Discord",
                 "icon": "discord",
-                "href": "https://discord.gg/gdakynHUEb"
+                "href": "{discord_url}"
             }
         ],
         "primary": {
             "type": "button",
             "label": "Charm Store",
-            "href": "https://store.charmos.io"
+            "href": "{store_url}"
         }
     },
     "redirects": [],
     "navigation": {
         "tabs": [
             {
-                "tab": "Get Started",
+                "tab": "Tutorials",
                 "groups": [
                     {
-                        "group": " ",
+                        "group": "Getting Started",
                         "pages": [
-                            "index"
-                        ]
-                    },
-                    {
-                        "group": "Quickstart",
-                        "pages": [
+                            "index",
                             "quickstart/overview",
                             "quickstart/install",
                             "quickstart/first-app",
-                            "quickstart/publish"
+                            "quickstart/publish",
+                            "guides/onboarding"
                         ]
                     },
                     {
-                        "group": "Templates",
+                        "group": "Agent Templates",
                         "pages": [
                             "templates/overview",
                             "templates/python",
@@ -91,25 +94,12 @@
                 ]
             },
             {
-                "tab": "Guides",
+                "tab": "How-to Guides",
                 "groups": [
-                    {
-                        "group": " ",
-                        "pages": [
-                            "guides/overview"
-                        ]
-                    },
-                    {
-                        "group": "Configuration",
-                        "pages": [
-                            "guides/manifest",
-                            "guides/interface",
-                            "guides/charmignore"
-                        ]
-                    },
                     {
                         "group": "Development",
                         "pages": [
+                            "guides/overview",
                             "guides/local-run",
                             "guides/docker-sandbox",
                             "guides/validate",
@@ -117,25 +107,49 @@
                         ]
                     },
                     {
-                        "group": "Publishing",
+                        "group": "Customization",
+                        "pages": [
+                            "guides/custom-runtimes",
+                            "guides/custom-adapters",
+                            "guides/telemetry-exporters",
+                            "guides/output-renderers",
+                            "guides/charmignore"
+                        ]
+                    },
+                    {
+                        "group": "Publishing & Versioning",
                         "pages": [
                             "guides/push",
                             "guides/version-control"
+                        ]
+                    },
+                    {
+                        "group": "Open Source",
+                        "pages": [
+                            "oss/dev-setup",
+                            "oss/adapter",
+                            "oss/base-image",
+                            "oss/documentation",
+                            "oss/release-process",
+                            "oss/docs-versioning"
                         ]
                     }
                 ]
             },
             {
-                "tab": "CLI",
+                "tab": "Reference",
                 "groups": [
                     {
-                        "group": " ",
+                        "group": "Core References",
                         "pages": [
-                            "guides/onboarding"
+                            "references/overview",
+                            "references/sdk",
+                            "references/api",
+                            "references/manifest"
                         ]
                     },
                     {
-                        "group": "Commands",
+                        "group": "CLI Commands",
                         "pages": [
                             "cli/init",
                             "cli/run",
@@ -145,37 +159,12 @@
                             "cli/auth",
                             "cli/config"
                         ]
-                    }
-                ]
-            },
-            {
-                "tab": "References",
-                "groups": [
-                    {
-                        "group": " ",
-                        "pages": [
-                            "references/overview"
-                        ]
                     },
                     {
-                        "group": "Reference",
-                        "pages": [
-                            "references/sdk",
-                            "references/api",
-                            "references/manifest"
-                        ]
-                    },
-                    {
-                        "group": "Execute",
+                        "group": "API: Execute & Agents",
                         "openapi": "openapi.json",
                         "pages": [
-                            "POST /v1/execute"
-                        ]
-                    },
-                    {
-                        "group": "Agents",
-                        "openapi": "openapi.json",
-                        "pages": [
+                            "POST /v1/execute",
                             "POST /v1/agents",
                             "GET /v1/agents",
                             "GET /v1/agents/{agent_id}",
@@ -184,18 +173,12 @@
                         ]
                     },
                     {
-                        "group": "Versions",
+                        "group": "API: Versions & Runs",
                         "openapi": "openapi.json",
                         "pages": [
                             "POST /v1/upgrade",
                             "GET /v1/versions/{agent_id}",
-                            "POST /v1/rollback"
-                        ]
-                    },
-                    {
-                        "group": "Runs",
-                        "openapi": "openapi.json",
-                        "pages": [
+                            "POST /v1/rollback",
                             "GET /v1/runs/{run_id}",
                             "GET /v1/runs/{run_id}/events",
                             "POST /v1/runs/{run_id}/complete",
@@ -204,28 +187,16 @@
                         ]
                     },
                     {
-                        "group": "Threads",
+                        "group": "API: Other",
                         "openapi": "openapi.json",
                         "pages": [
-                            "GET /v1/threads/{thread_id}/runs"
-                        ]
-                    },
-                    {
-                        "group": "Billing",
-                        "openapi": "openapi.json",
-                        "pages": [
+                            "GET /v1/threads/{thread_id}/runs",
                             "GET /v1/billing/wallet",
                             "GET /v1/billing/subscriptions",
                             "GET /v1/billing/subscriptions/{subscription_id}",
                             "POST /v1/billing/subscriptions",
                             "POST /v1/billing/transactions",
-                            "POST /v1/billing/webhook-event"
-                        ]
-                    },
-                    {
-                        "group": "Studio",
-                        "openapi": "openapi.json",
-                        "pages": [
+                            "POST /v1/billing/webhook-event",
                             "GET /v1/studio/agents",
                             "GET /v1/studio/agents/{agent_id}/stats",
                             "GET /v1/studio/agents/{agent_id}/runs",
@@ -234,13 +205,7 @@
                             "GET /v1/studio/agents/{agent_id}/usage-log",
                             "GET /v1/studio/agents/{agent_id}/token-distribution",
                             "GET /v1/studio/agents/{agent_id}/latency-distribution",
-                            "GET /v1/studio/agents/{agent_id}/session-depth"
-                        ]
-                    },
-                    {
-                        "group": "Daemons",
-                        "openapi": "openapi.json",
-                        "pages": [
+                            "GET /v1/studio/agents/{agent_id}/session-depth",
                             "GET /v1/daemon/{agent_id}/status",
                             "POST /v1/daemon/{agent_id}/start",
                             "POST /v1/daemon/{agent_id}/stop",
@@ -252,104 +217,51 @@
                 ]
             },
             {
-                "tab": "Adapters",
+                "tab": "Explanation",
                 "groups": [
                     {
-                        "group": " ",
+                        "group": "Architecture",
                         "pages": [
-                            "adapters/overview"
-                        ]
-                    },
-                    {
-                        "group": "Integrations",
-                        "pages": [
-                            "adapters/crewai",
-                            "adapters/langchain",
-                            "adapters/langgraph",
-                            "adapters/custom",
-                            "adapters/openclaw"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tab": "Platform",
-                "groups": [
-                    {
-                        "group": " ",
-                        "pages": [
-                            "platform/overview"
-                        ]
-                    },
-                    {
-                        "group": "Runtime",
-                        "pages": [
+                            "platform/overview",
                             "platform/execution-modes",
                             "platform/base-images",
-                            "platform/skills"
+                            "adapters/overview",
+                            "guides/interface",
+                            "guides/state-and-memory"
                         ]
                     },
                     {
-                        "group": "Features",
+                        "group": "Platform Features",
                         "pages": [
                             "platform/features",
                             "platform/ui-protocol",
                             "platform/observability",
+                            "platform/skills",
                             "platform/keys",
                             "platform/oauth",
                             "platform/threads"
                         ]
                     },
                     {
-                        "group": "Charm Store",
+                        "group": "Charm Store & Payments",
                         "pages": [
                             "platform/store",
                             "platform/studio",
-                            "platform/ambient-desktop-companion"
-                        ]
-                    },
-                    {
-                        "group": "Payments",
-                        "pages": [
+                            "platform/ambient-desktop-companion",
                             "platform/app",
                             "platform/platform",
                             "platform/earn-as-you-go"
                         ]
-                    }
-                ]
-            },
-            {
-                "tab": "Open Source",
-                "groups": [
-                    {
-                        "group": " ",
-                        "pages": [
-                            "oss/overview"
-                        ]
                     },
                     {
-                        "group": "Contributing",
+                        "group": "Community & Ecosystem",
                         "pages": [
+                            "guides/community-templates",
+                            "oss/overview",
                             "oss/contributing",
-                            "oss/dev-setup",
                             "oss/code-style",
                             "oss/code-of-conduct",
                             "oss/governance"
-                        ]
-                    },
-                    {
-                        "group": "Tools & Plugins",
-                        "pages": [
-                            "oss/adapter",
-                            "oss/base-image",
-                            "oss/documentation"
-                        ]
-                    },
-                    {
-                        "group": "Release",
-                        "pages": [
-                            "oss/release-process",
-                            "oss/docs-versioning"
                         ]
                     }
                 ]

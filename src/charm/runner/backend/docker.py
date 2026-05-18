@@ -11,8 +11,10 @@ from typing import AsyncGenerator, Dict
 try:
     import docker
     from docker.errors import DockerException
+    _docker_available = True
 except ImportError:
-    docker = None
+    docker = None  # type: ignore[assignment]
+    _docker_available = False
 
 from ...core.io import EVENT_PREFIX
 from ...runner.protocol import sse_pack
@@ -48,10 +50,11 @@ class LogRedactor:
 
 class DockerBackend(ExecutionBackend):
     def __init__(self):
-        if not docker:
+        if not _docker_available or docker is None:
             raise RuntimeError("Docker SDK missing. Install 'pip install docker'.")
+        assert docker is not None  # narrows type for mypy after the guard above
         try:
-            self.client = docker.from_env()
+            self.client = docker.from_env()  # type: ignore[attr-defined]
         except DockerException:
             logger.error("Docker engine not accessible.")
             self.client = None

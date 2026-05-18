@@ -1,0 +1,9 @@
+FROM ucmind/charm-base:latest
+
+RUN uv pip install -e ".[langchain]" \
+    "openai>=1.10.0" \
+    "google-generativeai" \
+    "langchain-google-genai" \
+    "beautifulsoup4"
+
+CMD ["echo", "Charm LangChain Runtime Ready"]

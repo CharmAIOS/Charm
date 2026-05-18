@@ -17,7 +17,19 @@ from ...contracts.uac import CharmConfig
 console = Console()
 
 # Valid adapter types (from UAC contract)
-VALID_ADAPTER_TYPES = ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+def get_valid_adapter_types() -> List[str]:
+    import sys
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import entry_points
+    else:
+        from importlib_metadata import entry_points
+    try:
+        eps = entry_points(group="charm.adapters")
+        return [ep.name for ep in eps]
+    except Exception:
+        return ["python", "crewai", "langchain", "langgraph", "openclaw", "node", "custom"]
+
+VALID_ADAPTER_TYPES = get_valid_adapter_types()
 
 # Latest supported version
 LATEST_VERSION = "0.4"
@@ -282,7 +294,7 @@ def _validate_adapter_type(config: CharmConfig) -> List[str]:
         elif not config.runtime.config.system_prompt:
             errors.append("OpenClaw adapter requires 'system_prompt' in runtime.config")
 
-    elif adapter_type in ("python", "custom", "crewai", "langchain", "langgraph"):
+    elif adapter_type not in ("openclaw", "node"):
         if not config.runtime.adapter.entry_point or not config.runtime.adapter.entry_point.strip():
             errors.append(f"{adapter_type} adapter requires a non-empty 'entry_point' (e.g., 'src.main:agent')")
 
@@ -431,7 +443,7 @@ def validate_command(path: str = typer.Argument(".", help="Path to the Charm pro
             issues_found = True
             console.print("[bold red]✖ Entry point command cannot be empty.[/bold red]")
 
-    elif config.runtime.adapter.type in ("python", "custom", "crewai", "langchain", "langgraph"):
+    elif config.runtime.adapter.type not in ("openclaw", "node"):
         # Python checks
         entry_point = config.runtime.adapter.entry_point or ""
         ep_errors = _check_entry_point_signature(project_path, entry_point)

@@ -1,0 +1,59 @@
+---
+title: Community Templates
+description: Learn how to contribute custom agent templates to the Charm ecosystem.
+---
+
+# Community Templates
+
+Charm's CLI scaffold system (`charm init`) is completely decoupled from the SDK's release cycle. This means the community can easily contribute new agent templates, and they will be instantly available to all developers worldwide without requiring an SDK update.
+
+## How it works
+
+When you run `charm init`, the CLI fetches the latest [templates-manifest.json](https://github.com/CharmAIOS/Charm/blob/main/templates-manifest.json) from the `main` branch of the Charm repository. This JSON file acts as a central registry containing all the files and configurations for every template.
+
+## Contributing a Template
+
+If you have built an excellent starter template (e.g., a "Sales Agent" or "Next.js Integration Agent"), you can share it by submitting a Pull Request to the Charm GitHub repository.
+
+You **do not** need to write any Python code to add a template!
+
+### Step 1: Prepare your JSON entry
+Create a JSON object that describes your template and contains all the initial files you want to scaffold. 
+
+Here is the schema for a single template entry:
+
+```json
+{
+  "id": "my-sales-agent",
+  "description": "An autonomous sales agent with Salesforce integration.",
+  "post_init_message": "  ├── charm.yaml\n  ├── .charmignore\n  └── src/\n      └── main.py\n\nNext: run 'charm push'!",
+  "files": [
+    {
+      "path": "charm.yaml",
+      "content": "persona:\n  name: \"my-agent\"\n  description: \"A sales agent.\"\nruntime:\n  adapter:\n    type: python\n    entry_point: src.main:agent\n"
+    },
+    {
+      "path": ".charmignore",
+      "content": ".env\n__pycache__/\n"
+    },
+    {
+      "path": "src/main.py",
+      "content": "# Your agent logic here\ndef agent(inputs):\n    return 'Hello Sales!'"
+    }
+  ]
+}
+```
+
+**Tips:**
+- The `id` must be unique and use `kebab-case`. This is the ID users will type in `charm init --template <id>`.
+- Keep the `description` concise (under 60 characters).
+- Include `charm.yaml` and `.charmignore` in the `files` array. The CLI will automatically inject the user's chosen agent name into `charm.yaml`.
+- Ensure your file `content` strings are properly escaped (e.g., escaping newlines as `\n` and quotes as `\"`).
+
+### Step 2: Submit a Pull Request
+1. Fork the [CharmAIOS/Charm](https://github.com/CharmAIOS/Charm) repository.
+2. Edit the `templates-manifest.json` file in the root directory.
+3. Append your new template object to the `templates` array.
+4. Submit a Pull Request.
+
+Once your PR is reviewed and merged into `main`, your template will immediately be live! Anyone running `charm init` will see your template in the interactive menu.

@@ -22,7 +22,6 @@ Use this lifecycle for agents that need persistent background execution, schedul
 Document these fields:
 
 - `runtime.lifecycle: daemon`
-- `runtime.mode`
 - `runtime.adapter.type`
 - `policies`
 
@@ -32,7 +31,6 @@ Example:
 runtime:
   adapter:
     type: "openclaw"
-  mode: "full"
   lifecycle: "daemon"
 ```
 

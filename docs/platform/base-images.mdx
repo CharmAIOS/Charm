@@ -1,52 +1,41 @@
 ---
 title: Base Images
-summary: Choose the right container environment for your agent.
+summary: Understand how Charm selects container environments for your agent.
 ---
 
-Charm runs agents inside managed container images. Choose the smallest image that supports your workload.
+Charm runs agents inside managed container environments. In the decoupled architecture, base images are automatically selected based on your `adapter_type` to ensure the smallest footprint and fastest cold-start times.
 
-## Configure Runtime Mode
+## Automatic Selection
+
+The Charm Cloud Runner automatically provisions the correct base image by reading your `charm.yaml` file:
 
 ```yaml
 runtime:
-  mode: "standard"
+  adapter:
+    type: "langchain" # Automatically maps to the LangChain Base Image
 ```
 
-Valid values:
+Valid default mappings include:
 
-- `standard`
-- `full`
+<Snippet file="snippets/base-image-mapping.mdx" />
 
-## Standard Runtime
+## Custom Images
 
-Use `standard` for most Python agents.
+If the default images do not meet your needs (e.g., you need specialized system libraries, custom rendering engines, or are building your own adapter), you can override this behavior by providing a `custom_image` URL.
 
-Best for:
+```yaml
+runtime:
+  adapter:
+    type: "custom"
+  custom_image: "ghcr.io/your-org/your-custom-runtime:latest"
+```
 
-- text processing,
-- API calls,
-- lightweight data workflows,
-- RAG-style agents,
-- simple LangChain/LangGraph/custom agents.
+When `custom_image` is declared, the Cloud Runner completely ignores the adapter mapping and boots your provided Docker image directly.
 
-It is optimized for lower cold-start time and smaller dependency footprint.
-
-## Full Runtime
-
-Use `full` when the agent needs browser or multimedia support.
-
-Best for:
-
-- Playwright, Selenium, Puppeteer,
-- FFmpeg or audio/video workflows,
-- OpenClaw agents,
-- browser-rendered output.
-
-## Choosing a Mode
-
-Start with `standard`. Move to `full` only when a dependency requires it.
+> **Note**: The legacy `runtime.mode` configuration (`standard` or `full`) is now deprecated and ignored by the Cloud Runner.
 
 ## Related Pages
 
 - [Execution Modes](/platform/execution-modes)
 - [Base Image Contributions](/oss/base-image)
+- [Building Custom Runtimes](/guides/custom-runtimes)

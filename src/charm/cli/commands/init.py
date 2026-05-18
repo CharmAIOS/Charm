@@ -1,34 +1,52 @@
+import json
 import shutil
-from importlib.resources import files
+import urllib.request
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
+from rich.prompt import Prompt
 
 app = typer.Typer(help="Initialize a new Charm agent")
 console = Console()
 
-# Valid templates
-VALID_TEMPLATES = [
-    "python",
-    "openclaw",
-    "research-agent",
-    "code-review-agent",
-    "customer-support-agent",
-    "data-pipeline-agent",
-    "slack-bot",
-]
+MANIFEST_URL = "https://raw.githubusercontent.com/charmaios/charm/main/templates-manifest.json"
 
-_TEMPLATE_DESCRIPTIONS = {
-    "python":                 "Custom Python agent (code-based)",
-    "openclaw":               "MCP-powered OpenClaw agent",
-    "research-agent":         "Web research & report generation",
-    "code-review-agent":      "Code review for bugs, security, style",
-    "customer-support-agent": "Always-on customer support daemon",
-    "data-pipeline-agent":    "Data processing & ETL pipeline",
-    "slack-bot":              "Persistent Slack workspace bot",
-}
+def fetch_manifest() -> Dict[str, Any]:
+    try:
+        with urllib.request.urlopen(MANIFEST_URL, timeout=5) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        console.print(f"[bold yellow]Warning:[/bold yellow] Failed to fetch community templates: {e}")
+        console.print("Using fallback offline template...")
+        return {
+            "templates": [
+                {
+                    "id": "python",
+                    "description": "Fallback Python template (offline mode)",
+                    "files": [
+                        {
+                            "path": "charm.yaml",
+                            "content": "persona:\n  name: \"my-agent\"\n  description: \"A Charm agent\"\nruntime:\n  adapter:\n    type: python\n    entry_point: src.main:agent\n"
+                        },
+                        {
+                            "path": ".charmignore",
+                            "content": ".env\n__pycache__/\n*.pyc\n"
+                        },
+                        {
+                            "path": "src/__init__.py",
+                            "content": ""
+                        },
+                        {
+                            "path": "src/main.py",
+                            "content": "# Define your agent logic here.\n# The object must be named 'agent' to match charm.yaml entry_point.\n\ndef agent(inputs):\n    return f\"Hello from Charm! Input received: {inputs}\"\n"
+                        }
+                    ],
+                    "post_init_message": "  ├── charm.yaml\n  ├── .charmignore\n  └── src/\n      ├── __init__.py\n      └── main.py"
+                }
+            ]
+        }
 
 
 @app.command("init")
@@ -39,10 +57,7 @@ def init_command(
     ),
     template: str = typer.Option(
         "python",
-        help=(
-            "Template to use. Options: "
-            + ", ".join(f"'{t}'" for t in VALID_TEMPLATES)
-        ),
+        help="Template to use (fetched dynamically from community registry)."
     ),
     create: Optional[str] = typer.Option(
         None, "--create", help="Specifically create a single file from template (e.g. 'charm.yaml')"
@@ -55,25 +70,21 @@ def init_command(
     Scaffold a new Charm Agent project.
     """
     project_path = Path(name)
-
-    # Interactive mode
+    manifest = fetch_manifest()
+    templates = manifest.get("templates", [])
+    
     if interactive:
-        run_interactive(project_path)
+        run_interactive(project_path, templates)
         return
 
-    # Single file creation mode
     if create:
-        create_single_file(project_path, create)
+        create_single_file(project_path, create, templates)
         return
 
-    # Full project creation
-    create_project(project_path, template)
+    create_project(project_path, template, templates)
 
 
-def run_interactive(project_path: Path):
-    """Run init in interactive mode with prompts."""
-    from rich.prompt import Prompt
-
+def run_interactive(project_path: Path, templates: List[Dict[str, Any]]):
     # Check if directory exists
     if project_path.exists():
         if not project_path.is_dir():
@@ -86,32 +97,32 @@ def run_interactive(project_path: Path):
         project_path.mkdir(parents=True)
 
     try:
-        # Show template menu
         console.print("\n[bold]Available templates:[/bold]")
-        for t, desc in _TEMPLATE_DESCRIPTIONS.items():
-            console.print(f"  [cyan]{t:<26}[/cyan] {desc}")
+        valid_ids = []
+        for t in templates:
+            t_id = t["id"]
+            desc = t.get("description", "")
+            console.print(f"  [cyan]{t_id:<26}[/cyan] {desc}")
+            valid_ids.append(t_id)
         console.print()
 
         template_choice = Prompt.ask(
             "[bold]Select template[/bold]",
-            choices=VALID_TEMPLATES,
-            default="python",
+            choices=valid_ids,
+            default="python" if "python" in valid_ids else valid_ids[0],
         )
 
-        # Prompt for agent name (optional, can use directory name)
         agent_name = Prompt.ask(
             "[bold]Agent name[/bold]",
             default=project_path.name if project_path.name != "." else "my-agent",
         )
 
-        # Prompt for description
         description = Prompt.ask(
             "[bold]Description[/bold]",
             default="A Charm agent",
         )
 
-        # Create the project with selected template
-        create_project_from_template(project_path, template_choice, agent_name, description)
+        create_project_from_template(project_path, template_choice, templates, agent_name, description)
 
         console.print("\n[bold green]✔ Project created successfully![/bold green]")
         console.print(f"\nNext step:\n  [cyan]cd[/cyan] {project_path}\n  [cyan]charm push[/cyan]")
@@ -123,8 +134,7 @@ def run_interactive(project_path: Path):
         raise typer.Exit(1) from e
 
 
-def create_single_file(project_path: Path, create: str):
-    """Create a single file from template."""
+def create_single_file(project_path: Path, create: str, templates: List[Dict[str, Any]]):
     if not project_path.exists():
         project_path.mkdir(parents=True)
 
@@ -135,20 +145,23 @@ def create_single_file(project_path: Path, create: str):
 
     try:
         # Use python template for single file creation
-        template_source = files("charm.templates").joinpath("python.yaml")
-        yaml_content = template_source.read_text(encoding="utf-8")
-        target_file.write_text(yaml_content, encoding="utf-8")
+        python_tpl = next((t for t in templates if t["id"] == "python"), templates[0])
+        file_tpl = next((f for f in python_tpl["files"] if f["path"] == "charm.yaml"), None)
+        if not file_tpl:
+            console.print("[bold red]Error:[/bold red] Template does not contain charm.yaml")
+            raise typer.Exit(1)
+            
+        target_file.write_text(file_tpl["content"], encoding="utf-8")
         console.print(f"[bold green]✔ Created file: {target_file}[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error creating file:[/bold red] {e}")
         raise typer.Exit(1) from e
 
 
-def create_project(project_path: Path, template: str):
-    """Create a full project from template."""
-    # Validate template
-    if template not in VALID_TEMPLATES:
-        console.print(f"[bold red]Error:[/bold red] Invalid template '{template}'. Valid options: {', '.join(VALID_TEMPLATES)}")
+def create_project(project_path: Path, template: str, templates: List[Dict[str, Any]]):
+    valid_ids = [t["id"] for t in templates]
+    if template not in valid_ids:
+        console.print(f"[bold red]Error:[/bold red] Invalid template '{template}'. Valid options: {', '.join(valid_ids)}")
         raise typer.Exit(1)
 
     if project_path.exists():
@@ -162,7 +175,7 @@ def create_project(project_path: Path, template: str):
         project_path.mkdir(parents=True)
 
     try:
-        create_project_from_template(project_path, template)
+        create_project_from_template(project_path, template, templates)
         console.print("\nNext step:\n  [cyan]cd[/cyan] " + str(project_path) + "\n  [cyan]charm push[/cyan]")
     except Exception as e:
         console.print(f"[bold red]Error loading template:[/bold red] {e}")
@@ -174,141 +187,30 @@ def create_project(project_path: Path, template: str):
 def create_project_from_template(
     project_path: Path,
     template: str,
+    templates: List[Dict[str, Any]],
     name: Optional[str] = None,
     description: Optional[str] = None,
 ):
-    """Create project from template with optional customization."""
-    # Load template YAML
-    template_source = files("charm.templates").joinpath(f"{template}.yaml")
-    yaml_content = template_source.read_text(encoding="utf-8")
-
-    # Customize name and description if provided
-    if name or description:
-        import re
-        if name:
-            yaml_content = re.sub(r'name: "[^"]*"', f'name: "{name}"', yaml_content)
-        if description:
-            yaml_content = re.sub(r'description: "[^"]*"', f'description: "{description}"', yaml_content)
-
-    # Write charm.yaml
-    (project_path / "charm.yaml").write_text(yaml_content, encoding="utf-8")
-
-    # Create .charmignore from template (consistent for all templates)
-    ignore_source = files("charm.templates").joinpath("charm.ignore.template")
-    ignore_content = ignore_source.read_text(encoding="utf-8")
-    (project_path / ".charmignore").write_text(ignore_content, encoding="utf-8")
-
-    if template == "python":
-        # Create src directory with main.py and __init__.py
-        (project_path / "src").mkdir(exist_ok=True)
-        (project_path / "src" / "__init__.py").touch()
-        (project_path / "src" / "main.py").write_text(
-            "# Define your agent logic here.\n"
-            "# The object must be named 'agent' to match charm.yaml entry_point.\n\n"
-            "def agent(inputs):\n"
-            '    return f"Hello from Charm! Input received: {inputs}"\n',
-            encoding="utf-8",
-        )
-        console.print(f"[bold green]✔ Created Python Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml")
-        console.print("  ├── .charmignore")
-        console.print("  └── src/")
-        console.print("      ├── __init__.py")
-        console.print("      └── main.py")
-
-    elif template == "openclaw":
-        # Create skills directory
-        skills_dir = project_path / "skills"
-        skills_dir.mkdir(exist_ok=True)
-
-        # Create sample custom skill
-        sample_skill = skills_dir / "my_tool"
-        sample_skill.mkdir(exist_ok=True)
-        (sample_skill / "server.py").write_text(
-            "print('Hello from custom skill!')\n# Implement MCP server here",
-            encoding="utf-8",
-        )
-        (sample_skill / "requirements.txt").write_text("mcp", encoding="utf-8")
-
-        console.print(f"[bold green]✔ Created OpenClaw Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml")
-        console.print("  ├── .charmignore")
-        console.print("  └── skills/")
-        console.print("      └── my_tool/  <-- Example custom skill")
-
-    elif template == "research-agent":
-        # OpenClaw-based — no extra source files needed (system_prompt drives it)
-        console.print(f"[bold green]✔ Created Research Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml  ← system_prompt & web-search skill pre-configured")
-        console.print("  └── .charmignore")
-        console.print("\n[dim]Next:[/dim] edit [cyan]charm.yaml[/cyan] to refine the system_prompt, then [cyan]charm push[/cyan]")
-
-    elif template == "code-review-agent":
-        # Custom Python adapter — scaffold src/main.py with a starter reviewer
-        (project_path / "src").mkdir(exist_ok=True)
-        (project_path / "src" / "__init__.py").touch()
-        (project_path / "src" / "main.py").write_text(
-            "# Code Review Agent\n"
-            "# Receives code + focus area, returns a structured review.\n\n"
-            "def agent(inputs):\n"
-            "    code = inputs.get('code', '')\n"
-            "    language = inputs.get('language', 'auto-detect') or 'auto-detect'\n"
-            "    focus = inputs.get('focus', 'general')\n\n"
-            "    # TODO: call your preferred LLM here\n"
-            "    # Example (pseudo-code):\n"
-            "    # prompt = build_review_prompt(code, language, focus)\n"
-            "    # return llm.complete(prompt)\n\n"
-            "    return f'[Code Review — {focus}]\\n\\nLanguage: {language}\\n\\n{code[:80]}...\\n\\n(Implement your review logic above)'\n",
-            encoding="utf-8",
-        )
-        console.print(f"[bold green]✔ Created Code Review Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml")
-        console.print("  ├── .charmignore")
-        console.print("  └── src/main.py  ← add your LLM call here")
-
-    elif template == "customer-support-agent":
-        # OpenClaw daemon — system_prompt drives the support behaviour
-        console.print(f"[bold green]✔ Created Customer Support Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml  ← daemon lifecycle, knowledge-base skill pre-configured")
-        console.print("  └── .charmignore")
-        console.print("\n[dim]Tip:[/dim] this agent runs as a [bold]daemon[/bold] — it stays alive between requests.")
-        console.print("Edit the system_prompt in [cyan]charm.yaml[/cyan] with your product knowledge, then [cyan]charm push[/cyan]")
-
-    elif template == "data-pipeline-agent":
-        # Custom Python adapter — scaffold src/main.py with input routing
-        (project_path / "src").mkdir(exist_ok=True)
-        (project_path / "src" / "__init__.py").touch()
-        (project_path / "src" / "main.py").write_text(
-            "# Data Pipeline Agent\n"
-            "# Routes data through clean / summarise / transform / analyse tasks.\n\n"
-            "def agent(inputs):\n"
-            "    data = inputs.get('data', '')\n"
-            "    task = inputs.get('task', 'analyse')\n"
-            "    output_format = inputs.get('output_format', 'markdown')\n\n"
-            "    # TODO: implement each task branch\n"
-            "    if task == 'clean':\n"
-            "        result = data.strip()  # replace with real cleaning logic\n"
-            "    elif task == 'summarise':\n"
-            "        result = data[:200] + '...'  # replace with LLM summarisation\n"
-            "    elif task == 'transform':\n"
-            "        result = data  # replace with transformation logic\n"
-            "    else:  # analyse\n"
-            "        result = f'Analysis of {len(data)} chars of data.'  # replace with LLM analysis\n\n"
-            "    if output_format == 'json':\n"
-            "        import json\n"
-            "        return json.dumps({'result': result})\n"
-            "    return result\n",
-            encoding="utf-8",
-        )
-        console.print(f"[bold green]✔ Created Data Pipeline Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml")
-        console.print("  ├── .charmignore")
-        console.print("  └── src/main.py  ← implement your pipeline tasks here")
-
-    elif template == "slack-bot":
-        # OpenClaw daemon with Slack MCP skill
-        console.print(f"[bold green]✔ Created Slack Bot Agent project: {project_path.name}[/bold green]")
-        console.print("  ├── charm.yaml  ← daemon lifecycle, Slack MCP skill pre-configured")
-        console.print("  └── .charmignore")
-        console.print("\n[dim]Tip:[/dim] this agent runs as a [bold]daemon[/bold] — it persists across Slack events.")
-        console.print("Add your Slack API credentials as secrets, then [cyan]charm push[/cyan]")
+    import re
+    tpl_data = next((t for t in templates if t["id"] == template), None)
+    if not tpl_data:
+        raise Exception(f"Template '{template}' not found in manifest.")
+        
+    for file_obj in tpl_data.get("files", []):
+        file_path = project_path / file_obj["path"]
+        content = file_obj["content"]
+        
+        # Customize charm.yaml if name/desc provided
+        if file_obj["path"] == "charm.yaml":
+            if name:
+                content = re.sub(r'name: "[^"]*"', f'name: "{name}"', content)
+            if description:
+                content = re.sub(r'description: "[^"]*"', f'description: "{description}"', content)
+                
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content, encoding="utf-8")
+        
+    console.print(f"[bold green]✔ Created {tpl_data.get('id', 'Agent')} project: {project_path.name}[/bold green]")
+    post_msg = tpl_data.get("post_init_message", "")
+    if post_msg:
+        console.print(post_msg)

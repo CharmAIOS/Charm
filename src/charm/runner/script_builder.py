@@ -254,6 +254,7 @@ PYEOF
             if [ -f "$CHARM_ROLLBACK_SNAPSHOT_PATH" ]; then
                 tar -xzf "$CHARM_ROLLBACK_SNAPSHOT_PATH" -C "$CHARM_WORKSPACE_DIR"
                 echo '::CHARM_EVENT::{"type":"status","content":"Workspace restored successfully."}'
+                echo '::CHARM_EVENT::{"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}'
                 exit 0
             else
                 echo '::CHARM_EVENT::{"type":"error","content":"Snapshot not found: $CHARM_ROLLBACK_SNAPSHOT_PATH"}'

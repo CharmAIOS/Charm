@@ -43,6 +43,26 @@ class CharmOpenClawAdapter(BaseAdapter):
         # Standard OpenClaw memory file
         self.memory_file = os.path.join(self.workspace_dir, "MEMORY.md")
 
+    @staticmethod
+    def _is_container_runtime() -> bool:
+        """True when executing inside runner/Docker (not local `charm run`)."""
+        return bool(
+            os.getenv("CHARM_AGENT_ID")
+            or os.getenv("CHARM_LIFECYCLE")
+            or os.path.exists("/.dockerenv")
+        )
+
+    @staticmethod
+    def _resolve_home(env: dict) -> str:
+        """Use /root in containers; the real user home for local CLI runs."""
+        if CharmOpenClawAdapter._is_container_runtime():
+            return env.get("HOME") or "/root"
+        return os.path.expanduser("~")
+
+    @staticmethod
+    def _openclaw_home(env: dict) -> str:
+        return os.path.join(CharmOpenClawAdapter._resolve_home(env), ".openclaw")
+
     def _install_dependencies(self, skill_path: str):
         """
         [Auto-Dependency] Detects and installs deps for local skills.
@@ -87,10 +107,21 @@ class CharmOpenClawAdapter(BaseAdapter):
         Run OpenClaw onboarding if not already initialized.
         Creates ~/.openclaw/openclaw.json with default config.
         """
-        openclaw_home = os.path.join(env.get("HOME", "/root"), ".openclaw")
+        openclaw_home = self._openclaw_home(env)
         config_file = os.path.join(openclaw_home, "openclaw.json")
 
         if os.path.exists(config_file):
+            return
+
+        os.makedirs(openclaw_home, exist_ok=True)
+
+        if not shutil.which("openclaw"):
+            logger.warning(
+                "openclaw CLI not found in PATH — writing minimal openclaw.json. "
+                "Install with: npm install -g openclaw@latest"
+            )
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump({}, f)
             return
 
         logger.info("Running OpenClaw onboarding (first boot)...")
@@ -109,9 +140,18 @@ class CharmOpenClawAdapter(BaseAdapter):
             )
             if result.returncode != 0:
                 logger.debug(f"Onboard stderr (non-fatal): {result.stderr.strip()}")
+            if not os.path.exists(config_file):
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump({}, f)
             logger.info("OpenClaw onboarding complete.")
         except Exception as e:
             logger.warning(f"Onboarding issue (may be non-fatal): {e}")
+            if not os.path.exists(config_file):
+                try:
+                    with open(config_file, "w", encoding="utf-8") as f:
+                        json.dump({}, f)
+                except OSError as write_err:
+                    logger.error(f"Failed to create fallback openclaw.json: {write_err}")
 
     def _build_mcp_servers(self) -> dict:
         """
@@ -225,7 +265,7 @@ class CharmOpenClawAdapter(BaseAdapter):
     def _generate_openclaw_config(self, env: dict):
         """Configure OpenClaw for the current session."""
         oc_config = self.config.runtime.config
-        openclaw_home = os.path.join(env.get("HOME", "/root"), ".openclaw")
+        openclaw_home = self._openclaw_home(env)
 
         if oc_config and oc_config.system_prompt:
             identity_path = os.path.join(self.workspace_dir, "IDENTITY.md")
@@ -360,7 +400,7 @@ class CharmOpenClawAdapter(BaseAdapter):
         logger.info("🚀 Booting OpenClaw Adapter (Session Mode)")
 
         env = os.environ.copy()
-        env["HOME"] = "/root"
+        env["HOME"] = self._resolve_home(env)
         self._inject_proxy_env(env)
 
         # During upgrades, the workspace should contain the user's customized files
@@ -479,7 +519,10 @@ class CharmOpenClawAdapter(BaseAdapter):
         except FileNotFoundError:
             return {
                 "status": "error",
-                "message": "OpenClaw binary not found. Is it installed in the Docker image?",
+                "message": (
+                    "OpenClaw CLI not found in PATH. "
+                    "Install with: npm install -g openclaw@latest"
+                ),
             }
 
         stdout_lines = []

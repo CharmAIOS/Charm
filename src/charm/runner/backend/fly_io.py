@@ -17,7 +17,7 @@ logger = logging.getLogger("charm.runner.fly_io")
 MACHINE_POLL_INTERVAL = 3
 MACHINE_POLL_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — image pull can take ~45-60s on first boot
 MACHINE_HEALTH_POLL_INTERVAL = 3
-MACHINE_HEALTH_MAX_ATTEMPTS = 20
+MACHINE_HEALTH_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — bootstrap + image pull can exceed 60s on first boot
 DAEMON_AGENT_PORT = 8000
 
 
@@ -400,15 +400,38 @@ class FlyIoBackend(ExecutionBackend):
         url = f"https://{self.app_name}.fly.dev/health"
         headers = {"fly-force-instance-id": machine_id}
         timeout = aiohttp.ClientTimeout(total=5)
+        last_error: Optional[str] = None
+        last_status: Optional[int] = None
         for attempt in range(MACHINE_HEALTH_MAX_ATTEMPTS):
             await asyncio.sleep(MACHINE_HEALTH_POLL_INTERVAL)
             try:
                 async with session.get(url, headers=headers, timeout=timeout) as resp:
+                    last_status = resp.status
                     if resp.status == 200:
                         logger.info("[Fly.io] Machine %s health OK on attempt %d", machine_id, attempt + 1)
                         return True
+                    last_error = (await resp.text())[:200]
             except Exception as exc:
-                logger.debug("[Fly.io] Health poll attempt %d for %s: %s", attempt + 1, machine_id, exc)
+                last_error = str(exc)
+                logger.warning(
+                    "[Fly.io] Health poll attempt %d for %s (%s): %s",
+                    attempt + 1,
+                    machine_id,
+                    url,
+                    exc,
+                )
+        logger.error(
+            "[Fly.io] Machine %s health timed out after %ds (url=%s, last_status=%s, last_error=%s). "
+            "Confirm Fly app exists (`fly apps list`), machines are running (`fly machine list -a %s`), "
+            "and the runtime image starts the daemon HTTP server on port %d.",
+            machine_id,
+            MACHINE_HEALTH_MAX_ATTEMPTS * MACHINE_HEALTH_POLL_INTERVAL,
+            url,
+            last_status,
+            last_error,
+            self.app_name,
+            DAEMON_AGENT_PORT,
+        )
         return False
 
     async def _dispatch_job(

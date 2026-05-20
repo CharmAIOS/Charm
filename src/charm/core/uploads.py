@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, Mapping, MutableMapping
+from typing import Mapping, MutableMapping
 
 TEXT_EXTENSIONS = {
     ".txt",

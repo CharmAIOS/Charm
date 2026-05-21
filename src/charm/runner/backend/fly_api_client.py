@@ -50,6 +50,34 @@ class FlyApiClient:
         async with session.delete(url, headers=self._headers()) as resp:
             return resp.status in (200, 201)
 
+    async def update_machine_bootstrap(
+        self,
+        session: aiohttp.ClientSession,
+        machine_id: str,
+        env_vars: dict[str, str],
+        bootstrap_script: str,
+    ) -> bool:
+        """Push an updated bootstrap script to an existing machine config."""
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
+        payload = {
+            "config": {
+                "env": {
+                    **env_vars,
+                    "CHARM_DAEMON_MODE": "true",
+                    "CHARM_BOOTSTRAP_SCRIPT": bootstrap_script,
+                },
+                "init": {
+                    "cmd": ["/bin/bash", "-c", "echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"]
+                },
+            },
+        }
+        async with session.post(url, headers=self._headers(), json=payload) as resp:
+            if resp.status not in (200, 201):
+                text = await resp.text()
+                logger.error("[Fly.io] Machine bootstrap update failed (HTTP %s): %s", resp.status, text)
+                return False
+            return True
+
     async def create_volume(self, session: aiohttp.ClientSession, agent_id: str, user_id: str) -> Tuple[Optional[str], Optional[str]]:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/volumes"
         clean_user = user_id.replace('-', '')[:10]

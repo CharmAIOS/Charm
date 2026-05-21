@@ -125,6 +125,47 @@ jobs:
               raise SystemExit(f"Missing OpenAPI specs referenced by docs.json: {missing_openapi}")
           if missing:
               raise SystemExit(f"Missing docs pages referenced by docs.json: {missing}")
+
+          variables = config.get("variables", {})
+          navbar = config.get("navbar", {})
+          invalid_hrefs = []
+
+          def validate_href(path: str, href: str | None) -> None:
+              if not href:
+                  invalid_hrefs.append(f"{path}: missing href")
+                  return
+              if href.startswith("{") and href.endswith("}"):
+                  invalid_hrefs.append(
+                      f"{path}: {href!r} is a placeholder; navbar hrefs must be literal URLs "
+                      "(Mintlify variables only substitute in MDX content, not docs.json schema fields)."
+                  )
+                  return
+              if not (href.startswith("http://") or href.startswith("https://") or href.startswith("/")):
+                  invalid_hrefs.append(f"{path}: {href!r} must be http(s):// or a relative path")
+
+          for index, link in enumerate(navbar.get("links", [])):
+              validate_href(f"navbar.links[{index}].href", link.get("href"))
+
+          primary = navbar.get("primary")
+          if isinstance(primary, dict):
+              validate_href("navbar.primary.href", primary.get("href"))
+
+          # Keep navbar store/discord links aligned with docs variables when present.
+          store_url = variables.get("store_url")
+          discord_url = variables.get("discord_url")
+          if isinstance(primary, dict) and store_url and primary.get("href") != store_url:
+              invalid_hrefs.append(
+                  f"navbar.primary.href drift: expected {store_url!r} from variables.store_url"
+              )
+          if discord_url and isinstance(navbar.get("links"), list):
+              for index, link in enumerate(navbar["links"]):
+                  if link.get("label") == "Discord" and link.get("href") != discord_url:
+                      invalid_hrefs.append(
+                          f"navbar.links[{index}].href drift: expected {discord_url!r} from variables.discord_url"
+                      )
+
+          if invalid_hrefs:
+              raise SystemExit("Invalid docs.json navbar hrefs:\n" + "\n".join(invalid_hrefs))
           PY
 
       - name: Check for placeholder TODOs

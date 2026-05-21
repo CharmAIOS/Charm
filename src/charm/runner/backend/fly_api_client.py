@@ -93,7 +93,26 @@ class FlyApiClient:
             if resp.status in (200, 201):
                 return True
             text = await resp.text()
+            if resp.status == 409:
+                state = await self.get_machine_state(session, machine_id)
+                if state in ("created", "stopped", "suspended", "stopping"):
+                    logger.info(
+                        "[Fly.io] Stop not required for machine %s (state=%s): %s",
+                        machine_id,
+                        state,
+                        text,
+                    )
+                    return True
             logger.error("[Fly.io] Failed to stop machine %s (HTTP %s): %s", machine_id, resp.status, text)
+            return False
+
+    async def restart_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/restart"
+        async with session.post(url, headers=self._headers()) as resp:
+            if resp.status in (200, 201):
+                return True
+            text = await resp.text()
+            logger.error("[Fly.io] Failed to restart machine %s (HTTP %s): %s", machine_id, resp.status, text)
             return False
 
     async def delete_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:

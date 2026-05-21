@@ -107,7 +107,8 @@ class FlyApiClient:
 
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
         payload = {"config": updated_config}
-        async with session.post(url, headers=self._headers(), json=payload) as resp:            if resp.status not in (200, 201):
+        async with session.post(url, headers=self._headers(), json=payload) as resp:
+            if resp.status not in (200, 201):
                 text = await resp.text()
                 logger.error("[Fly.io] Machine bootstrap update failed (HTTP %s): %s", resp.status, text)
                 return False

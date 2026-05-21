@@ -86,6 +86,96 @@ class FlyIoBackend(ExecutionBackend):
             import json,subprocess,os
             from http.server import HTTPServer,BaseHTTPRequestHandler
             SECRET=os.environ.get("RUNNER_DAEMON_SECRET","")
+            def _resolve_snapshot_archive(snap_path,snap_url,snap_paths_json):
+                import json as _json,os as _os,urllib.request as _urlreq
+                paths=[]
+                if snap_path:
+                    paths.append(snap_path)
+                if snap_paths_json:
+                    try:
+                        extra=_json.loads(snap_paths_json)
+                        if isinstance(extra,list):
+                            for p in extra:
+                                if isinstance(p,str) and p and p not in paths:
+                                    paths.append(p)
+                    except Exception:
+                        pass
+                for p in paths:
+                    if p and _os.path.isfile(p):
+                        return p
+                if snap_url and paths:
+                    target=paths[0]
+                    try:
+                        _os.makedirs(_os.path.dirname(target),exist_ok=True)
+                        with _urlreq.urlopen(snap_url,timeout=180) as resp:
+                            data=resp.read()
+                        with open(target,"wb") as out:
+                            out.write(data)
+                        if _os.path.isfile(target):
+                            return target
+                    except Exception:
+                        pass
+                return None
+            def _openclaw_home():
+                return os.path.join(os.path.expanduser("~"),".openclaw")
+            def _snapshot_has_state(ws):
+                try:
+                    for name in os.listdir(ws):
+                        if name!=".snapshots":
+                            return True
+                except Exception:
+                    pass
+                oc=_openclaw_home()
+                try:
+                    return os.path.isdir(oc) and bool(os.listdir(oc))
+                except Exception:
+                    return False
+            def _clear_openclaw_home():
+                import shutil
+                oc=_openclaw_home()
+                if not os.path.isdir(oc):
+                    return
+                for name in os.listdir(oc):
+                    pth=os.path.join(oc,name)
+                    if os.path.isdir(pth):
+                        shutil.rmtree(pth,ignore_errors=True)
+                    else:
+                        try:os.remove(pth)
+                        except Exception:pass
+            def _apply_snapshot_restore(tf,ws):
+                import shutil,tempfile
+                names=tf.getnames()
+                prefixed=any(n.startswith("workspace/") or n.startswith("openclaw/") for n in names)
+                if not prefixed:
+                    tf.extractall(ws)
+                    return
+                oc=_openclaw_home()
+                os.makedirs(oc,exist_ok=True)
+                _clear_openclaw_home()
+                with tempfile.TemporaryDirectory() as tmp:
+                    tf.extractall(tmp)
+                    wsrc=os.path.join(tmp,"workspace")
+                    if os.path.isdir(wsrc):
+                        for name in os.listdir(wsrc):
+                            src=os.path.join(wsrc,name)
+                            dst=os.path.join(ws,name)
+                            if os.path.isdir(src):
+                                if os.path.exists(dst):
+                                    shutil.rmtree(dst,ignore_errors=True)
+                                shutil.copytree(src,dst)
+                            else:
+                                shutil.copy2(src,dst)
+                    osrc=os.path.join(tmp,"openclaw")
+                    if os.path.isdir(osrc):
+                        for name in os.listdir(osrc):
+                            src=os.path.join(osrc,name)
+                            dst=os.path.join(oc,name)
+                            if os.path.isdir(src):
+                                if os.path.exists(dst):
+                                    shutil.rmtree(dst,ignore_errors=True)
+                                shutil.copytree(src,dst)
+                            else:
+                                shutil.copy2(src,dst)
             class H(BaseHTTPRequestHandler):
                 def log_message(self,*a):pass
                 def do_GET(self):
@@ -114,6 +204,8 @@ class FlyIoBackend(ExecutionBackend):
                             return
                         ws=p.get("workspace","/workspace/agent_code")
                         snap_path=p.get("snapshot_path","")
+                        snap_url=p.get("snapshot_url","")
+                        snap_paths_json=p.get("snapshot_paths_json","")
                         self.send_response(200)
                         self.send_header("Content-Type","text/event-stream")
                         self.send_header("Cache-Control","no-cache")
@@ -134,9 +226,11 @@ class FlyIoBackend(ExecutionBackend):
                             else:
                                 try:os.remove(pth)
                                 except Exception:pass
-                        if os.path.isfile(snap_path):
-                            with tarfile.open(snap_path,"r:gz") as tf:
-                                tf.extractall(ws)
+                        _clear_openclaw_home()
+                        resolved=_resolve_snapshot_archive(snap_path,snap_url,snap_paths_json)
+                        if resolved:
+                            with tarfile.open(resolved,"r:gz") as tf:
+                                _apply_snapshot_restore(tf,ws)
                             emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
                             emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
                             emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
@@ -165,7 +259,9 @@ class FlyIoBackend(ExecutionBackend):
                     burl=p.get("bundle_url","")
                     xenv=p.get("env",{})
                     snap_path=xenv.get("CHARM_ROLLBACK_SNAPSHOT_PATH","")
-                    if snap_path:
+                    snap_url=xenv.get("CHARM_ROLLBACK_SNAPSHOT_URL","")
+                    snap_paths_json=xenv.get("CHARM_ROLLBACK_SNAPSHOT_PATHS","")
+                    if snap_path or snap_url or snap_paths_json:
                         self.send_response(200)
                         self.send_header("Content-Type","text/event-stream")
                         self.send_header("Cache-Control","no-cache")
@@ -186,9 +282,11 @@ class FlyIoBackend(ExecutionBackend):
                             else:
                                 try:os.remove(pth)
                                 except Exception:pass
-                        if os.path.isfile(snap_path):
-                            with tarfile.open(snap_path,"r:gz") as tf:
-                                tf.extractall(ws)
+                        _clear_openclaw_home()
+                        resolved=_resolve_snapshot_archive(snap_path,snap_url,snap_paths_json)
+                        if resolved:
+                            with tarfile.open(resolved,"r:gz") as tf:
+                                _apply_snapshot_restore(tf,ws)
                             emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
                             emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
                             emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
@@ -222,6 +320,41 @@ class FlyIoBackend(ExecutionBackend):
                             emit(json.dumps({"type":"error","content":"Bundle setup failed: "+str(e)}))
                             return
                     env={**os.environ,**xenv,"CHARM_WORKSPACE_DIR":ws}
+                    upgrade_snap_ver=xenv.get("CHARM_UPGRADE_SNAPSHOT_VERSION","")
+                    if upgrade_snap_ver:
+                        import tarfile as _tarfile
+                        snap_dir=os.path.join(ws,".snapshots")
+                        os.makedirs(snap_dir,exist_ok=True)
+                        snap_archive=os.path.join(snap_dir,upgrade_snap_ver+".tar.gz")
+                        oc_home=_openclaw_home()
+                        if os.path.isfile(snap_archive):
+                            emit(json.dumps({"type":"status","content":"Workspace snapshot saved."}))
+                        elif _snapshot_has_state(ws):
+                            emit(json.dumps({"type":"status","content":"Creating workspace snapshot..."}))
+                            try:
+                                with _tarfile.open(snap_archive,"w:gz") as tf:
+                                    try:
+                                        for name in os.listdir(ws):
+                                            if name==".snapshots":
+                                                continue
+                                            path=os.path.join(ws,name)
+                                            tf.add(path,arcname="workspace/"+name)
+                                    except Exception:
+                                        pass
+                                    if os.path.isdir(oc_home):
+                                        try:
+                                            for name in os.listdir(oc_home):
+                                                path=os.path.join(oc_home,name)
+                                                tf.add(path,arcname="openclaw/"+name)
+                                        except Exception:
+                                            pass
+                                emit(json.dumps({"type":"status","content":"Workspace snapshot saved."}))
+                            except Exception as e:
+                                emit(json.dumps({"type":"error","content":"Snapshot creation failed: "+str(e)}))
+                                emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":1}}))
+                                return
+                        else:
+                            emit(json.dumps({"type":"status","content":"Workspace empty — snapshot skipped."}))
                     # Write openclaw.json so openclaw routes LLM calls through the Charm proxy.
                     # CHARM_LLM_PROXY_BASE and CHARM_LLM_PROXY_KEY are forwarded in xenv.
                     proxy_base=env.get("CHARM_LLM_PROXY_BASE","").strip()
@@ -506,13 +639,29 @@ class FlyIoBackend(ExecutionBackend):
                 yield sse_pack("error", "Daemon agent HTTP server did not become ready in time.")
                 return
 
+            needs_handler_refresh = bool(
+                config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH")
+                or config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION")
+            )
+            if needs_handler_refresh:
+                if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
+                    yield sse_pack("status", "Restoring workspace on daemon...")
+                elif config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION"):
+                    yield sse_pack("status", "Preparing daemon for upgrade snapshot...")
+                yield sse_pack("status", "Updating daemon handler...")
+                refreshed, refresh_err = await self._refresh_daemon_bootstrap(session, machine_id, config)
+                if not refreshed:
+                    logger.error(
+                        "[Fly.io] Daemon bootstrap refresh failed for %s: %s",
+                        machine_id,
+                        refresh_err,
+                    )
+                    yield sse_pack("error", f"Failed to refresh daemon handler: {refresh_err}")
+                    return
+
             # Dispatch the job and stream results back
             if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
-                yield sse_pack("status", "Restoring workspace on daemon...")
-                # Use /job — all daemons expose it, and the handler restores when
-                # CHARM_ROLLBACK_SNAPSHOT_PATH is in forwarded env. /restore is newer
-                # and absent on machines booted before that route existed; hitting it
-                # triggers a stop/start bootstrap refresh that often fails quietly.
+                logger.info("[Fly.io] Dispatching rollback restore job to machine %s", machine_id)
                 async for event in self._dispatch_job(session, machine_id, config):
                     yield event
                 return
@@ -708,8 +857,13 @@ class FlyIoBackend(ExecutionBackend):
             "env": forward_env,
         }
 
-        job_timeout = aiohttp.ClientTimeout(total=config.timeout_seconds or 3600)
+        job_timeout = aiohttp.ClientTimeout(
+            total=config.timeout_seconds or 3600,
+            connect=30,
+            sock_connect=30,
+        )
         try:
+            logger.info("[Fly.io] POST %s machine=%s rollback=%s", url, machine_id, bool(forward_env.get("CHARM_ROLLBACK_SNAPSHOT_PATH")))
             async with session.post(
                 url, headers=headers, json=payload, timeout=job_timeout
             ) as resp:

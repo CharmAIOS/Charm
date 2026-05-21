@@ -15,14 +15,41 @@ class FlyApiClient:
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
 
+    async def get_machine(self, session: aiohttp.ClientSession, machine_id: str) -> Optional[dict[str, Any]]:
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
+        try:
+            async with session.get(url, headers=self._headers()) as resp:
+                if resp.status == 404:
+                    return None
+                if resp.status != 200:
+                    text = await resp.text()
+                    logger.error("[Fly.io] Failed to fetch machine %s (HTTP %s): %s", machine_id, resp.status, text)
+                    return None
+                data = await resp.json()
+                return data if isinstance(data, dict) else None
+        except Exception as e:
+            logger.error("Error fetching machine %s: %s", machine_id, e)
+            return None
+
     async def get_machine_state(self, session: aiohttp.ClientSession, machine_id: str) -> Optional[str]:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
         try:
             async with session.get(url, headers=self._headers()) as resp:
                 if resp.status == 404:
                     return "destroyed"
+                if resp.status != 200:
+                    text = await resp.text()
+                    logger.error(
+                        "[Fly.io] Failed to fetch machine state for %s (HTTP %s): %s",
+                        machine_id,
+                        resp.status,
+                        text,
+                    )
+                    return None
                 data = await resp.json()
-                return data.get("state")
+                if isinstance(data, dict):
+                    return data.get("state")
+                return None
         except Exception as e:
             logger.error("Error fetching machine state for %s: %s", machine_id, e)
             return None
@@ -58,21 +85,29 @@ class FlyApiClient:
         bootstrap_script: str,
     ) -> bool:
         """Push an updated bootstrap script to an existing machine config."""
-        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
-        payload = {
-            "config": {
-                "env": {
-                    **env_vars,
-                    "CHARM_DAEMON_MODE": "true",
-                    "CHARM_BOOTSTRAP_SCRIPT": bootstrap_script,
-                },
-                "init": {
-                    "cmd": ["/bin/bash", "-c", "echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"]
-                },
-            },
+        machine = await self.get_machine(session, machine_id)
+        if not machine:
+            return False
+
+        current_config = machine.get("config")
+        if not isinstance(current_config, dict) or not current_config.get("image"):
+            logger.error("[Fly.io] Machine %s is missing config.image; cannot update bootstrap", machine_id)
+            return False
+
+        merged_env = dict(current_config.get("env") or {})
+        merged_env.update(env_vars)
+        merged_env["CHARM_DAEMON_MODE"] = "true"
+        merged_env["CHARM_BOOTSTRAP_SCRIPT"] = bootstrap_script
+
+        updated_config = dict(current_config)
+        updated_config["env"] = merged_env
+        updated_config["init"] = {
+            "cmd": ["/bin/bash", "-c", "echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"]
         }
-        async with session.post(url, headers=self._headers(), json=payload) as resp:
-            if resp.status not in (200, 201):
+
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
+        payload = {"config": updated_config}
+        async with session.post(url, headers=self._headers(), json=payload) as resp:            if resp.status not in (200, 201):
                 text = await resp.text()
                 logger.error("[Fly.io] Machine bootstrap update failed (HTTP %s): %s", resp.status, text)
                 return False

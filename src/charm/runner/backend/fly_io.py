@@ -375,14 +375,54 @@ class FlyIoBackend(ExecutionBackend):
         if not self.api:
             return False
         api = self.api
+        last_state: Optional[str] = None
         for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
             await asyncio.sleep(MACHINE_POLL_INTERVAL)
             state = await api.get_machine_state(session, machine_id)
+            last_state = state
             logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
             if state == "started":
                 return True
             if state in ("destroyed", None):
+                logger.error(
+                    "[Fly.io] Machine %s entered terminal/unavailable state while waiting to start: %s",
+                    machine_id,
+                    state,
+                )
                 return False
+        logger.error(
+            "[Fly.io] Machine %s did not reach started state within %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            last_state,
+        )
+        return False
+
+    async def _wait_for_stopped(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
+        if not self.api:
+            return False
+        api = self.api
+        last_state: Optional[str] = None
+        for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
+            await asyncio.sleep(MACHINE_POLL_INTERVAL)
+            state = await api.get_machine_state(session, machine_id)
+            last_state = state
+            logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
+            if state == "stopped":
+                return True
+            if state in ("destroyed", None):
+                logger.error(
+                    "[Fly.io] Machine %s entered terminal/unavailable state while waiting to stop: %s",
+                    machine_id,
+                    state,
+                )
+                return False
+        logger.error(
+            "[Fly.io] Machine %s did not reach stopped state within %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            last_state,
+        )
         return False
 
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
@@ -469,7 +509,11 @@ class FlyIoBackend(ExecutionBackend):
             # Dispatch the job and stream results back
             if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
                 yield sse_pack("status", "Restoring workspace on daemon...")
-                async for event in self._dispatch_restore(session, machine_id, config):
+                # Use /job — all daemons expose it, and the handler restores when
+                # CHARM_ROLLBACK_SNAPSHOT_PATH is in forwarded env. /restore is newer
+                # and absent on machines booted before that route existed; hitting it
+                # triggers a stop/start bootstrap refresh that often fails quietly.
+                async for event in self._dispatch_job(session, machine_id, config):
                     yield event
                 return
 
@@ -479,25 +523,44 @@ class FlyIoBackend(ExecutionBackend):
 
     async def _refresh_daemon_bootstrap(
         self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
-    ) -> bool:
+    ) -> tuple[bool, str]:
         if not self.api:
-            return False
+            return False, "Fly.io API client is not configured"
+
         bootstrap = self._generate_bootstrap_script()
+        # Only refresh bootstrap env keys — merging full rollback env can exceed Fly limits.
+        env_overrides: dict[str, str] = {}
+        daemon_secret = os.getenv("RUNNER_DAEMON_SECRET", "").strip()
+        if daemon_secret:
+            env_overrides["RUNNER_DAEMON_SECRET"] = daemon_secret
+
         updated = await self.api.update_machine_bootstrap(
             session,
             machine_id,
-            dict(config.env_vars),
+            env_overrides,
             bootstrap,
         )
         if not updated:
-            return False
-        await self.api.stop_machine(session, machine_id)
-        started = await self.api.start_machine(session, machine_id)
-        if not started:
-            return False
+            return False, "Failed to update machine bootstrap config"
+
+        if not await self.api.stop_machine(session, machine_id):
+            logger.error("[Fly.io] Failed to stop machine %s before bootstrap refresh", machine_id)
+            return False, "Failed to stop machine before bootstrap refresh"
+
+        if not await self._wait_for_stopped(session, machine_id):
+            return False, "Machine did not stop before bootstrap refresh"
+
+        if not await self.api.start_machine(session, machine_id):
+            logger.error("[Fly.io] Failed to start machine %s after bootstrap refresh", machine_id)
+            return False, "Failed to start machine after bootstrap refresh"
+
         if not await self._wait_for_started(session, machine_id):
-            return False
-        return await self._wait_for_health(session, machine_id)
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        if not await self._wait_for_health(session, machine_id):
+            return False, "Daemon HTTP server did not become healthy after bootstrap refresh"
+
+        return True, ""
 
     async def _dispatch_restore(
         self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
@@ -531,8 +594,14 @@ class FlyIoBackend(ExecutionBackend):
         async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as resp:
             if resp.status == 404:
                 yield sse_pack("status", "Updating daemon restore support...")
-                if not await self._refresh_daemon_bootstrap(session, machine_id, config):
-                    yield sse_pack("error", "Failed to refresh daemon for workspace restore.")
+                refreshed, refresh_err = await self._refresh_daemon_bootstrap(session, machine_id, config)
+                if not refreshed:
+                    logger.error(
+                        "[Fly.io] Daemon bootstrap refresh failed for %s: %s",
+                        machine_id,
+                        refresh_err,
+                    )
+                    yield sse_pack("error", f"Failed to refresh daemon for workspace restore: {refresh_err}")
                     return
                 async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as retry_resp:
                     if retry_resp.status != 200:

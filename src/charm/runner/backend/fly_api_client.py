@@ -19,6 +19,8 @@ class FlyApiClient:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
         try:
             async with session.get(url, headers=self._headers()) as resp:
+                if resp.status == 404:
+                    return None
                 if resp.status != 200:
                     text = await resp.text()
                     logger.error("[Fly.io] Failed to fetch machine %s (HTTP %s): %s", machine_id, resp.status, text)
@@ -30,10 +32,27 @@ class FlyApiClient:
             return None
 
     async def get_machine_state(self, session: aiohttp.ClientSession, machine_id: str) -> Optional[str]:
-        machine = await self.get_machine(session, machine_id)
-        if machine is None:
-            return "destroyed"
-        return machine.get("state")
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
+        try:
+            async with session.get(url, headers=self._headers()) as resp:
+                if resp.status == 404:
+                    return "destroyed"
+                if resp.status != 200:
+                    text = await resp.text()
+                    logger.error(
+                        "[Fly.io] Failed to fetch machine state for %s (HTTP %s): %s",
+                        machine_id,
+                        resp.status,
+                        text,
+                    )
+                    return None
+                data = await resp.json()
+                if isinstance(data, dict):
+                    return data.get("state")
+                return None
+        except Exception as e:
+            logger.error("Error fetching machine state for %s: %s", machine_id, e)
+            return None
 
     async def start_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/start"

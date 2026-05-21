@@ -474,12 +474,16 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": stopped, "action": "paused"}
 
                 elif action == "restart":
-                    started = await api.start_machine(session, machine_id)
-                    if started:
+                    current_state = await api.get_machine_state(session, machine_id)
+                    if current_state == "started":
+                        restarted = await api.restart_machine(session, machine_id)
+                    else:
+                        restarted, _ = await self._bring_machine_to_started(session, machine_id)
+                    if restarted:
                         supabase_client.table("daemon_machines").update(
                             {"status": "running", "updated_at": "now()"}
                         ).eq("agent_id", agent_id).eq("user_id", user_id).execute()
-                    return {"success": started, "action": "restarted"}
+                    return {"success": restarted, "action": "restarted"}
 
                 elif action == "terminate":
                     current_state = await api.get_machine_state(session, machine_id)
@@ -700,27 +704,22 @@ class FlyIoBackend(ExecutionBackend):
                     yield sse_pack("status", "Daemon agent is already running.")
                 elif state in ("stopped", "suspended", "created"):
                     yield sse_pack("status", "Resuming daemon agent...")
-                    started = await self.api.start_machine(session, machine_id)
+                    started, start_err = await self._bring_machine_to_started(session, machine_id)
                     if not started:
-                        yield sse_pack("error", "Failed to start daemon machine.")
+                        yield sse_pack("error", f"Failed to start daemon machine: {start_err}")
                         return
                     yield sse_pack("status", "Waiting for daemon machine to boot...")
-                    if not await self._wait_for_started(session, machine_id):
-                        yield sse_pack("error", "Daemon machine did not reach started state in time.")
-                        return
                 elif state in ("stopping", "restarting", "replacing"):
                     # Machine is mid-transition (e.g. just finished an upgrade run).
                     # Wait for it to settle rather than treating it as gone and
                     # trying to create a new machine — which would fail with AlreadyExists.
                     yield sse_pack("status", "Waiting for daemon machine to finish transitioning...")
                     logger.info("[Fly.io] Machine %s is %s — waiting for it to settle.", machine_id, state)
-                    if not await self._wait_for_started(session, machine_id):
-                        # If it doesn't reach started, try an explicit start
-                        yield sse_pack("status", "Restarting daemon machine...")
-                        await self.api.start_machine(session, machine_id)
-                        if not await self._wait_for_started(session, machine_id):
-                            yield sse_pack("error", "Daemon machine did not reach started state in time.")
-                            return
+                    await self._wait_for_settled(session, machine_id)
+                    started, start_err = await self._bring_machine_to_started(session, machine_id)
+                    if not started:
+                        yield sse_pack("error", f"Daemon machine did not reach started state in time: {start_err}")
+                        return
                 else:
                     # Machine is truly gone (destroyed/unknown) — clear and re-provision
                     logger.warning("[Fly.io] Machine %s is %s, re-provisioning.", machine_id, state)

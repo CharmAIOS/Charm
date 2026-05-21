@@ -100,6 +100,50 @@ class FlyIoBackend(ExecutionBackend):
                         self.send_response(404)
                         self.end_headers()
                 def do_POST(self):
+                    if self.path=="/restore":
+                        if SECRET and self.headers.get("X-Daemon-Secret")!=SECRET:
+                            self.send_response(401)
+                            self.end_headers()
+                            return
+                        try:
+                            n=int(self.headers.get("Content-Length",0))
+                            p=json.loads(self.rfile.read(n))
+                        except Exception:
+                            self.send_response(400)
+                            self.end_headers()
+                            return
+                        ws=p.get("workspace","/workspace/agent_code")
+                        snap_path=p.get("snapshot_path","")
+                        self.send_response(200)
+                        self.send_header("Content-Type","text/event-stream")
+                        self.send_header("Cache-Control","no-cache")
+                        self.send_header("X-Accel-Buffering","no")
+                        self.end_headers()
+                        def emit(d):
+                            try:
+                                self.wfile.write(("data: "+d+"\n\n").encode())
+                                self.wfile.flush()
+                            except Exception:pass
+                        import shutil,tarfile
+                        emit(json.dumps({"type":"status","content":"Restoring workspace from snapshot..."}))
+                        os.makedirs(ws,exist_ok=True)
+                        for name in os.listdir(ws):
+                            if name==".snapshots":continue
+                            pth=os.path.join(ws,name)
+                            if os.path.isdir(pth):shutil.rmtree(pth,ignore_errors=True)
+                            else:
+                                try:os.remove(pth)
+                                except Exception:pass
+                        if os.path.isfile(snap_path):
+                            with tarfile.open(snap_path,"r:gz") as tf:
+                                tf.extractall(ws)
+                            emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
+                            emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
+                            emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
+                        else:
+                            emit(json.dumps({"type":"error","content":"Snapshot not found: "+snap_path}))
+                            emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":1}}))
+                        return
                     if self.path!="/job":
                         self.send_response(404)
                         self.end_headers()
@@ -120,6 +164,38 @@ class FlyIoBackend(ExecutionBackend):
                     agent=p.get("agent","main")
                     burl=p.get("bundle_url","")
                     xenv=p.get("env",{})
+                    snap_path=xenv.get("CHARM_ROLLBACK_SNAPSHOT_PATH","")
+                    if snap_path:
+                        self.send_response(200)
+                        self.send_header("Content-Type","text/event-stream")
+                        self.send_header("Cache-Control","no-cache")
+                        self.send_header("X-Accel-Buffering","no")
+                        self.end_headers()
+                        def emit(d):
+                            try:
+                                self.wfile.write(("data: "+d+"\n\n").encode())
+                                self.wfile.flush()
+                            except Exception:pass
+                        import shutil,tarfile
+                        emit(json.dumps({"type":"status","content":"Restoring workspace from snapshot..."}))
+                        os.makedirs(ws,exist_ok=True)
+                        for name in os.listdir(ws):
+                            if name==".snapshots":continue
+                            pth=os.path.join(ws,name)
+                            if os.path.isdir(pth):shutil.rmtree(pth,ignore_errors=True)
+                            else:
+                                try:os.remove(pth)
+                                except Exception:pass
+                        if os.path.isfile(snap_path):
+                            with tarfile.open(snap_path,"r:gz") as tf:
+                                tf.extractall(ws)
+                            emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
+                            emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
+                            emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
+                        else:
+                            emit(json.dumps({"type":"error","content":"Snapshot not found: "+snap_path}))
+                            emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":1}}))
+                        return
                     self.send_response(200)
                     self.send_header("Content-Type","text/event-stream")
                     self.send_header("Cache-Control","no-cache")
@@ -391,8 +467,88 @@ class FlyIoBackend(ExecutionBackend):
                 return
 
             # Dispatch the job and stream results back
+            if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
+                yield sse_pack("status", "Restoring workspace on daemon...")
+                async for event in self._dispatch_restore(session, machine_id, config):
+                    yield event
+                return
+
             yield sse_pack("status", "Running agent job on daemon...")
             async for event in self._dispatch_job(session, machine_id, config):
+                yield event
+
+    async def _refresh_daemon_bootstrap(
+        self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
+    ) -> bool:
+        if not self.api:
+            return False
+        bootstrap = self._generate_bootstrap_script()
+        updated = await self.api.update_machine_bootstrap(
+            session,
+            machine_id,
+            dict(config.env_vars),
+            bootstrap,
+        )
+        if not updated:
+            return False
+        await self.api.stop_machine(session, machine_id)
+        started = await self.api.start_machine(session, machine_id)
+        if not started:
+            return False
+        if not await self._wait_for_started(session, machine_id):
+            return False
+        return await self._wait_for_health(session, machine_id)
+
+    async def _dispatch_restore(
+        self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
+    ) -> AsyncGenerator[str, None]:
+        """Stream SSE from POST /restore on the daemon machine."""
+        url = f"https://{self.app_name}.fly.dev/restore"
+        secret = os.getenv("RUNNER_DAEMON_SECRET", "")
+        headers = {
+            "Content-Type": "application/json",
+            "fly-force-instance-id": machine_id,
+        }
+        if secret:
+            headers["X-Daemon-Secret"] = secret
+
+        payload = {
+            "workspace": config.env_vars.get("CHARM_WORKSPACE_DIR", "/workspace/agent_code"),
+            "snapshot_path": config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH", ""),
+        }
+        job_timeout = aiohttp.ClientTimeout(total=config.timeout_seconds or 120)
+
+        async def _stream_restore_events(resp: aiohttp.ClientResponse) -> AsyncGenerator[str, None]:
+            buf = ""
+            async for chunk in resp.content.iter_any():
+                buf += chunk.decode("utf-8", errors="replace")
+                while "\n\n" in buf:
+                    event_block, buf = buf.split("\n\n", 1)
+                    event_block = event_block.strip()
+                    if event_block.startswith("data: "):
+                        yield event_block + "\n\n"
+
+        async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as resp:
+            if resp.status == 404:
+                yield sse_pack("status", "Updating daemon restore support...")
+                if not await self._refresh_daemon_bootstrap(session, machine_id, config):
+                    yield sse_pack("error", "Failed to refresh daemon for workspace restore.")
+                    return
+                async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as retry_resp:
+                    if retry_resp.status != 200:
+                        text = await retry_resp.text()
+                        yield sse_pack("error", f"Daemon restore dispatch failed ({retry_resp.status}): {text[:200]}")
+                        return
+                    async for event in _stream_restore_events(retry_resp):
+                        yield event
+                return
+
+            if resp.status != 200:
+                text = await resp.text()
+                yield sse_pack("error", f"Daemon restore dispatch failed ({resp.status}): {text[:200]}")
+                return
+
+            async for event in _stream_restore_events(resp):
                 yield event
 
     async def _wait_for_health(self, session: aiohttp.ClientSession, machine_id: str) -> bool:

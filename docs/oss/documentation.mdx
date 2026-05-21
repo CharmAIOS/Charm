@@ -20,6 +20,8 @@ On Windows, enable Developer Mode or run the terminal as Administrator if Mintli
 ## File Structure
 
 - `docs/docs.json`: Mintlify configuration and navigation.
+- `docs/docs.json` `variables`: substituted in MDX content (for example `{store_url}` in pages).
+- Navbar `href` values in `docs.json` must be literal URLs; Mintlify validates them as URIs and does not substitute `{variable}` placeholders there. Keep them in sync with `variables.store_url` and `variables.discord_url`.
 - `docs/quickstart`: onboarding.
 - `docs/templates`: starter templates.
 - `docs/guides`: developer workflow guides.

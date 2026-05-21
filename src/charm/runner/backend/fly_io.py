@@ -18,6 +18,7 @@ MACHINE_POLL_INTERVAL = 3
 MACHINE_POLL_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — image pull can take ~45-60s on first boot
 MACHINE_HEALTH_POLL_INTERVAL = 3
 MACHINE_HEALTH_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — bootstrap + image pull can exceed 60s on first boot
+MACHINE_TRANSITIONAL_STATES = ("stopping", "restarting", "replacing")
 DAEMON_AGENT_PORT = 8000
 
 
@@ -543,7 +544,7 @@ class FlyIoBackend(ExecutionBackend):
             logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
             if state == "stopped":
                 return True
-            if state in ("created", "suspended"):
+            if state == "suspended":
                 return True
             if state in ("destroyed", None):
                 logger.error(
@@ -560,6 +561,86 @@ class FlyIoBackend(ExecutionBackend):
         )
         return False
 
+    async def _wait_for_settled(
+        self, session: aiohttp.ClientSession, machine_id: str
+    ) -> Optional[str]:
+        """Wait until the machine leaves replacing/stopping/restarting."""
+        if not self.api:
+            return None
+        api = self.api
+        state = await api.get_machine_state(session, machine_id)
+        for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
+            if state not in MACHINE_TRANSITIONAL_STATES:
+                return state
+            logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
+            await asyncio.sleep(MACHINE_POLL_INTERVAL)
+            state = await api.get_machine_state(session, machine_id)
+        logger.warning(
+            "[Fly.io] Machine %s still transitional after %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            state,
+        )
+        return state
+
+    async def _bring_machine_to_started(
+        self, session: aiohttp.ClientSession, machine_id: str
+    ) -> tuple[bool, str]:
+        """Start or wait for a machine to reach the started state."""
+        if not self.api:
+            return False, "Fly.io API client is not configured"
+
+        state = await self.api.get_machine_state(session, machine_id)
+        logger.info("[Fly.io] Bringing machine %s to started (current=%s)", machine_id, state)
+
+        if state == "started":
+            return True, ""
+        if state in (None, "destroyed"):
+            return False, f"Machine unavailable (state={state})"
+        if state in MACHINE_TRANSITIONAL_STATES:
+            state = await self._wait_for_settled(session, machine_id)
+            if state in (None, "destroyed"):
+                return False, f"Machine unavailable after transition (state={state})"
+            if state == "started":
+                return True, ""
+
+        if state == "created":
+            # Bootstrap updates often land here; flyd auto-starts with restart:always.
+            # The /start API rejects created (HTTP 412), so wait or restart instead.
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+            state = await self.api.get_machine_state(session, machine_id)
+            if state == "started":
+                return True, ""
+            logger.info(
+                "[Fly.io] Machine %s still %s after wait; trying restart API",
+                machine_id,
+                state,
+            )
+            if await self.api.restart_machine(session, machine_id):
+                settled = await self._wait_for_settled(session, machine_id)
+                if settled == "started" or await self._wait_for_started(session, machine_id):
+                    return True, ""
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        if state in ("stopped", "suspended"):
+            if not await self.api.start_machine(session, machine_id):
+                return False, "Failed to start machine after bootstrap refresh"
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        logger.warning(
+            "[Fly.io] Machine %s unexpected state %s; attempting restart",
+            machine_id,
+            state,
+        )
+        if await self.api.restart_machine(session, machine_id):
+            await self._wait_for_settled(session, machine_id)
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+        return False, f"Failed to start machine from state {state}"
+
     async def _restart_machine_after_config_update(
         self, session: aiohttp.ClientSession, machine_id: str
     ) -> tuple[bool, str]:
@@ -570,40 +651,23 @@ class FlyIoBackend(ExecutionBackend):
         state = await self.api.get_machine_state(session, machine_id)
         logger.info("[Fly.io] Machine %s state after bootstrap update: %s", machine_id, state)
 
-        if state in ("stopped", "created", "suspended"):
-            logger.info(
-                "[Fly.io] Machine %s idle (%s); starting after bootstrap update",
-                machine_id,
-                state,
-            )
-            if not await self.api.start_machine(session, machine_id):
-                return False, "Failed to start machine after bootstrap refresh"
-        elif state in ("stopping", "restarting", "replacing"):
-            if not await self._wait_for_stopped(session, machine_id):
-                return False, "Machine did not stop before bootstrap refresh"
-            if not await self.api.start_machine(session, machine_id):
-                return False, "Failed to start machine after bootstrap refresh"
-        elif state == "started":
-            # always-restart machines may ignore stop; use Fly restart instead.
+        if state == "started":
+            # Bootstrap was updated while running — restart to apply.
             if not await self.api.restart_machine(session, machine_id):
                 if not await self.api.stop_machine(session, machine_id):
                     return False, "Failed to stop machine before bootstrap refresh"
                 if not await self._wait_for_stopped(session, machine_id):
-                    state = await self.api.get_machine_state(session, machine_id)
-                    if state not in ("stopped", "created", "suspended"):
+                    settled = await self._wait_for_settled(session, machine_id)
+                    if settled not in ("stopped", "suspended", "created", "started"):
                         return False, "Machine did not stop before bootstrap refresh"
-                if not await self.api.start_machine(session, machine_id):
-                    return False, "Failed to start machine after bootstrap refresh"
-        elif state in ("destroyed", None):
-            return False, f"Machine unavailable after bootstrap update (state={state})"
-        else:
-            logger.warning(
-                "[Fly.io] Machine %s unexpected state %s after bootstrap update; attempting restart",
-                machine_id,
-                state,
-            )
-            if not await self.api.restart_machine(session, machine_id):
-                return False, "Failed to restart machine after bootstrap refresh"
+
+        settled = await self._wait_for_settled(session, machine_id)
+        if settled in (None, "destroyed"):
+            return False, f"Machine unavailable after bootstrap update (state={settled})"
+
+        started, start_err = await self._bring_machine_to_started(session, machine_id)
+        if not started:
+            return False, start_err
 
         if not await self._wait_for_started(session, machine_id):
             return False, "Machine did not reach started state after bootstrap refresh"
@@ -620,6 +684,7 @@ class FlyIoBackend(ExecutionBackend):
 
         machine_id: Optional[str] = None
         volume_id: Optional[str] = None
+        machine_just_provisioned = False
 
         if config.supabase_client:
             user_id = config.env_vars.get("CHARM_USER_ID", "local")
@@ -684,6 +749,7 @@ class FlyIoBackend(ExecutionBackend):
                 if not await self._wait_for_started(session, machine_id):
                     yield sse_pack("error", "Daemon machine did not reach started state in time.")
                     return
+                machine_just_provisioned = True
 
             # Wait for the in-machine HTTP server to be healthy
             yield sse_pack("status", "Waiting for agent HTTP server to become ready...")
@@ -695,7 +761,17 @@ class FlyIoBackend(ExecutionBackend):
                 config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH")
                 or config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION")
             )
-            if needs_handler_refresh:
+            skip_refresh_for_fresh_upgrade = bool(
+                machine_just_provisioned
+                and config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION")
+                and not config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH")
+            )
+            if skip_refresh_for_fresh_upgrade:
+                logger.info(
+                    "[Fly.io] Skipping bootstrap refresh for newly provisioned machine %s (upgrade snapshot via /job env)",
+                    machine_id,
+                )
+            if needs_handler_refresh and not skip_refresh_for_fresh_upgrade:
                 if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
                     yield sse_pack("status", "Restoring workspace on daemon...")
                 elif config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION"):

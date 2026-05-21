@@ -49,13 +49,13 @@
             {
                 "label": "Discord",
                 "icon": "discord",
-                "href": "https://discord.gg/gdakynHUEb"
+                "href": "{discord_url}"
             }
         ],
         "primary": {
             "type": "button",
             "label": "Charm Store",
-            "href": "https://store.charmos.io"
+            "href": "{store_url}"
         }
     },
     "redirects": [],

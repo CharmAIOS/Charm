@@ -1,83 +1,85 @@
 ---
 title: How to Build Input Forms (UI Schema)
-summary: A practical guide to configuring dynamic input forms for your agent.
+summary: Configure dynamic input forms for your agent in the Charm Store.
 ---
 
-The `interface` block in your `charm.yaml` generates the input form users see in the Charm Store. 
+The `interface` block in `charm.yaml` defines the JSON Schema for user inputs. The optional `interface.ui` block maps fields to Store form widgets.
 
-For the complete list of supported schema fields, please check the [Manifest Reference](/references/manifest).
+For all manifest fields, see the [Manifest Reference](/references/manifest).
 
-## How to Create Text Inputs
-
-You can easily request strings from the user. 
+## Text inputs
 
 ```yaml
 interface:
   input:
-    type: "object"
-    required: ["message"]
+    type: object
+    required: [message]
     properties:
       message:
-        type: "string"
-        title: "Message"
-        description: "What should the agent do?"
+        type: string
+        title: Message
+        description: What should the agent do?
+  output:
+    type: string
 ```
 
-## How to Add Validation Rules
-
-To prevent users from submitting invalid data, use JSON schema constraints:
+## Validation rules
 
 ```yaml
       depth:
-        type: "integer"
-        title: "Search Depth"
+        type: integer
+        title: Search Depth
         default: 3
         minimum: 1
         maximum: 5
 ```
 
-## How to Assign Custom UI Widgets
+## Built-in UI widgets
 
-The `ui` block maps your data fields to specific frontend React components. This keeps your data schema clean while allowing rich UI.
+Map fields to Store components with `interface.ui`:
 
 ```yaml
   ui:
-    # Render a large multi-line text input
     message: { "ui:widget": "textarea" }
-    
-    # Render a secure masked input
-    api_key: { "ui:widget": "password" }
-    
-    # Render a file upload zone. 
-    # (The runner will automatically inject the uploaded filename here)
-    document: { "ui:widget": "file" }
-    
-    # Render a color picker
-    brand_color: { "ui:widget": "color" }
+    upload: { "ui:widget": "file" }
 ```
 
-## How to Access Inputs in Code
+**Supported built-in widgets today:**
 
-The values submitted by the user are passed to your agent as a dictionary. 
+| Widget | Description |
+|--------|-------------|
+| `text` | Single-line input (default) |
+| `textarea` | Multi-line input |
+| `file` | File upload — runner receives the uploaded file path in inputs |
+
+Legacy templates may use `x-ui-widget` on individual properties; the Store still resolves those for backward compatibility.
+
+Unknown widget names fall back to `text`.
+
+## Access inputs in code
 
 ```python
 def agent(inputs):
-    # Fetch the input exactly as named in the schema
     message = inputs.get("message")
-    search_depth = inputs.get("depth", 3)
+    depth = inputs.get("depth", 3)
+    return f"Processed: {message} (depth={depth})"
 ```
 
-## For Platform Contributors: Adding New Widgets
+File fields are injected by the runner/store pipeline — use the key name from your schema.
 
-If you are contributing to the Charm platform and want to support a new widget type (e.g., a map selector), you do not need to modify the core `uac` (Universal Agent Contract). The UI schema is decoupled via a `WidgetRegistry` in the frontend application (`charm-store`).
+## Adding new widget types (platform contributors)
 
-**How to add a new widget:**
-1. **Create the Component:** Build a new standard React component in `charm-store/app/components/` that accepts standard props (such as `value` and `onChange`).
-2. **Register the Component:** Open `charm-store/app/components/DynamicForm.tsx` and add your new component to the `WidgetRegistry`:
-   ```tsx
-   const WidgetRegistry: Record<string, React.FC<WidgetProps>> = {
-       "textarea": TextareaWidget,
-       "map-selector": MapSelectorWidget, // Your new widget
-   };
-   ```
-3. **Update Documentation:** Add the new widget name to the supported list in the Reference so Agent Creators know they can use it.
+New widgets are **not** runtime plugins. They require a **charm-store** change and deploy:
+
+1. Create a React field component (accepts `value`, `onChange`, etc.)
+2. Register it in `WidgetRegistry` inside `charm-store/app/components/DynamicForm.tsx`
+3. Document the widget name here and in [UI Protocol](/platform/ui-protocol)
+4. Deploy the store
+
+Agent authors can then reference the new name in `interface.ui`.
+
+## Related
+
+- [Extensibility Overview](/guides/extensibility)
+- [UI Protocol Reference](/platform/ui-protocol)
+- [Output Renderers](/guides/output-renderers)

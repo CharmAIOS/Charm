@@ -269,13 +269,14 @@ def push_command(
             resp_data = reg_resp.json()
             agent_url = resp_data.get("url", "N/A")
 
-            # Try auto-copy to clipboard
+            # Try auto-copy to clipboard (optional; missing xclip/wl-clipboard on Linux is OK)
             clipboard_msg = ""
             try:
                 import pyperclip
+
                 pyperclip.copy(agent_url)
                 clipboard_msg = "\n[bold cyan](Copied to clipboard!)[/bold cyan]"
-            except ImportError:
+            except Exception:
                 pass
 
             console.print(

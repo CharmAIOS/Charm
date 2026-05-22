@@ -1,30 +1,27 @@
 ---
 title: Telemetry Exporters
-description: Learn how to monitor and observe your Charm Agents by integrating custom telemetry exporters.
+description: Monitor agent lifecycle by registering custom telemetry exporter plugins.
 ---
 
 # Telemetry Exporters
 
-Charm provides an open observability framework to track the full lifecycle of your agents—from LLM token generation to tool execution and error handling. 
+Charm dispatches execution lifecycle events (run start/end, tool calls, LLM tokens, errors) to a **`TelemetryManager`** inside the agent container. By default, events stream to stdout for the cloud runner to forward as SSE. You can add **custom exporters** to forward the same events to Datadog, LangSmith, Sentry, etc.
 
-By default, Charm streams execution events via `stdout` so the Charm Cloud Runner can capture and broadcast them to end-users via Server-Sent Events (SSE). However, you can extend this by building and registering **Custom Telemetry Exporters** to forward events directly to external platforms like DataDog, LangSmith, or Sentry.
+> Telemetry plugins run **inside the agent container**, not in the store or cloud-runner API process.
 
-## 1. Create your Telemetry Exporter
+## 1. Implement `BaseTelemetryExporter`
 
-To create a custom telemetry exporter, create a new Python class that inherits from `charm.core.telemetry.BaseTelemetryExporter`. You can implement whichever lifecycle hooks you need:
-
-Create a file named `my_exporter.py`:
+Subclass `charm.core.telemetry.BaseTelemetryExporter`. **All abstract hook methods must be implemented** (use `pass` for hooks you do not need):
 
 ```python
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 from charm.core.telemetry import BaseTelemetryExporter
 
 class DataDogExporter(BaseTelemetryExporter):
-    def __init__(self):
-        # API Keys can be securely injected via environment variables
-        self.api_key = os.getenv("DATADOG_API_KEY")
-        
+    def __init__(self) -> None:
+        self.api_key = os.getenv("DATADOG_API_KEY", "")
+
     def on_run_start(self, run_id: str, inputs: Dict[str, Any]) -> None:
         pass
 
@@ -35,7 +32,6 @@ class DataDogExporter(BaseTelemetryExporter):
         pass
 
     def on_tool_start(self, tool_name: str, input_str: str) -> None:
-        # e.g., send a custom Datadog metric
         pass
 
     def on_tool_end(self, tool_name: str, output: str) -> None:
@@ -51,34 +47,49 @@ class DataDogExporter(BaseTelemetryExporter):
         pass
 ```
 
-## 2. Register via Entry Points
-
-Just like custom adapters, Charm discovers telemetry exporters dynamically using Python `entry_points`.
-
-In your package's `pyproject.toml`, add an entry to the `charm.telemetry` group:
+## 2. Register via entry points
 
 ```toml
 [project.entry-points."charm.telemetry"]
-datadog = "charm_telemetry_datadog.my_exporter:DataDogExporter"
+datadog = "charm_telemetry_datadog.exporter:DataDogExporter"
 ```
 
-Once installed, Charm's `TelemetryManager` will recognize the `datadog` plugin.
+## 3. Opt in from `charm.yaml`
 
-## 3. Enable it in `charm.yaml`
-
-To avoid loading unnecessary plugins, telemetry exporters are **opt-in**. You must explicitly list the exporters you want to activate in your `charm.yaml` configuration file:
+Exporters are **opt-in** — list the entry point **names** you want loaded:
 
 ```yaml
 runtime:
   adapter:
-    type: python
-    entry_point: src.main:my_agent
+    type: custom
+    entry_point: src.main:agent
   telemetry:
     - datadog
 ```
 
-## 4. Deploying to the Cloud Runner
+The default `CharmEmitterExporter` always runs; listed plugins are added to the dispatch list.
 
-When deploying your agent to the Charm Cloud Runner, ensure that:
-1. You provide a **Custom Image** (`custom_image`) that installs your telemetry python package (e.g., `RUN uv pip install charm-telemetry-datadog`).
-2. You provide the required secrets (e.g., `DATADOG_API_KEY`) via your Agent's Environment Variables settings in the Charm Dashboard. The runner will securely inject these directly into the container execution context.
+## 4. Cloud deployment
+
+1. **Install the exporter package in your `custom_image`** — same requirement as [Custom Adapters](/guides/custom-adapters)
+2. **Inject secrets via environment variables** (e.g. `DATADOG_API_KEY`) through the Store agent settings or runner env resolution — never hard-code keys in `charm.yaml`
+
+```dockerfile
+FROM ghcr.io/charmaios/charm-base:latest
+RUN uv pip install charm-telemetry-datadog
+```
+
+```yaml
+runtime:
+  custom_image: "ghcr.io/your-org/my-runtime:prod"
+  telemetry:
+    - datadog
+```
+
+View exporter output in **container logs** (Cloud Run / Docker), not in Store SSE unless your exporter also writes via `CharmEmitter`.
+
+## Related
+
+- [Extensibility Overview](/guides/extensibility)
+- [Observability](/platform/observability)
+- [Custom Runtimes](/guides/custom-runtimes)

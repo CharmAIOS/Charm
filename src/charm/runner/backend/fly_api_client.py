@@ -6,6 +6,30 @@ import aiohttp
 logger = logging.getLogger("charm.runner.fly_api_client")
 FLY_API_BASE = "https://api.machines.dev/v1"
 
+
+def resolve_machine_image(machine: dict[str, Any]) -> Optional[str]:
+    config = machine.get("config")
+    if isinstance(config, dict):
+        image = config.get("image")
+        if isinstance(image, str) and image.strip():
+            return image.strip()
+
+    image_ref = machine.get("image_ref")
+    if not isinstance(image_ref, dict):
+        return None
+
+    registry = str(image_ref.get("registry") or "").strip()
+    repository = str(image_ref.get("repository") or "").strip()
+    tag = str(image_ref.get("tag") or "latest").strip()
+    if not repository:
+        return None
+    if registry == "registry-1.docker.io":
+        return f"{repository}:{tag}"
+    if registry:
+        return f"{registry}/{repository}:{tag}"
+    return f"{repository}:{tag}"
+
+
 class FlyApiClient:
     def __init__(self, api_token: str, app_name: str, region: str = "sjc"):
         self.api_token = api_token
@@ -57,15 +81,39 @@ class FlyApiClient:
     async def start_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/start"
         async with session.post(url, headers=self._headers()) as resp:
-            return resp.status in (200, 201)
+            if resp.status in (200, 201):
+                return True
+            text = await resp.text()
+            logger.error("[Fly.io] Failed to start machine %s (HTTP %s): %s", machine_id, resp.status, text)
+            return False
 
     async def stop_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/stop"
         async with session.post(url, headers=self._headers()) as resp:
-            if resp.status not in (200, 201):
-                return False
-            # We don't poll here, polling is handled in the backend layer if needed
-            return True
+            if resp.status in (200, 201):
+                return True
+            text = await resp.text()
+            if resp.status == 409:
+                state = await self.get_machine_state(session, machine_id)
+                if state in ("created", "stopped", "suspended", "stopping"):
+                    logger.info(
+                        "[Fly.io] Stop not required for machine %s (state=%s): %s",
+                        machine_id,
+                        state,
+                        text,
+                    )
+                    return True
+            logger.error("[Fly.io] Failed to stop machine %s (HTTP %s): %s", machine_id, resp.status, text)
+            return False
+
+    async def restart_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
+        url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}/restart"
+        async with session.post(url, headers=self._headers()) as resp:
+            if resp.status in (200, 201):
+                return True
+            text = await resp.text()
+            logger.error("[Fly.io] Failed to restart machine %s (HTTP %s): %s", machine_id, resp.status, text)
+            return False
 
     async def delete_machine(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
         url = f"{FLY_API_BASE}/apps/{self.app_name}/machines/{machine_id}"
@@ -90,7 +138,12 @@ class FlyApiClient:
             return False
 
         current_config = machine.get("config")
-        if not isinstance(current_config, dict) or not current_config.get("image"):
+        if not isinstance(current_config, dict):
+            logger.error("[Fly.io] Machine %s has no config object; cannot update bootstrap", machine_id)
+            return False
+
+        image = resolve_machine_image(machine)
+        if not image:
             logger.error("[Fly.io] Machine %s is missing config.image; cannot update bootstrap", machine_id)
             return False
 
@@ -100,6 +153,7 @@ class FlyApiClient:
         merged_env["CHARM_BOOTSTRAP_SCRIPT"] = bootstrap_script
 
         updated_config = dict(current_config)
+        updated_config["image"] = image
         updated_config["env"] = merged_env
         updated_config["init"] = {
             "cmd": ["/bin/bash", "-c", "echo $CHARM_BOOTSTRAP_SCRIPT | base64 -d | bash"]

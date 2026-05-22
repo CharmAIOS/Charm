@@ -1,0 +1,78 @@
+---
+title: Extensibility Overview
+description: How to extend Charm — adapters, runtimes, telemetry, memory, UI, templates, and renderers.
+---
+
+# Extensibility Overview
+
+Charm separates a **small stable core** from **community-owned extensions**. Not every extension works the same way — some are runtime Python plugins, some are store contributions, and some are manifest PRs.
+
+Use this page to pick the right path before you start building.
+
+## Extension paths at a glance
+
+| What you want to add | Registration | Runs where | Needs `custom_image` on cloud? | Needs store deploy? |
+|----------------------|--------------|------------|----------------------------------|---------------------|
+| [Custom adapter plugin](/guides/custom-adapters) | `charm.adapters` entry point | Agent container | **Yes** | No |
+| [Custom runtime only](/guides/custom-runtimes) | `runtime.custom_image` in YAML | Agent container | **Yes** | No |
+| [Telemetry exporter](/guides/telemetry-exporters) | `charm.telemetry` entry point | Agent container | **Yes** | No |
+| [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Yes** (if not built-in) | No |
+| [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | Only for **new** widget types |
+| [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | Only for **new** renderer types |
+| [Starter templates](/guides/community-templates) | PR to `templates-manifest.json` | `charm init` | No | No (manifest merge) |
+
+## Two kinds of “custom” (important)
+
+These names overlap — they are **not** the same thing:
+
+| Term | Meaning |
+|------|---------|
+| **`runtime.adapter.type: custom`** | Built-in Charm adapter for plain Python agents (`CharmCustomAdapter` in core). Good default for `charm init` projects. |
+| **`runtime.custom_image`** | Docker image override for the cloud runner. Required for third-party adapter/telemetry/memory plugins. |
+| **Third-party adapter plugin** | New adapter name (e.g. `ag2`, `plugin_test`) registered via `[project.entry-points."charm.adapters"]`. |
+
+Scenario: you can use **`type: custom`** with **`custom_image`** (extra deps, no new adapter class).  
+Scenario: you can use **`type: ag2`** with **`custom_image`** (new adapter plugin + image that installs it).
+
+## Recommended workflow for plugin authors
+
+1. **Start from a normal agent** — `charm init my-agent --template python`
+2. **Add a pip package** with your adapter/telemetry/memory classes and `pyproject.toml` entry points
+3. **Point `charm.yaml` at your plugin** — `runtime.adapter.type: your_plugin_name`
+4. **Build a Docker image** that installs your package (and compatible `charmos`) — see [Custom Runtimes](/guides/custom-runtimes)
+5. **Set `runtime.custom_image`** to that image URI
+6. **`charm validate`** → **`charm push`** → run on the Store
+
+The cloud runner **does not `pip install` your plugin at runtime**. Your package must already be in the container image.
+
+## Built-in vs third-party
+
+| Layer | Built-in (no plugin package) | Third-party (plugin author) |
+|-------|------------------------------|-----------------------------|
+| Python agent logic | `charm init` + `type: custom` | Same |
+| Adapter type | `custom`, `langchain`, `openclaw`, … | New name via entry points |
+| Runtime image | Official `runner-*` images | Your `custom_image` |
+| Store form widgets | `text`, `textarea`, `file` | New widgets → store PR |
+| Rich output UI | Built-in `_charm_render_type` values | New types → store PR |
+
+## Cloud prerequisites
+
+For any **custom image** on production:
+
+1. Push the image to a registry the runner can pull (Artifact Registry, GHCR, etc.)
+2. Grant the runner service account **read** access to that registry (if private)
+3. Declare `runtime.custom_image` in `charm.yaml` — the runner selects it over default adapter images
+
+See [Base Images](/platform/base-images) and [Custom Runtimes](/guides/custom-runtimes).
+
+## Next steps
+
+- [Custom Adapters](/guides/custom-adapters) — third-party framework integration
+- [Custom Runtimes](/guides/custom-runtimes) — Docker image overrides
+- [Telemetry Exporters](/guides/telemetry-exporters)
+- [State & Memory](/guides/state-and-memory)
+- [Input Forms (UI Schema)](/guides/interface)
+- [Output Renderers](/guides/output-renderers)
+- [Community Templates](/guides/community-templates)
+
+For core contributors merging adapters into the official SDK, see [Write a Custom Adapter](/oss/adapter) (in-repo process).

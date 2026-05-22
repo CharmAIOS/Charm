@@ -1,110 +1,119 @@
 ---
 title: How to Render Rich UI
-description: A guide on returning structured data from your agent to render rich UI components in the Charm Store.
+description: Return structured data from your agent to render charts and components in the Charm Store.
 ---
 
 # How to Render Rich UI
 
-The Charm Store features a **Universal Renderer** that can automatically transform your agent's data into beautiful, interactive React components—like charts, data grids, and metric cards—without you needing to write any frontend code.
+The Charm Store **Universal Renderer** maps structured agent output to React components — bar/line/pie charts, data grids, metric cards — without you writing frontend code.
 
-This guide will show you how to structure your agent's return values to trigger these components.
+For full payload schemas, see the [UI Protocol Reference](/platform/ui-protocol).
 
-For a full list of supported UI schemas, please refer to the [UI Protocol Reference](/platform/ui-protocol).
+## Built-in render types (no store changes)
 
-## Returning Explicit UI Components
+Return a JSON object with `_charm_render_type` set to one of:
 
-To guarantee that the Store renders a specific component, your agent should return a Python dictionary containing the special key `_charm_render_type`. 
+| Type | Use case |
+|------|----------|
+| `bar_chart` | Categorical comparisons |
+| `line_chart` | Trends over time |
+| `pie_chart` | Part-to-whole |
+| `data_grid` | Tabular results |
+| `metric_card` | KPI-style metrics |
 
-### Using the Custom Adapter
+These work for any published agent — **no store deploy required**.
 
-If you are writing a standard Python function agent, you can simply return the dictionary:
+## Custom Python agents
 
 ```python
 def agent(inputs):
-    # Perform your agent logic here...
-    
-    # Return a structured dictionary instead of a string
     return {
         "_charm_render_type": "bar_chart",
         "title": "Quarterly Sales",
         "data": [
             {"name": "Q1", "value": 15000},
             {"name": "Q2", "value": 22000},
-            {"name": "Q3", "value": 31000}
-        ]
+        ],
     }
 ```
 
-### Using Framework Adapters (LangChain, CrewAI, OpenClaw)
+With the built-in **`custom`** adapter, return the dict directly from your entry point. With a third-party adapter, return `{"status": "success", "output": {...}}` or ensure your adapter forwards structured output.
 
-If you are using a framework, you can configure your LLM to output a JSON string that matches the required schema. The Charm adapters will automatically detect the JSON, parse it, and forward the structure to the UI.
+## Framework adapters (LangChain, CrewAI, OpenClaw)
 
-For example, using OpenClaw:
+Configure the model to emit JSON matching the schema. Example for OpenClaw:
 
 ```yaml
-# Inside charm.yaml
 runtime:
   adapter:
     type: openclaw
   config:
     system_prompt: |
-      You are a data analysis agent. 
-      You MUST return your final answer as a JSON object containing a pie chart.
-      Format:
+      Return your final answer as JSON only:
       {
-        "_charm_render_type": "pie_chart",
-        "title": "Data Distribution",
-        "data": [{"name": "A", "value": 50}, {"name": "B", "value": 50}]
+        "_charm_render_type": "metric_card",
+        "title": "Analysis Results",
+        "metrics": [
+          {"label": "Confidence", "value": "98.5", "unit": "%"}
+        ]
       }
 ```
 
-## Rendering Custom UI with HTML/SVG
+Adapters parse JSON final messages and forward structure to the Store.
 
-If the built-in components do not meet your needs, you can return raw HTML or SVG strings. The Store's Markdown renderer safely sanitizes HTML (stripping `<script>` tags) and renders it directly.
+## Metric card example
+
+```python
+return {
+    "_charm_render_type": "metric_card",
+    "title": "Performance",
+    "metrics": [
+        {"label": "Active Users", "value": 1204, "change": 12, "unit": "users"},
+        {"label": "Error Rate", "value": "0.3", "unit": "%"},
+    ],
+}
+```
+
+## Markdown and HTML fallback
+
+Return a plain string for standard Markdown rendering. HTML and SVG snippets are sanitized (scripts stripped):
 
 ```python
 def agent(inputs):
-    # Dynamically generate an SVG badge
-    status = "Operational"
-    color = "#4CAF50"
-    
-    svg_badge = f"""
-    <svg width="150" height="30" xmlns="http://www.w3.org/2000/svg">
-      <rect width="150" height="30" rx="5" fill="{color}"/>
-      <text x="75" y="20" font-family="sans-serif" font-size="14" fill="white" text-anchor="middle">
-        {status}
-      </text>
-    </svg>
-    """
-    
-    # You can mix SVG with standard Markdown
-    return f"### System Status\n\n{svg_badge}"
+    return "### Status\n\nAll systems operational."
 ```
 
-## Mixing Text and UI
+## Streaming text + rich final
 
-In most conversational agents, you want to stream thoughts and text before showing the final chart. 
-
-To achieve this, use the `CharmEmitter` to stream markdown text during the execution, and then return the rich JSON object as the final result:
+Use `CharmEmitter` for intermediate markdown, then return structured JSON as the final result:
 
 ```python
 from charm.core.io import CharmEmitter
 
 def agent(inputs):
-    CharmEmitter.emit_delta("Analyzing the dataset...\n")
-    # ... logic ...
-    CharmEmitter.emit_delta("Generating the chart...\n")
-    
+    CharmEmitter.emit_delta("Analyzing dataset...\n")
     return {
         "_charm_render_type": "metric_card",
-        "title": "Analysis Results",
-        "metrics": [
-            {"label": "Confidence", "value": "98.5", "unit": "%"}
-        ]
+        "title": "Results",
+        "metrics": [{"label": "Score", "value": 98, "unit": "%"}],
     }
 ```
 
-## Next Steps
+## Adding **new** renderer types (platform contributors)
 
-- Explore all supported JSON shapes in the [UI Protocol Reference](/platform/ui-protocol).
-- Learn about [Execution Modes](/platform/execution-modes) to understand how data streams to the frontend.
+Built-in types are registered in the **charm-store** app at build time (`registerRenderer` in `CharmRenderers.tsx`). There is **no runtime npm plugin loader** today.
+
+To add a new component type:
+
+1. Implement a React renderer in `charm-store`
+2. Call `registerRenderer("my_type", ...)` 
+3. Deploy the store
+4. Document the JSON schema in [UI Protocol](/platform/ui-protocol)
+
+Agent authors can then use `"_charm_render_type": "my_type"` after that deploy.
+
+## Related
+
+- [UI Protocol Reference](/platform/ui-protocol)
+- [Extensibility Overview](/guides/extensibility)
+- [Input Forms (UI Schema)](/guides/interface)

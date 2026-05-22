@@ -18,6 +18,7 @@ MACHINE_POLL_INTERVAL = 3
 MACHINE_POLL_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — image pull can take ~45-60s on first boot
 MACHINE_HEALTH_POLL_INTERVAL = 3
 MACHINE_HEALTH_MAX_ATTEMPTS = 40  # 40 × 3s = 120s — bootstrap + image pull can exceed 60s on first boot
+MACHINE_TRANSITIONAL_STATES = ("stopping", "restarting", "replacing")
 DAEMON_AGENT_PORT = 8000
 
 
@@ -86,6 +87,96 @@ class FlyIoBackend(ExecutionBackend):
             import json,subprocess,os
             from http.server import HTTPServer,BaseHTTPRequestHandler
             SECRET=os.environ.get("RUNNER_DAEMON_SECRET","")
+            def _resolve_snapshot_archive(snap_path,snap_url,snap_paths_json):
+                import json as _json,os as _os,urllib.request as _urlreq
+                paths=[]
+                if snap_path:
+                    paths.append(snap_path)
+                if snap_paths_json:
+                    try:
+                        extra=_json.loads(snap_paths_json)
+                        if isinstance(extra,list):
+                            for p in extra:
+                                if isinstance(p,str) and p and p not in paths:
+                                    paths.append(p)
+                    except Exception:
+                        pass
+                for p in paths:
+                    if p and _os.path.isfile(p):
+                        return p
+                if snap_url and paths:
+                    target=paths[0]
+                    try:
+                        _os.makedirs(_os.path.dirname(target),exist_ok=True)
+                        with _urlreq.urlopen(snap_url,timeout=180) as resp:
+                            data=resp.read()
+                        with open(target,"wb") as out:
+                            out.write(data)
+                        if _os.path.isfile(target):
+                            return target
+                    except Exception:
+                        pass
+                return None
+            def _openclaw_home():
+                return os.path.join(os.path.expanduser("~"),".openclaw")
+            def _snapshot_has_state(ws):
+                try:
+                    for name in os.listdir(ws):
+                        if name!=".snapshots":
+                            return True
+                except Exception:
+                    pass
+                oc=_openclaw_home()
+                try:
+                    return os.path.isdir(oc) and bool(os.listdir(oc))
+                except Exception:
+                    return False
+            def _clear_openclaw_home():
+                import shutil
+                oc=_openclaw_home()
+                if not os.path.isdir(oc):
+                    return
+                for name in os.listdir(oc):
+                    pth=os.path.join(oc,name)
+                    if os.path.isdir(pth):
+                        shutil.rmtree(pth,ignore_errors=True)
+                    else:
+                        try:os.remove(pth)
+                        except Exception:pass
+            def _apply_snapshot_restore(tf,ws):
+                import shutil,tempfile
+                names=tf.getnames()
+                prefixed=any(n.startswith("workspace/") or n.startswith("openclaw/") for n in names)
+                if not prefixed:
+                    tf.extractall(ws)
+                    return
+                oc=_openclaw_home()
+                os.makedirs(oc,exist_ok=True)
+                _clear_openclaw_home()
+                with tempfile.TemporaryDirectory() as tmp:
+                    tf.extractall(tmp)
+                    wsrc=os.path.join(tmp,"workspace")
+                    if os.path.isdir(wsrc):
+                        for name in os.listdir(wsrc):
+                            src=os.path.join(wsrc,name)
+                            dst=os.path.join(ws,name)
+                            if os.path.isdir(src):
+                                if os.path.exists(dst):
+                                    shutil.rmtree(dst,ignore_errors=True)
+                                shutil.copytree(src,dst)
+                            else:
+                                shutil.copy2(src,dst)
+                    osrc=os.path.join(tmp,"openclaw")
+                    if os.path.isdir(osrc):
+                        for name in os.listdir(osrc):
+                            src=os.path.join(osrc,name)
+                            dst=os.path.join(oc,name)
+                            if os.path.isdir(src):
+                                if os.path.exists(dst):
+                                    shutil.rmtree(dst,ignore_errors=True)
+                                shutil.copytree(src,dst)
+                            else:
+                                shutil.copy2(src,dst)
             class H(BaseHTTPRequestHandler):
                 def log_message(self,*a):pass
                 def do_GET(self):
@@ -114,6 +205,8 @@ class FlyIoBackend(ExecutionBackend):
                             return
                         ws=p.get("workspace","/workspace/agent_code")
                         snap_path=p.get("snapshot_path","")
+                        snap_url=p.get("snapshot_url","")
+                        snap_paths_json=p.get("snapshot_paths_json","")
                         self.send_response(200)
                         self.send_header("Content-Type","text/event-stream")
                         self.send_header("Cache-Control","no-cache")
@@ -134,9 +227,11 @@ class FlyIoBackend(ExecutionBackend):
                             else:
                                 try:os.remove(pth)
                                 except Exception:pass
-                        if os.path.isfile(snap_path):
-                            with tarfile.open(snap_path,"r:gz") as tf:
-                                tf.extractall(ws)
+                        _clear_openclaw_home()
+                        resolved=_resolve_snapshot_archive(snap_path,snap_url,snap_paths_json)
+                        if resolved:
+                            with tarfile.open(resolved,"r:gz") as tf:
+                                _apply_snapshot_restore(tf,ws)
                             emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
                             emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
                             emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
@@ -165,7 +260,9 @@ class FlyIoBackend(ExecutionBackend):
                     burl=p.get("bundle_url","")
                     xenv=p.get("env",{})
                     snap_path=xenv.get("CHARM_ROLLBACK_SNAPSHOT_PATH","")
-                    if snap_path:
+                    snap_url=xenv.get("CHARM_ROLLBACK_SNAPSHOT_URL","")
+                    snap_paths_json=xenv.get("CHARM_ROLLBACK_SNAPSHOT_PATHS","")
+                    if snap_path or snap_url or snap_paths_json:
                         self.send_response(200)
                         self.send_header("Content-Type","text/event-stream")
                         self.send_header("Cache-Control","no-cache")
@@ -186,9 +283,11 @@ class FlyIoBackend(ExecutionBackend):
                             else:
                                 try:os.remove(pth)
                                 except Exception:pass
-                        if os.path.isfile(snap_path):
-                            with tarfile.open(snap_path,"r:gz") as tf:
-                                tf.extractall(ws)
+                        _clear_openclaw_home()
+                        resolved=_resolve_snapshot_archive(snap_path,snap_url,snap_paths_json)
+                        if resolved:
+                            with tarfile.open(resolved,"r:gz") as tf:
+                                _apply_snapshot_restore(tf,ws)
                             emit(json.dumps({"type":"status","content":"Workspace restored successfully."}))
                             emit(json.dumps({"type":"final","content":"ROLLBACK_RESTORE_COMPLETE"}))
                             emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":0}}))
@@ -222,6 +321,41 @@ class FlyIoBackend(ExecutionBackend):
                             emit(json.dumps({"type":"error","content":"Bundle setup failed: "+str(e)}))
                             return
                     env={**os.environ,**xenv,"CHARM_WORKSPACE_DIR":ws}
+                    upgrade_snap_ver=xenv.get("CHARM_UPGRADE_SNAPSHOT_VERSION","")
+                    if upgrade_snap_ver:
+                        import tarfile as _tarfile
+                        snap_dir=os.path.join(ws,".snapshots")
+                        os.makedirs(snap_dir,exist_ok=True)
+                        snap_archive=os.path.join(snap_dir,upgrade_snap_ver+".tar.gz")
+                        oc_home=_openclaw_home()
+                        if os.path.isfile(snap_archive):
+                            emit(json.dumps({"type":"status","content":"Workspace snapshot saved."}))
+                        elif _snapshot_has_state(ws):
+                            emit(json.dumps({"type":"status","content":"Creating workspace snapshot..."}))
+                            try:
+                                with _tarfile.open(snap_archive,"w:gz") as tf:
+                                    try:
+                                        for name in os.listdir(ws):
+                                            if name==".snapshots":
+                                                continue
+                                            path=os.path.join(ws,name)
+                                            tf.add(path,arcname="workspace/"+name)
+                                    except Exception:
+                                        pass
+                                    if os.path.isdir(oc_home):
+                                        try:
+                                            for name in os.listdir(oc_home):
+                                                path=os.path.join(oc_home,name)
+                                                tf.add(path,arcname="openclaw/"+name)
+                                        except Exception:
+                                            pass
+                                emit(json.dumps({"type":"status","content":"Workspace snapshot saved."}))
+                            except Exception as e:
+                                emit(json.dumps({"type":"error","content":"Snapshot creation failed: "+str(e)}))
+                                emit(json.dumps({"type":"internal_run_finished","content":{"exit_code":1}}))
+                                return
+                        else:
+                            emit(json.dumps({"type":"status","content":"Workspace empty — snapshot skipped."}))
                     # Write openclaw.json so openclaw routes LLM calls through the Charm proxy.
                     # CHARM_LLM_PROXY_BASE and CHARM_LLM_PROXY_KEY are forwarded in xenv.
                     proxy_base=env.get("CHARM_LLM_PROXY_BASE","").strip()
@@ -340,12 +474,16 @@ class FlyIoBackend(ExecutionBackend):
                     return {"success": stopped, "action": "paused"}
 
                 elif action == "restart":
-                    started = await api.start_machine(session, machine_id)
-                    if started:
+                    current_state = await api.get_machine_state(session, machine_id)
+                    if current_state == "started":
+                        restarted = await api.restart_machine(session, machine_id)
+                    else:
+                        restarted, _ = await self._bring_machine_to_started(session, machine_id)
+                    if restarted:
                         supabase_client.table("daemon_machines").update(
                             {"status": "running", "updated_at": "now()"}
                         ).eq("agent_id", agent_id).eq("user_id", user_id).execute()
-                    return {"success": started, "action": "restarted"}
+                    return {"success": restarted, "action": "restarted"}
 
                 elif action == "terminate":
                     current_state = await api.get_machine_state(session, machine_id)
@@ -375,15 +513,170 @@ class FlyIoBackend(ExecutionBackend):
         if not self.api:
             return False
         api = self.api
+        last_state: Optional[str] = None
         for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
             await asyncio.sleep(MACHINE_POLL_INTERVAL)
             state = await api.get_machine_state(session, machine_id)
+            last_state = state
             logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
             if state == "started":
                 return True
             if state in ("destroyed", None):
+                logger.error(
+                    "[Fly.io] Machine %s entered terminal/unavailable state while waiting to start: %s",
+                    machine_id,
+                    state,
+                )
                 return False
+        logger.error(
+            "[Fly.io] Machine %s did not reach started state within %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            last_state,
+        )
         return False
+
+    async def _wait_for_stopped(self, session: aiohttp.ClientSession, machine_id: str) -> bool:
+        if not self.api:
+            return False
+        api = self.api
+        last_state: Optional[str] = None
+        for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
+            await asyncio.sleep(MACHINE_POLL_INTERVAL)
+            state = await api.get_machine_state(session, machine_id)
+            last_state = state
+            logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
+            if state == "stopped":
+                return True
+            if state == "suspended":
+                return True
+            if state in ("destroyed", None):
+                logger.error(
+                    "[Fly.io] Machine %s entered terminal/unavailable state while waiting to stop: %s",
+                    machine_id,
+                    state,
+                )
+                return False
+        logger.error(
+            "[Fly.io] Machine %s did not reach stopped state within %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            last_state,
+        )
+        return False
+
+    async def _wait_for_settled(
+        self, session: aiohttp.ClientSession, machine_id: str
+    ) -> Optional[str]:
+        """Wait until the machine leaves replacing/stopping/restarting."""
+        if not self.api:
+            return None
+        api = self.api
+        state = await api.get_machine_state(session, machine_id)
+        for _ in range(MACHINE_POLL_MAX_ATTEMPTS):
+            if state not in MACHINE_TRANSITIONAL_STATES:
+                return state
+            logger.info("[Fly.io] Machine %s state: %s", machine_id, state)
+            await asyncio.sleep(MACHINE_POLL_INTERVAL)
+            state = await api.get_machine_state(session, machine_id)
+        logger.warning(
+            "[Fly.io] Machine %s still transitional after %ds (last_state=%s)",
+            machine_id,
+            MACHINE_POLL_MAX_ATTEMPTS * MACHINE_POLL_INTERVAL,
+            state,
+        )
+        return state
+
+    async def _bring_machine_to_started(
+        self, session: aiohttp.ClientSession, machine_id: str
+    ) -> tuple[bool, str]:
+        """Start or wait for a machine to reach the started state."""
+        if not self.api:
+            return False, "Fly.io API client is not configured"
+
+        state = await self.api.get_machine_state(session, machine_id)
+        logger.info("[Fly.io] Bringing machine %s to started (current=%s)", machine_id, state)
+
+        if state == "started":
+            return True, ""
+        if state in (None, "destroyed"):
+            return False, f"Machine unavailable (state={state})"
+        if state in MACHINE_TRANSITIONAL_STATES:
+            state = await self._wait_for_settled(session, machine_id)
+            if state in (None, "destroyed"):
+                return False, f"Machine unavailable after transition (state={state})"
+            if state == "started":
+                return True, ""
+
+        if state == "created":
+            # Bootstrap updates often land here; flyd auto-starts with restart:always.
+            # The /start API rejects created (HTTP 412), so wait or restart instead.
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+            state = await self.api.get_machine_state(session, machine_id)
+            if state == "started":
+                return True, ""
+            logger.info(
+                "[Fly.io] Machine %s still %s after wait; trying restart API",
+                machine_id,
+                state,
+            )
+            if await self.api.restart_machine(session, machine_id):
+                settled = await self._wait_for_settled(session, machine_id)
+                if settled == "started" or await self._wait_for_started(session, machine_id):
+                    return True, ""
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        if state in ("stopped", "suspended"):
+            if not await self.api.start_machine(session, machine_id):
+                return False, "Failed to start machine after bootstrap refresh"
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        logger.warning(
+            "[Fly.io] Machine %s unexpected state %s; attempting restart",
+            machine_id,
+            state,
+        )
+        if await self.api.restart_machine(session, machine_id):
+            await self._wait_for_settled(session, machine_id)
+            if await self._wait_for_started(session, machine_id):
+                return True, ""
+        return False, f"Failed to start machine from state {state}"
+
+    async def _restart_machine_after_config_update(
+        self, session: aiohttp.ClientSession, machine_id: str
+    ) -> tuple[bool, str]:
+        """Apply a bootstrap config update by restarting the machine safely."""
+        if not self.api:
+            return False, "Fly.io API client is not configured"
+
+        state = await self.api.get_machine_state(session, machine_id)
+        logger.info("[Fly.io] Machine %s state after bootstrap update: %s", machine_id, state)
+
+        if state == "started":
+            # Bootstrap was updated while running — restart to apply.
+            if not await self.api.restart_machine(session, machine_id):
+                if not await self.api.stop_machine(session, machine_id):
+                    return False, "Failed to stop machine before bootstrap refresh"
+                if not await self._wait_for_stopped(session, machine_id):
+                    settled = await self._wait_for_settled(session, machine_id)
+                    if settled not in ("stopped", "suspended", "created", "started"):
+                        return False, "Machine did not stop before bootstrap refresh"
+
+        settled = await self._wait_for_settled(session, machine_id)
+        if settled in (None, "destroyed"):
+            return False, f"Machine unavailable after bootstrap update (state={settled})"
+
+        started, start_err = await self._bring_machine_to_started(session, machine_id)
+        if not started:
+            return False, start_err
+
+        if not await self._wait_for_started(session, machine_id):
+            return False, "Machine did not reach started state after bootstrap refresh"
+
+        return True, ""
 
     async def stream_logs(self, config: RunConfig) -> AsyncGenerator[str, None]:
         if not self.api_token or not self.app_name or not self.api:
@@ -395,6 +688,7 @@ class FlyIoBackend(ExecutionBackend):
 
         machine_id: Optional[str] = None
         volume_id: Optional[str] = None
+        machine_just_provisioned = False
 
         if config.supabase_client:
             user_id = config.env_vars.get("CHARM_USER_ID", "local")
@@ -410,27 +704,22 @@ class FlyIoBackend(ExecutionBackend):
                     yield sse_pack("status", "Daemon agent is already running.")
                 elif state in ("stopped", "suspended", "created"):
                     yield sse_pack("status", "Resuming daemon agent...")
-                    started = await self.api.start_machine(session, machine_id)
+                    started, start_err = await self._bring_machine_to_started(session, machine_id)
                     if not started:
-                        yield sse_pack("error", "Failed to start daemon machine.")
+                        yield sse_pack("error", f"Failed to start daemon machine: {start_err}")
                         return
                     yield sse_pack("status", "Waiting for daemon machine to boot...")
-                    if not await self._wait_for_started(session, machine_id):
-                        yield sse_pack("error", "Daemon machine did not reach started state in time.")
-                        return
                 elif state in ("stopping", "restarting", "replacing"):
                     # Machine is mid-transition (e.g. just finished an upgrade run).
                     # Wait for it to settle rather than treating it as gone and
                     # trying to create a new machine — which would fail with AlreadyExists.
                     yield sse_pack("status", "Waiting for daemon machine to finish transitioning...")
                     logger.info("[Fly.io] Machine %s is %s — waiting for it to settle.", machine_id, state)
-                    if not await self._wait_for_started(session, machine_id):
-                        # If it doesn't reach started, try an explicit start
-                        yield sse_pack("status", "Restarting daemon machine...")
-                        await self.api.start_machine(session, machine_id)
-                        if not await self._wait_for_started(session, machine_id):
-                            yield sse_pack("error", "Daemon machine did not reach started state in time.")
-                            return
+                    await self._wait_for_settled(session, machine_id)
+                    started, start_err = await self._bring_machine_to_started(session, machine_id)
+                    if not started:
+                        yield sse_pack("error", f"Daemon machine did not reach started state in time: {start_err}")
+                        return
                 else:
                     # Machine is truly gone (destroyed/unknown) — clear and re-provision
                     logger.warning("[Fly.io] Machine %s is %s, re-provisioning.", machine_id, state)
@@ -459,6 +748,7 @@ class FlyIoBackend(ExecutionBackend):
                 if not await self._wait_for_started(session, machine_id):
                     yield sse_pack("error", "Daemon machine did not reach started state in time.")
                     return
+                machine_just_provisioned = True
 
             # Wait for the in-machine HTTP server to be healthy
             yield sse_pack("status", "Waiting for agent HTTP server to become ready...")
@@ -466,10 +756,40 @@ class FlyIoBackend(ExecutionBackend):
                 yield sse_pack("error", "Daemon agent HTTP server did not become ready in time.")
                 return
 
+            needs_handler_refresh = bool(
+                config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH")
+                or config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION")
+            )
+            skip_refresh_for_fresh_upgrade = bool(
+                machine_just_provisioned
+                and config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION")
+                and not config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH")
+            )
+            if skip_refresh_for_fresh_upgrade:
+                logger.info(
+                    "[Fly.io] Skipping bootstrap refresh for newly provisioned machine %s (upgrade snapshot via /job env)",
+                    machine_id,
+                )
+            if needs_handler_refresh and not skip_refresh_for_fresh_upgrade:
+                if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
+                    yield sse_pack("status", "Restoring workspace on daemon...")
+                elif config.env_vars.get("CHARM_UPGRADE_SNAPSHOT_VERSION"):
+                    yield sse_pack("status", "Preparing daemon for upgrade snapshot...")
+                yield sse_pack("status", "Updating daemon handler...")
+                refreshed, refresh_err = await self._refresh_daemon_bootstrap(session, machine_id, config)
+                if not refreshed:
+                    logger.error(
+                        "[Fly.io] Daemon bootstrap refresh failed for %s: %s",
+                        machine_id,
+                        refresh_err,
+                    )
+                    yield sse_pack("error", f"Failed to refresh daemon handler: {refresh_err}")
+                    return
+
             # Dispatch the job and stream results back
             if config.env_vars.get("CHARM_ROLLBACK_SNAPSHOT_PATH"):
-                yield sse_pack("status", "Restoring workspace on daemon...")
-                async for event in self._dispatch_restore(session, machine_id, config):
+                logger.info("[Fly.io] Dispatching rollback restore job to machine %s", machine_id)
+                async for event in self._dispatch_job(session, machine_id, config):
                     yield event
                 return
 
@@ -479,25 +799,34 @@ class FlyIoBackend(ExecutionBackend):
 
     async def _refresh_daemon_bootstrap(
         self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
-    ) -> bool:
+    ) -> tuple[bool, str]:
         if not self.api:
-            return False
+            return False, "Fly.io API client is not configured"
+
         bootstrap = self._generate_bootstrap_script()
+        # Only refresh bootstrap env keys — merging full rollback env can exceed Fly limits.
+        env_overrides: dict[str, str] = {}
+        daemon_secret = os.getenv("RUNNER_DAEMON_SECRET", "").strip()
+        if daemon_secret:
+            env_overrides["RUNNER_DAEMON_SECRET"] = daemon_secret
+
         updated = await self.api.update_machine_bootstrap(
             session,
             machine_id,
-            dict(config.env_vars),
+            env_overrides,
             bootstrap,
         )
         if not updated:
-            return False
-        await self.api.stop_machine(session, machine_id)
-        started = await self.api.start_machine(session, machine_id)
-        if not started:
-            return False
-        if not await self._wait_for_started(session, machine_id):
-            return False
-        return await self._wait_for_health(session, machine_id)
+            return False, "Failed to update machine bootstrap config"
+
+        restarted, restart_err = await self._restart_machine_after_config_update(session, machine_id)
+        if not restarted:
+            return False, restart_err
+
+        if not await self._wait_for_health(session, machine_id):
+            return False, "Daemon HTTP server did not become healthy after bootstrap refresh"
+
+        return True, ""
 
     async def _dispatch_restore(
         self, session: aiohttp.ClientSession, machine_id: str, config: RunConfig
@@ -531,8 +860,14 @@ class FlyIoBackend(ExecutionBackend):
         async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as resp:
             if resp.status == 404:
                 yield sse_pack("status", "Updating daemon restore support...")
-                if not await self._refresh_daemon_bootstrap(session, machine_id, config):
-                    yield sse_pack("error", "Failed to refresh daemon for workspace restore.")
+                refreshed, refresh_err = await self._refresh_daemon_bootstrap(session, machine_id, config)
+                if not refreshed:
+                    logger.error(
+                        "[Fly.io] Daemon bootstrap refresh failed for %s: %s",
+                        machine_id,
+                        refresh_err,
+                    )
+                    yield sse_pack("error", f"Failed to refresh daemon for workspace restore: {refresh_err}")
                     return
                 async with session.post(url, headers=headers, json=payload, timeout=job_timeout) as retry_resp:
                     if retry_resp.status != 200:
@@ -639,8 +974,13 @@ class FlyIoBackend(ExecutionBackend):
             "env": forward_env,
         }
 
-        job_timeout = aiohttp.ClientTimeout(total=config.timeout_seconds or 3600)
+        job_timeout = aiohttp.ClientTimeout(
+            total=config.timeout_seconds or 3600,
+            connect=30,
+            sock_connect=30,
+        )
         try:
+            logger.info("[Fly.io] POST %s machine=%s rollback=%s", url, machine_id, bool(forward_env.get("CHARM_ROLLBACK_SNAPSHOT_PATH")))
             async with session.post(
                 url, headers=headers, json=payload, timeout=job_timeout
             ) as resp:

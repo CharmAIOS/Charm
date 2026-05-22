@@ -1,90 +1,142 @@
 ---
 title: Custom Adapters
-description: Learn how to build and register a custom framework adapter for the Charm platform.
+description: Build and register a third-party framework adapter using Python entry points.
 ---
 
 # Custom Adapters
 
-Charm is designed to be highly pluggable. While it ships with built-in adapters for LangChain, CrewAI, and OpenClaw, you can easily integrate any Python-based AI framework by building a **Custom Adapter**.
+Use this guide when you are a **plugin author** integrating a new Python framework (AG2, AutoGen, an internal runtime, etc.) — not when you only need a plain Python function agent.
 
-Under the hood, Charm uses standard Python `entry_points` to dynamically discover and load adapters. 
+> **Using plain Python only?** You probably want the built-in **`custom`** adapter from `charm init --template python`. See [Custom Python Adapter](/adapters/custom). This guide is for registering a **new adapter name** via entry points.
 
-## 1. Create your Adapter Class
+## How discovery works
 
-Your adapter must inherit from `charm.adapters.base.BaseAdapter` and implement the `invoke` method.
+Charm loads adapters from Python **`entry_points`** in the `charm.adapters` group. The name you register becomes a valid `runtime.adapter.type` in `charm.yaml`.
 
-Create a file named `my_adapter.py`:
+Official adapters (`langchain`, `crewai`, `openclaw`, `custom`, …) use the same mechanism in the `charmos` package. Third-party packages add more names without forking core.
+
+## 1. Start from an agent project
+
+```bash
+charm init my-ag2-agent --template python
+cd my-ag2-agent
+```
+
+This scaffolds `charm.yaml`, `src/main.py`, and `.charmignore`. You will add a **separate installable package** (or a `pyproject.toml` in the same repo) for the adapter plugin.
+
+## 2. Implement `BaseAdapter`
+
+Your class must inherit from `charm.adapters.base.BaseAdapter` and implement `invoke`.
 
 ```python
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 from charm.adapters.base import BaseAdapter
 
-class MyCustomAdapter(BaseAdapter):
-    def __init__(self, agent_instance: Any, **kwargs):
-        # agent_instance is the object imported from the user's entry_point
-        super().__init__(agent_instance)
-        
-    def invoke(self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None) -> Dict[str, Any]:
-        """
-        Execute the agent logic.
-        """
-        # Execute your custom framework's logic
+class Ag2Adapter(BaseAdapter):
+    def invoke(
+        self, inputs: Dict[str, Any], callbacks: Optional[List[Any]] = None
+    ) -> Dict[str, Any]:
+        # self.agent is the object imported from runtime.adapter.entry_point
         result = self.agent.run(**inputs)
-        
         return {
             "status": "success",
-            "output": result
+            "output": result,
         }
 ```
 
-## 2. Register via Entry Points
+The loader constructs your adapter as `AdapterClass(agent_instance=..., config=...)` after importing the user's entry point from `charm.yaml`.
 
-To let Charm's core loader find your adapter, register it in your package's `pyproject.toml` under the `charm.adapters` group. 
+Return a dict with `"status": "success"` and `"output"` for standard Store rendering, or include structured keys like `_charm_render_type` (see [Output Renderers](/guides/output-renderers)).
 
-For example, if you are publishing a package called `charm-adapter-ag2`:
+## 3. Register via entry points
+
+In your plugin package's `pyproject.toml`:
 
 ```toml
+[project]
+name = "charm-adapter-ag2"
+version = "0.1.0"
+dependencies = ["charmos"]
+
 [project.entry-points."charm.adapters"]
-ag2 = "charm_adapter_ag2.adapter:MyCustomAdapter"
+ag2 = "charm_adapter_ag2.adapter:Ag2Adapter"
 ```
 
-Once a user runs `pip install charm-adapter-ag2`, the `ag2` adapter immediately becomes available to the Charm CLI and Cloud Runner.
+Install locally while developing:
 
-## 3. Use it in `charm.yaml`
+```bash
+pip install -e ./path/to/charm-adapter-ag2
+pip install -e ./path/to/my-ag2-agent   # if separate
+```
 
-Users can now reference your adapter in their `charm.yaml` file using the name you defined in the entry point (`ag2`):
+Verify discovery:
+
+```bash
+python -c "from importlib.metadata import entry_points; print([e.name for e in entry_points(group='charm.adapters')])"
+```
+
+`charm validate` should accept `runtime.adapter.type: ag2` after your package is installed.
+
+## 4. Configure `charm.yaml`
+
+```yaml
+version: "0.4.2"
+
+persona:
+  name: "My AG2 Agent"
+  description: "Agent using a third-party adapter plugin"
+  version: "0.1.0"
+
+interface:
+  input:
+    type: object
+    required: [message]
+    properties:
+      message: { type: string }
+  output:
+    type: string
+
+runtime:
+  adapter:
+    type: ag2
+    entry_point: src.main:my_agent
+  lifecycle: serverless
+```
+
+## 5. Cloud execution requires a custom image
+
+The cloud runner **does not install your plugin package at runtime**. For production:
+
+1. Build a Docker image based on [charm-base](https://github.com/CharmAIOS/Charm/pkgs/container/charm-base) or an official runner image
+2. `RUN uv pip install charm-adapter-ag2` (or `pip install`) inside the Dockerfile
+3. Set `runtime.custom_image` to the pushed image URI
 
 ```yaml
 runtime:
+  custom_image: "ghcr.io/your-org/my-ag2-runtime:prod"
   adapter:
     type: ag2
     entry_point: src.main:my_agent
 ```
 
-## 4. Running in the Cloud Runner
+See [Custom Runtimes](/guides/custom-runtimes) for registry and IAM notes.
 
-If you want to run this custom adapter in the Charm Cloud Runner, you must pair it with a **Custom Runtime** (Base Image) that has your adapter package installed.
+## Local testing
 
-Create a `Dockerfile`:
+```bash
+# Validates adapter type (plugin must be installed in local env)
+charm validate .
 
-```dockerfile
-FROM ghcr.io/charmaios/charm-base:latest
+# Runs agent logic locally (uses local env, not necessarily your custom image)
+charm run . --input "hello"
 
-# Install your custom adapter
-RUN uv pip install charm-adapter-ag2
-
-# Copy the user's agent code
-COPY . /app
+# Simulates cloud container (uses custom_image from charm.yaml)
+charm run . --docker --input "hello"
 ```
 
-Then configure the custom image in `charm.yaml`:
+## Related
 
-```yaml
-runtime:
-  custom_image: "ghcr.io/your-org/your-custom-runtime:latest"
-  adapter:
-    type: ag2
-    entry_point: src.main:my_agent
-```
-
-With this setup, the Cloud Runner will boot your custom image, read `type: ag2`, dynamically load your adapter via the Python entry point, and execute the agent flawlessly.
+- [Extensibility Overview](/guides/extensibility)
+- [Custom Runtimes](/guides/custom-runtimes)
+- [Custom Python Adapter](/adapters/custom) — built-in path, no entry points
+- [Write a Custom Adapter](/oss/adapter) — contributing official adapters to the SDK repo

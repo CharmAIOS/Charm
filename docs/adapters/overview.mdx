@@ -32,6 +32,10 @@ runtime:
 - Use `langchain`, `langgraph`, or `crewai` when you already use that framework.
 - Use `openclaw` for browser, tools, and computer-use style workflows.
 
+## Third-party adapter plugins
+
+Any pip package can register additional `runtime.adapter.type` values via `[project.entry-points."charm.adapters"]`. These require a [custom runtime image](/guides/custom-runtimes) on the cloud runner. See [Extensibility Overview](/guides/extensibility) and [Custom Adapters](/guides/custom-adapters).
+
 ## Adapter Pages
 
 - [Custom](/adapters/custom)

@@ -32,6 +32,8 @@ runtime:
 
 When `custom_image` is declared, the Cloud Runner completely ignores the adapter mapping and boots your provided Docker image directly.
 
+Third-party adapter plugins (registered via `charm.adapters` entry points) **require** a `custom_image` that installs the plugin package — see [Custom Adapters](/guides/custom-adapters).
+
 > **Note**: The legacy `runtime.mode` configuration (`standard` or `full`) is now deprecated and ignored by the Cloud Runner.
 
 ## Related Pages

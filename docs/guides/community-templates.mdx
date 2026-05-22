@@ -1,59 +1,82 @@
 ---
 title: Community Templates
-description: Learn how to contribute custom agent templates to the Charm ecosystem.
+description: Contribute starter agent templates to the Charm CLI scaffold registry.
 ---
 
 # Community Templates
 
-Charm's CLI scaffold system (`charm init`) is completely decoupled from the SDK's release cycle. This means the community can easily contribute new agent templates, and they will be instantly available to all developers worldwide without requiring an SDK update.
+`charm init` scaffolds new agents from a remote manifest — not from files bundled inside the installed `charmos` wheel. That lets the community add templates without waiting for an SDK release.
 
 ## How it works
 
-When you run `charm init`, the CLI fetches the latest [templates-manifest.json](https://github.com/CharmAIOS/Charm/blob/main/templates-manifest.json) from the `main` branch of the Charm repository. This JSON file acts as a central registry containing all the files and configurations for every template.
+When you run `charm init`, the CLI fetches:
 
-## Contributing a Template
+```
+https://raw.githubusercontent.com/charmaios/charm/main/templates-manifest.json
+```
 
-If you have built an excellent starter template (e.g., a "Sales Agent" or "Next.js Integration Agent"), you can share it by submitting a Pull Request to the Charm GitHub repository.
+Each manifest entry lists files (as JSON strings) to write into the new project directory. After a PR merges to **`main`**, the template is available globally on the next `charm init`.
 
-You **do not** need to write any Python code to add a template!
+Offline fallback: if the manifest cannot be fetched, the CLI scaffolds a minimal Python template.
 
-### Step 1: Prepare your JSON entry
-Create a JSON object that describes your template and contains all the initial files you want to scaffold. 
+## Contributing a template
 
-Here is the schema for a single template entry:
+You **do not** write Python loader code — only a JSON entry in the manifest.
+
+### Step 1: Prepare your template entry
 
 ```json
 {
   "id": "my-sales-agent",
-  "description": "An autonomous sales agent with Salesforce integration.",
-  "post_init_message": "  ├── charm.yaml\n  ├── .charmignore\n  └── src/\n      └── main.py\n\nNext: run 'charm push'!",
+  "description": "Sales outreach agent starter",
+  "post_init_message": "  ├── charm.yaml\n  ├── .charmignore\n  └── src/\n      └── main.py\n\nNext: charm push",
   "files": [
     {
       "path": "charm.yaml",
-      "content": "persona:\n  name: \"my-agent\"\n  description: \"A sales agent.\"\nruntime:\n  adapter:\n    type: python\n    entry_point: src.main:agent\n"
+      "content": "version: \"0.4.2\"\n\npersona:\n  name: \"My Sales Agent\"\n  description: \"A sales agent starter.\"\n  version: \"0.1.0\"\n\ninterface:\n  input:\n    type: object\n    required: [message]\n    properties:\n      message: { type: string, title: Message }\n  output:\n    type: string\n\nruntime:\n  adapter:\n    type: custom\n    entry_point: src.main:agent\n  lifecycle: serverless\n"
     },
     {
       "path": ".charmignore",
-      "content": ".env\n__pycache__/\n"
+      "content": ".env\n.venv\n__pycache__/\n*.pyc\n"
+    },
+    {
+      "path": "src/__init__.py",
+      "content": ""
     },
     {
       "path": "src/main.py",
-      "content": "# Your agent logic here\ndef agent(inputs):\n    return 'Hello Sales!'"
+      "content": "def agent(inputs):\n    msg = inputs.get('message', 'hello')\n    return f'Sales draft for: {msg}'\n"
     }
   ]
 }
 ```
 
 **Tips:**
-- The `id` must be unique and use `kebab-case`. This is the ID users will type in `charm init --template <id>`.
-- Keep the `description` concise (under 60 characters).
-- Include `charm.yaml` and `.charmignore` in the `files` array. The CLI will automatically inject the user's chosen agent name into `charm.yaml`.
-- Ensure your file `content` strings are properly escaped (e.g., escaping newlines as `\n` and quotes as `\"`).
 
-### Step 2: Submit a Pull Request
-1. Fork the [CharmAIOS/Charm](https://github.com/CharmAIOS/Charm) repository.
-2. Edit the `templates-manifest.json` file in the root directory.
-3. Append your new template object to the `templates` array.
-4. Submit a Pull Request.
+- `id` must be unique **kebab-case** — used as `charm init my-agent --template my-sales-agent`
+- Include `version: "0.4.2"` in `charm.yaml` content (required contract version)
+- Use `type: custom` (or `python`, an alias) for standard Python agents — not a fictional adapter name unless you document a required plugin
+- Escape newlines as `\n` and quotes as `\"` inside JSON strings
+- Rich templates can include `interface.ui` for Store widgets — see [Input Forms](/guides/interface)
 
-Once your PR is reviewed and merged into `main`, your template will immediately be live! Anyone running `charm init` will see your template in the interactive menu.
+### Step 2: Open a pull request
+
+1. Fork [CharmAIOS/Charm](https://github.com/CharmAIOS/Charm)
+2. Append your object to the `templates` array in root `templates-manifest.json`
+3. Submit a PR for review
+
+After merge to `main`, your template appears in `charm init` (interactive menu or `--template <id>`).
+
+## Templates vs runtime plugins
+
+| | Community template | Adapter plugin |
+|---|-------------------|----------------|
+| Delivers | Starter files for `charm init` | New `runtime.adapter.type` |
+| Registration | Manifest PR | `charm.adapters` entry point |
+| Custom Docker image | Only if template's `charm.yaml` sets `custom_image` | Required on cloud |
+
+## Related
+
+- [Extensibility Overview](/guides/extensibility)
+- [Build Your First Agent](/quickstart/first-app)
+- [Configuration](/guides/manifest)

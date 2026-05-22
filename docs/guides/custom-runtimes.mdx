@@ -1,66 +1,105 @@
 ---
 title: Custom Runtimes
-description: Learn how to provide your own Docker image for complete control over your agent's execution environment.
+description: Provide your own Docker image for agent execution on the cloud runner.
 ---
 
 # Custom Runtimes
 
-While Charm provides highly optimized base images for standard frameworks like LangChain, CrewAI, and OpenClaw, you may sometimes need complete control over the execution environment. 
+Use a **custom runtime** when the official Charm base images are not enough — extra system packages, pre-baked models, a private fork of `charmos`, or a **third-party adapter/telemetry/memory plugin** baked into the image.
 
-This could be because:
-- You are using a specialized framework like AG2 or AutoGen.
-- You have heavy system dependencies (e.g., custom rendering engines, specific versions of Node.js).
-- You want to pre-install massive ML models inside the image to save boot time.
+`runtime.custom_image` tells the cloud runner which container image to pull. When set, it **overrides** the default adapter→image mapping from [Base Images](/platform/base-images).
 
-Charm allows you to define a **Custom Runtime** by pointing to your own Docker image.
+## When you need this
+
+| Goal | Typical setup |
+|------|----------------|
+| Extra Python/system deps only | `type: custom` + `custom_image` |
+| Third-party adapter plugin | `type: your_plugin` + `custom_image` with plugin installed |
+| Telemetry or memory plugin on cloud | Same — plugin package must be in the image |
+| Private or pinned `charmos` version | Extend base image and install your SDK build |
+
+You do **not** need `custom_image` for a normal `charm init` Python agent that runs on the default `runner-base` image.
 
 ## 1. Create a Dockerfile
 
-To ensure compatibility with the Charm Runner, we highly recommend extending the official base image: `ghcr.io/charmaios/charm-base:latest`.
+Extend the official base image:
 
 ```dockerfile
-# Start from the minimal Charm Base Image
 FROM ghcr.io/charmaios/charm-base:latest
 
-# Example: Install system dependencies
-RUN apt-get update && apt-get install -y ffmpeg
+# System dependencies (example)
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Example: Install your custom framework
-RUN uv pip install charm-adapter-ag2
-
-# You can also pre-download models or copy proprietary binaries here
+# Third-party plugin packages (examples)
+RUN uv pip install charm-adapter-ag2 charm-telemetry-datadog
 ```
 
-Build and push this image to a container registry accessible to the internet (e.g., GitHub Container Registry, Docker Hub, or Google Artifact Registry).
+Build and push to a registry the runner can reach:
 
 ```bash
-docker build -t ghcr.io/your-org/my-agent-image:latest .
-docker push ghcr.io/your-org/my-agent-image:latest
+docker build -t ghcr.io/your-org/my-agent-runtime:prod .
+docker push ghcr.io/your-org/my-agent-runtime:prod
 ```
 
-## 2. Declare the Custom Image in `charm.yaml`
+For Google Artifact Registry:
 
-Once your image is publicly accessible, you can tell the Charm Cloud Runner to use it by adding the `custom_image` field under the `runtime` configuration block in your `charm.yaml`:
+```bash
+gcloud auth configure-docker us-central1-docker.pkg.dev
+docker tag ghcr.io/your-org/my-agent-runtime:prod \
+  us-central1-docker.pkg.dev/YOUR_PROJECT/charm-images/my-agent-runtime:prod
+docker push us-central1-docker.pkg.dev/YOUR_PROJECT/charm-images/my-agent-runtime:prod
+```
+
+## 2. Declare the image in `charm.yaml`
 
 ```yaml
-version: "{manifest_version}"
+version: "0.4.2"
+
 persona:
   name: "My Custom Agent"
+  description: "Runs on a custom runtime image"
+  version: "0.1.0"
+
+interface:
+  input:
+    type: object
+    required: [input]
+    properties:
+      input: { type: string }
+  output:
+    type: string
 
 runtime:
+  custom_image: "ghcr.io/your-org/my-agent-runtime:prod"
   adapter:
-    type: "custom"
-    entry_point: "src.main:run"
-  
-  # Inject your custom image URI here
-  custom_image: "ghcr.io/your-org/my-agent-image:latest"
+    type: custom
+    entry_point: src.main:agent
+  lifecycle: serverless
 ```
 
-## 3. Deployment
+The runner bundles your **agent source code** at execute time; the **image** supplies the environment (Python deps, plugins, system libs).
 
-Simply run `charm push` as usual.
+## 3. Publish and run
 
-The Charm CLI will bundle your code and update the registry. When users trigger your agent, the Cloud Runner will dynamically fetch and launch `ghcr.io/your-org/my-agent-image:latest` instead of the default images, giving your agent the exact environment it needs.
+```bash
+charm validate .
+charm push .
+```
 
-> [!NOTE]
-> Ensure your Docker Registry is public, or that the Charm Cloud Runner has the necessary IAM permissions/Service Accounts configured to pull from your private registry.
+Users trigger runs from the Store; the runner pulls `custom_image` and executes your bundle inside that container.
+
+## Registry access
+
+| Registry visibility | Requirement |
+|--------------------|-------------|
+| Public (GHCR public, etc.) | Runner pulls without extra IAM |
+| Private | Grant the cloud runner service account **read** access to your registry |
+
+The runner does **not** run `pip install` for your agent or plugins after the container starts — everything required at runtime must be in the image (except the agent bundle mounted/downloaded by the runner).
+
+## Related
+
+- [Extensibility Overview](/guides/extensibility)
+- [Custom Adapters](/guides/custom-adapters)
+- [Base Images](/platform/base-images)

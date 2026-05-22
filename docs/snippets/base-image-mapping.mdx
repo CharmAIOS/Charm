@@ -1,4 +1,8 @@
-- **Custom / Standard Python** (`type: "custom"`): Uses `runner-base`. A minimal Python environment.
-- **LangChain** (`type: "langchain"`): Uses `runner-langchain`. Pre-installed with LangChain dependencies.
-- **CrewAI** (`type: "crewai"`): Uses `runner-crewai`. Pre-installed with CrewAI dependencies.
-- **OpenClaw** (`type: "openclaw"`): Uses `runner-openclaw`. A heavy environment that includes browser automation (Playwright), FFmpeg, and the OpenClaw engine.
+- **Custom / Python** (`type: "custom"` or `"python"`): Uses `runner-base`. Minimal Python environment for plain code agents.
+- **LangChain** (`type: "langchain"`): Uses `runner-langchain`.
+- **LangGraph** (`type: "langgraph"`): Uses `runner-langchain` (same image as LangChain).
+- **CrewAI** (`type: "crewai"`): Uses `runner-crewai`.
+- **OpenClaw** (`type: "openclaw"`): Uses `runner-openclaw` (Playwright, FFmpeg, OpenClaw engine).
+- **Third-party adapter plugins**: Use whatever image you declare in `runtime.custom_image` — the runner does not map plugin names automatically.
+
+When `runtime.custom_image` is set, adapter→image mapping is **ignored** and your URI is used directly.

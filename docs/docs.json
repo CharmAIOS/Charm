@@ -109,6 +109,7 @@
                     {
                         "group": "Customization",
                         "pages": [
+                            "guides/extensibility",
                             "guides/custom-runtimes",
                             "guides/custom-adapters",
                             "guides/telemetry-exporters",

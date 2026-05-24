@@ -32,6 +32,10 @@ Built-in provider names today:
 | `supabase` | Core — when Supabase memory is configured |
 | Custom names | `charm.memory` entry points |
 
+### Underlying Checkpoint Mechanism
+
+When using an external provider like `supabase`, Charm leverages thread identifiers (`thread_id`) and checkpoint namespaces to continuously sync state to the database. Upon waking up or migrating across devices, the runtime automatically queries the most recent state checkpoint. This architecture provides zero-downtime perception and seamless cross-device continuity without additional developer overhead.
+
 ## Creating a memory plugin
 
 ### 1. Implement `BaseMemoryStore`

@@ -21,9 +21,15 @@ The Store passes a thread ID when a run belongs to an existing conversation. Age
 
 Some runtimes may receive state snapshots or history payloads. Agents should treat these as user/session context, not as global memory.
 
+## Cross-Device Rehydration
+
+Threads act as the critical key for enabling seamless cross-device continuity. When a user authenticates on a new device (e.g., moving from the Web Gateway to the Desktop App) and provides an existing `thread_id`, the platform automatically queries the database to rehydrate the complete execution history and session state. This allows interactive agents to resume conversations without losing context.
+
 ## Workspace Isolation
 
-- Serverless and interactive runs should treat each run/thread as isolated.
+The cloud runner dynamically provisions highly isolated workspaces using the pattern `/workspace/{user_id}/{agent_id}/{thread_id}`.
+
+- Serverless and interactive runs treat each thread as an isolated sandbox, ensuring that generated artifacts, uploaded files, and local memory (`MEMORY.md`) remain strictly segregated per user session.
 - Daemon agents may share a longer-lived workspace depending on implementation.
 
 ## Use Cases

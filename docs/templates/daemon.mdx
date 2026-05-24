@@ -41,6 +41,12 @@ runtime:
 3. A machine is created or reused in the configured Fly.io app.
 4. The daemon process starts and continues running until paused, restarted, or terminated.
 
+## Auto-Recovery & Persistence
+
+**Fault Tolerance:** Daemon machines deployed on the cloud runner are equipped with automatic recovery capabilities. If the underlying Fly.io machine goes `offline` or is `stopped` due to infrastructure scaling or resource reassignment, the runner detects this state upon the next interaction and automatically issues a `restart` command to resurrect the container.
+
+**Important:** Because daemon machines may restart automatically, you must pair them with an external `runtime.memory.provider` (such as Supabase or Redis) to persist state. When state is safely externalized, auto-restarts remain entirely transparent to the end user.
+
 ## Production Requirements
 
 The production runner must be configured with:

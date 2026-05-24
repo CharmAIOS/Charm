@@ -25,9 +25,11 @@ Charm loads the compiled graph and invokes it with the input payload from the St
 - Stateful assistants.
 - Agents with conditional routing.
 
-## State Notes
+## State and Auto-Checkpointing
 
-If your graph needs durable state, document the expected storage/checkpointing behavior clearly and test it in the target lifecycle.
+If your graph requires durable state, the Charm SDK provides automatic checkpointing when used with an external memory provider. 
+
+When you configure `runtime.memory.provider: supabase`, the platform automatically injects a `CharmSupabaseCheckpointer` into your LangGraph execution. This eliminates the need for custom database logic—every step of your graph's state is transparently serialized and persisted. In the event of a system upgrade, network disconnect, or runner restart, the next invocation automatically rehydrates the latest graph state to resume the asynchronous workflow seamlessly, ensuring strict fault tolerance.
 
 ## Tips
 

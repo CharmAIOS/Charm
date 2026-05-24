@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "charmos"
 version = "0.5.0"
-description = "The Unified System Layer for Agentic Intelligence"
+description = "The Unified Application Layer for Agentic Intelligence"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [

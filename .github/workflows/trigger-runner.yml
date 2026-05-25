@@ -3,8 +3,9 @@ name: Trigger Runner Deploy
 on:
     push:
         branches:
-            - develop
             - main
+        tags:
+            - 'v*'
         paths:
             - 'src/**'
             - 'docker/Dockerfile*'

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/charm-banner.png" alt="Charm Banner" width="60%" />
+  <img src="https://raw.githubusercontent.com/CharmAIOS/Charm/main/assets/charm-banner.png" alt="Charm Banner" width="60%" />
 </p>
 
 <p align="center">

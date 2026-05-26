@@ -1,0 +1,44 @@
+---
+title: Agentic Merge
+summary: Understand how Charm safely upgrades OpenClaw agents while preserving user workspace modifications via an intelligent agentic merge.
+---
+
+OTA updates use an intelligent **Agentic Merge** approach to allow agents like OpenClaw to handle their own version upgrades. This mechanism ensures that any local customizations you have made are not blindly overwritten by a new software bundle.
+
+## Overview
+
+When an upgrade is triggered, the system does not simply replace your workspace with the new bundle. Instead, it calculates the differences (diff) between the old bundle and the new bundle, and then delegates the task of applying those differences to the local AI agent itself.
+
+This approach mimics how a human developer resolves merge conflicts, allowing the agent to adapt the changes to your specific environment and customizations.
+
+## Core Process & Logic
+
+The Agentic Merge process involves the following key stages:
+
+### 1. Trigger & Intercept
+During an upgrade, the runner intercepts the payload and looks for an upgrade diff (`__charm_upgrade_diff__`). When detected, the `OpenClaw Adapter` activates Agentic Merge mode and logs:
+`"🔧 Upgrade payload intercepted. Launching Agentic Merge Mode."`
+
+### 2. Preserve Workspace State
+In a normal startup, the workspace is seeded directly from the downloaded bundle. However, during an upgrade, this step is intentionally bypassed. 
+This is critical because the workspace must retain the **previous version's** files alongside any user customizations. If the workspace were seeded with the new bundle, the diff would not match the file contents, causing the merge to fail.
+
+### 3. Pre-upgrade Snapshot (Safety Backup)
+Before the agent alters any files, the system creates a backup of the current workspace state. 
+If the environment provides a `CHARM_UPGRADE_SNAPSHOT_VERSION`, a `.tar.gz` archive is saved to a hidden `.snapshots/` directory. This ensures a one-command rollback path if the merge fails.
+
+### 4. Agent Execution
+The OpenClaw Adapter injects the upgrade differences into a prompt template (e.g., `Execute upgrade with diff: {upgrade_diff}`).
+The OpenClaw agent receives this instruction and acts on the diff. It intelligently applies the necessary changes to the existing files, respecting any custom modifications you may have made previously.
+
+### 5. Completion & Rollback
+- **Success:** Once the agent successfully applies the changes, the adapter prepends `UPGRADE_COMPLETE:` to the final output. This acts as a sentinel signal for the runner to finalize the version increment.
+- **Rollback:** If an unrecoverable error occurs, the runner uses the `CHARM_ROLLBACK_SNAPSHOT_PATH` to clear the workspace and extract the snapshot, instantly reverting the agent to its last known healthy state.
+
+## Summary
+
+The OTA Agentic Merge is a robust workflow combining:
+1. Snapshot backups
+2. Preventing blind code overwrites
+3. LLM-driven intelligent conflict resolution
+4. Strict completion signals and rollback safety nets

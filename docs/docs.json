@@ -94,6 +94,47 @@
                 ]
             },
             {
+                "tab": "Platform",
+                "groups": [
+                    {
+                        "group": "Overview",
+                        "pages": [
+                            "platform/overview",
+                            "platform/execution-modes",
+                            "platform/base-images",
+                            "adapters/overview",
+                            "guides/interface",
+                            "guides/state-and-memory"
+                        ]
+                    },
+                    {
+                        "group": "Capabilities",
+                        "pages": [
+                            "platform/features",
+                            "platform/ui-protocol",
+                            "platform/observability",
+                            "platform/skills",
+                            "platform/keys",
+                            "platform/oauth",
+                            "platform/threads",
+                            "platform/agentic-merge"
+                        ]
+                    },
+                    {
+                        "group": "Store",
+                        "pages": [
+                            "platform/store",
+                            "platform/studio",
+                            "platform/listing",
+                            "platform/ambient-desktop-companion",
+                            "platform/app",
+                            "platform/platform",
+                            "platform/earn-as-you-go"
+                        ]
+                    }
+                ]
+            },
+            {
                 "tab": "How-to Guides",
                 "groups": [
                     {
@@ -202,45 +243,6 @@
                             "POST /v1/daemon/{agent_id}/control",
                             "GET /v1/daemons",
                             "POST /v1/daemons"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tab": "Platform",
-                "groups": [
-                    {
-                        "group": "Overview",
-                        "pages": [
-                            "platform/overview",
-                            "platform/execution-modes",
-                            "platform/base-images",
-                            "adapters/overview",
-                            "guides/interface",
-                            "guides/state-and-memory"
-                        ]
-                    },
-                    {
-                        "group": "Capabilities",
-                        "pages": [
-                            "platform/features",
-                            "platform/ui-protocol",
-                            "platform/observability",
-                            "platform/skills",
-                            "platform/keys",
-                            "platform/oauth",
-                            "platform/threads"
-                        ]
-                    },
-                    {
-                        "group": "Store",
-                        "pages": [
-                            "platform/store",
-                            "platform/studio",
-                            "platform/ambient-desktop-companion",
-                            "platform/app",
-                            "platform/platform",
-                            "platform/earn-as-you-go"
                         ]
                     }
                 ]

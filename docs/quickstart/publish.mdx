@@ -9,7 +9,7 @@ Please make sure to review our current technical specifications and limitations 
 
 Charm automatically selects the optimal container base image depending on your framework (`adapter.type`). See [Base Images](/platform/base-images) for more information on available runtimes and how to inject your own custom Docker image.
 
-### Hard Limitations (CRITICAL)
+### Technical Constraints
 
 Please read this section carefully. Most deployment failures are caused by violating these rules.
 
@@ -18,18 +18,21 @@ Please read this section carefully. Most deployment failures are caused by viola
    - The runtime environments **do not have GPU access (No CUDA)**.
    - **Solution**: Use cloud APIs (OpenAI, Anthropic, Groq, HuggingFace Inference API) for all inference tasks.
 
-2. **Strict Resource Limits**
-   - Memory is capped at **2 GB**. Attempting to load large datasets or models will cause an OOM (Out Of Memory) crash immediately.
-   - Execution time is limited to **600 seconds** (10 minutes) for serverless jobs. 
-   - **Solution**: If your agent needs to run 24/7 or maintain state between requests, configure `lifecycle: "daemon"` in your `charm.yaml`.
+2. **Resource Limits**
+   - Memory varies by execution mode:
+     - **Serverless**: **2 GB RAM**, 2 vCPU.
+     - **Daemon**: **1 GB RAM**, 1 shared vCPU.
+   - Attempting to load large datasets or models beyond these limits will cause an OOM (Out Of Memory) crash.
+   - The default execution timeout for serverless jobs is **600 seconds** (10 minutes), but you can customize this via `policies.execution_timeout_seconds` in your `charm.yaml`.
+   - **Solution**: If your agent needs to run 24/7 or maintain persistent state, configure `lifecycle: "daemon"` in your `charm.yaml`.
 
-3. **No Inbound Ports / Web Servers**
-   - **Do NOT** start servers that listen on inbound ports (e.g., `flask run`, `express`, `fastapi`).
-   - The runner is designed for **task execution**, not hosting web services. Any process waiting for inbound HTTP requests will timeout.
+3. **No Inbound Ports in Serverless Mode**
+   - In `serverless` mode, **do NOT** start servers that listen on inbound ports (e.g., `flask run`, `express`, `fastapi`). The serverless runner is designed for task execution, not hosting web services — any process waiting for inbound HTTP requests will timeout.
+   - **Note**: This restriction does **not** apply to `daemon` mode, which runs a persistent VM with full networking capabilities.
 
-4. **System Installs Disabled**
-   - `apt-get` is disabled. You cannot install system-level packages at runtime.
-   - **Solution**: If you need system binaries like **FFmpeg** or **Chrome**, you must either use an adapter that provides them (e.g., `adapter.type: "openclaw"`) or build and provide a `custom_image`.
+4. **System Package Installation**
+   - While `apt-get` is technically available inside the container, installing system packages at runtime is **strongly discouraged** for serverless jobs because packages are not persisted between invocations and will significantly slow down each cold start.
+   - **Solution**: If you need system binaries like **FFmpeg** or **Chrome**, use an adapter that provides them (e.g., `adapter.type: "openclaw"` includes FFmpeg, Node.js, and browser libraries) or provide your own `custom_image` in `charm.yaml` with everything pre-installed.
 
 5. **No Absolute Paths**
    - The runner executes in a dynamic container. **Do NOT** use hardcoded paths like `/Users/me/project/...`.

@@ -1,40 +1,43 @@
 ---
 title: Earn As You Go
-summary: The Charm creator economy — earn revenue every time your agent runs.
+summary: Earn revenue when users run your agent
 ---
 
-Earn As You Go is Charm's usage-based creator revenue model.
+**Earn As You Go** is Charm's dynamic, usage-based creator revenue model. Instead of relying solely on upfront purchases or subscriptions, creators can earn a continuous share of the platform's revenue simply by driving high-quality engagement and usage of their agents.
 
-## Concept
+## How the Profit Share Works
 
-Instead of earning only from an install or subscription, creators can earn when users run agent.
+Charm operates a sophisticated revenue-sharing algorithm designed to reward creators who build valuable, highly engaging agents. The distribution is influenced by :
 
-## What May Affect Earnings
+### 1. Platform Revenue & Profitability
 
-Revenue can depend on:
+### 2. User Tier Weighting
 
-- user plan,
-- execution cost,
-- successful completion,
-- payout policy,
-- platform fees.
+### 3. Usage & Engagement Metrics
 
-## Creator Dashboard
+## Anti-Fraud & Settlement
 
-Creator dashboards should help authors understand:
+To ensure a fair and sustainable creator ecosystem, all generated revenue events pass through an automated audit period before settlement. 
 
-- runs,
-- revenue events,
-- pending balance,
-- available balance,
-- payouts,
-- refund or adjustment events.
+*   **Organic Engagement:** Revenue sharing requires organic, legitimate usage. Self-dealing (running your own agents to inflate metrics) is strictly prohibited and will not generate revenue.
+*   **Velocity Anomalies:** Our systems automatically monitor for unnatural engagement patterns or inorganic traffic spikes. Activity flagged as anomalous is excluded from the final payout calculation.
+
+Revenue events remain in a `pending` state until the monthly audit cycle concludes. Once cleared, they transition to `settled`.
+
+## Tracking Your Earnings
+
+You can monitor your estimated "Earn As You Go" trajectory directly in the **Creator Studio**. 
+
+*   **Pending Balance**: Shows estimated revenue that has been attributed to your agent's engagement but has not yet completed the monthly settlement and audit process.
+*   **Available Balance**: Settled, audited funds ready for transfer.
+
+### Payouts
+Payouts are processed on a standardized monthly schedule. Creators who have completed their onboarding and met the dynamic payout thresholds will receive automated transfers directly to their connected accounts.
 
 ## Getting Started
 
-To prepare an agent for monetization:
+To prepare your agent for monetization:
 
-1. Set pricing in `charm.yaml`.
-2. Publish and test the listing.
-3. Verify billing behavior in staging or with test accounts.
-4. Monitor usage and revenue after launch.
+1. Ensure your agent is published and accessible in the Charm Store.
+2. Complete your Stripe Connect onboarding via the Creator Studio.
+3. Focus on building high-value agents that drive deep, continuous engagement from premium users.

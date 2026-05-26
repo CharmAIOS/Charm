@@ -62,10 +62,10 @@
     "navigation": {
         "tabs": [
             {
-                "tab": " ",
+                "tab": "Get Started",
                 "groups": [
                     {
-                        "group": "Getting Started",
+                        "group": " ",
                         "pages": [
                             "index",
                             "quickstart/overview",
@@ -221,7 +221,7 @@
                         ]
                     },
                     {
-                        "group": "Features",
+                        "group": "Capabilities",
                         "pages": [
                             "platform/features",
                             "platform/ui-protocol",

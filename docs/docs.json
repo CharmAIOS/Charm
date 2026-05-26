@@ -62,7 +62,7 @@
     "navigation": {
         "tabs": [
             {
-                "tab": "Tutorials",
+                "tab": " ",
                 "groups": [
                     {
                         "group": "Getting Started",
@@ -123,17 +123,6 @@
                             "guides/push",
                             "guides/version-control"
                         ]
-                    },
-                    {
-                        "group": "Open Source",
-                        "pages": [
-                            "oss/dev-setup",
-                            "oss/adapter",
-                            "oss/base-image",
-                            "oss/documentation",
-                            "oss/release-process",
-                            "oss/docs-versioning"
-                        ]
                     }
                 ]
             },
@@ -141,7 +130,7 @@
                 "tab": "Reference",
                 "groups": [
                     {
-                        "group": "Core References",
+                        "group": "Core",
                         "pages": [
                             "references/overview",
                             "references/sdk",
@@ -150,7 +139,7 @@
                         ]
                     },
                     {
-                        "group": "CLI Commands",
+                        "group": "CLI",
                         "pages": [
                             "cli/init",
                             "cli/run",
@@ -218,10 +207,10 @@
                 ]
             },
             {
-                "tab": "Explanation",
+                "tab": "Platform",
                 "groups": [
                     {
-                        "group": "Architecture",
+                        "group": "Overview",
                         "pages": [
                             "platform/overview",
                             "platform/execution-modes",
@@ -232,7 +221,7 @@
                         ]
                     },
                     {
-                        "group": "Platform Features",
+                        "group": "Features",
                         "pages": [
                             "platform/features",
                             "platform/ui-protocol",
@@ -244,7 +233,7 @@
                         ]
                     },
                     {
-                        "group": "Charm Store & Payments",
+                        "group": "Store",
                         "pages": [
                             "platform/store",
                             "platform/studio",
@@ -253,9 +242,25 @@
                             "platform/platform",
                             "platform/earn-as-you-go"
                         ]
+                    }
+                ]
+            },
+            {
+                "tab": "Open Source",
+                "groups": [
+                    {
+                        "group": "Ecosystem",
+                        "pages": [
+                            "oss/dev-setup",
+                            "oss/adapter",
+                            "oss/base-image",
+                            "oss/documentation",
+                            "oss/release-process",
+                            "oss/docs-versioning"
+                        ]
                     },
                     {
-                        "group": "Community & Ecosystem",
+                        "group": "Community",
                         "pages": [
                             "guides/community-templates",
                             "oss/overview",

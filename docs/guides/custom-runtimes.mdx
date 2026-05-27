@@ -96,7 +96,7 @@ Users trigger runs from the Store; the runner pulls `custom_image` and executes 
 | Public (GHCR public, etc.) | Runner pulls without extra IAM |
 | Private | Grant the cloud runner service account **read** access to your registry |
 
-> **Note on dynamic installation**: The cloud runner **does** run `uv pip install -r requirements.txt` at boot time for lightweight dependencies (like Telemetry plugins). However, if your agent requires heavy ML packages, long compile times, or system-level dependencies (like `ffmpeg`), you **must** use a `custom_image` to avoid the 300-second boot timeout.
+> **Note on dynamic installation**: The cloud runner **does** run `uv pip install -r requirements.txt` at boot time for lightweight dependencies (like Telemetry and Memory plugins). However, if your agent requires heavy ML packages, long compile times, or system-level dependencies (like `ffmpeg`), you **must** use a `custom_image` to avoid the 300-second boot timeout.
 
 ## Community Plugins
 

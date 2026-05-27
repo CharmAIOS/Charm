@@ -39,7 +39,7 @@ Scenario: you can use **`type: ag2`** with **`custom_image`** (new adapter plugi
 1. **Start from a normal agent** — `charm init my-agent --template python`
 2. **Add a pip package** with your adapter/telemetry/memory classes and `pyproject.toml` entry points
 3. **Point `charm.yaml` at your plugin** — `runtime.adapter.type: your_plugin_name`
-4. **Add to requirements.txt** (if lightweight like Telemetry) **OR** Build a `custom_image` (if heavy like Adapters)
+4. **Add to requirements.txt** (if lightweight like Telemetry or Memory) **OR** Build a `custom_image` (if heavy like Adapters)
 5. **Set `runtime.custom_image`** in `charm.yaml` (if you built a Docker image)
 6. **`charm validate`** → **`charm push`** → run on the Store
 

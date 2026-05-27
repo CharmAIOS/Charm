@@ -17,8 +17,8 @@ Use this page to pick the right path before you start building.
 | [Custom runtime only](/guides/custom-runtimes) | `runtime.custom_image` in YAML | Agent container | **Yes** | No |
 | [Telemetry exporter](/guides/telemetry-exporters) | `charm.telemetry` entry point | Agent container | **Typically No** (dynamic install) | No |
 | [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Typically No** (dynamic install) | No |
-| [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | Only for **new** widget types |
-| [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | Only for **new** renderer types |
+| [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | **Typically No** (dynamic ESM install) |
+| [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | **Typically No** (dynamic ESM install) |
 | [Starter templates](/guides/community-templates) | PR to `charm-community-plugin` | `charm init` | No | No (manifest merge) |
 
 ## Two kinds of “custom” (important)
@@ -52,8 +52,8 @@ Scenario: you can use **`type: ag2`** with **`custom_image`** (new adapter plugi
 | Python agent logic | `charm init` + `type: custom` | Same |
 | Adapter type | `custom`, `langchain`, `openclaw`, … | New name via entry points |
 | Runtime image | Official `runner-*` images | Your `custom_image` |
-| Store form widgets | `text`, `textarea`, `file` | New widgets → store PR |
-| Rich output UI | Built-in `_charm_render_type` values | New types → store PR |
+| Store form widgets | `text`, `textarea`, `file`, `select`, `checkbox`, `slider` | New widgets → community plugin PR |
+| Rich output UI | Built-in `_charm_render_type` values | New types → community plugin PR |
 
 ## Cloud prerequisites
 

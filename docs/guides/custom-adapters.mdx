@@ -15,7 +15,12 @@ Charm loads adapters from Python **`entry_points`** in the `charm.adapters` grou
 
 Official adapters (`langchain`, `crewai`, `openclaw`, `custom`, …) use the same mechanism in the `charmos` package. Third-party packages add more names without forking core.
 
-## 1. Start from an agent project
+## 1. Get the Boilerplate
+
+> [!TIP]
+> **Fastest Path:** You do not need to write this from scratch. Use the official **[charm-adapter-template](https://github.com/CharmAIOS/charm-adapter-template)** repository on GitHub. Click **Use this template**, rename the folder, and jump straight to implementing your `invoke` method.
+
+If you are doing it manually, start by scaffolding a plain project:
 
 ```bash
 charm init my-ag2-agent --template python
@@ -105,7 +110,9 @@ runtime:
 
 ## 5. Cloud execution requires a custom image
 
-The cloud runner **does not install your plugin package at runtime**. For production:
+The cloud runner **will automatically `uv pip install` your adapter if it is listed in the user's `requirements.txt`**. However, if your adapter depends on massive libraries (like PyTorch or large LLM frameworks), `uv pip install` might timeout during Cloud Run startup.
+
+For heavy adapters, you should provide a custom image:
 
 1. Build a Docker image based on [charm-base](https://github.com/CharmAIOS/Charm/pkgs/container/charm-base) or an official runner image
 2. `RUN uv pip install charm-adapter-ag2` (or `pip install`) inside the Dockerfile
@@ -118,6 +125,16 @@ runtime:
     type: ag2
     entry_point: src.main:my_agent
 ```
+
+## 6. Submit to the Charm Store
+
+To make your adapter discoverable by the global Charm community:
+
+1. Fork the [charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin) repository.
+2. Edit `adapters/registry.json` to add your package name (`charm-adapter-ag2`).
+3. Submit a Pull Request.
+
+Once merged, your adapter will instantly appear in the **Charm Store Plugins Gallery**, allowing users to one-click copy the install command.
 
 See [Custom Runtimes](/guides/custom-runtimes) for registry and IAM notes.
 

@@ -16,7 +16,7 @@ Use this page to pick the right path before you start building.
 | [Custom adapter plugin](/guides/custom-adapters) | `charm.adapters` entry point | Agent container | **Yes** | No |
 | [Custom runtime only](/guides/custom-runtimes) | `runtime.custom_image` in YAML | Agent container | **Yes** | No |
 | [Telemetry exporter](/guides/telemetry-exporters) | `charm.telemetry` entry point | Agent container | **Typically No** (dynamic install) | No |
-| [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Yes** (if not built-in) | No |
+| [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Typically No** (dynamic install) | No |
 | [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | Only for **new** widget types |
 | [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | Only for **new** renderer types |
 | [Starter templates](/guides/community-templates) | PR to `charm-community-plugin` | `charm init` | No | No (manifest merge) |

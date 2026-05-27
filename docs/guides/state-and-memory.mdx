@@ -104,11 +104,36 @@ def agent(inputs):
 
 ## Cloud deployment
 
-1. Install your memory plugin in **`runtime.custom_image`** (unless using built-in `local` or `supabase`)
-2. Ensure **`policies.allow_internet_access`** (or network policy) allows reaching your database
-3. Provide connection secrets via environment variables — not in committed `charm.yaml`
+Unlike heavy adapters, **Memory plugins are typically lightweight** (e.g. `redis`, `pymongo`). This means the Charm Cloud Runner can install them dynamically at boot time without timing out.
+
+**You do NOT need a `custom_image` to use most Memory Providers!**
+
+1. Add the package to your agent's `requirements.txt`:
+```txt
+charm-memory-redis
+```
+
+2. Enable it in `charm.yaml`:
+```yaml
+runtime:
+  memory:
+    provider: redis
+    config:
+      url: "${REDIS_URL}"
+```
+
+3. Ensure **`policies.allow_internet_access`** (or network policy) allows reaching your database.
+4. Provide connection secrets via environment variables — not in committed `charm.yaml`.
+
+If your memory plugin requires heavy native packages (e.g. `psycopg2-binary` takes longer), you should bake it into a `runtime.custom_image` instead.
 
 If the configured plugin is not found at runtime, Charm **falls back to local file memory** and logs a warning.
+
+## Share with the Community
+
+Once your memory provider is working and published to PyPI, you can list it in the official **Charm Store**!
+
+Submit a Pull Request to the [charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin) repository to add your package to `memory/registry.json`. Your integration will immediately appear on the [Plugins](/plugins) page for other developers to discover.
 
 ## Related
 

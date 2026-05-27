@@ -12,7 +12,7 @@ description: Contribute starter agent templates to the Charm CLI scaffold regist
 When you run `charm init`, the CLI fetches:
 
 ```
-https://raw.githubusercontent.com/charmaios/charm/main/templates-manifest.json
+https://raw.githubusercontent.com/CharmAIOS/charm-community-plugin/main/templates/registry.json
 ```
 
 Each manifest entry lists files (as JSON strings) to write into the new project directory. After a PR merges to **`main`**, the template is available globally on the next `charm init`.
@@ -68,8 +68,8 @@ You **do not** write Python loader code — only a JSON entry in the manifest.
 
 ### Step 2: Open a pull request
 
-1. Fork [CharmAIOS/Charm](https://github.com/CharmAIOS/Charm)
-2. Append your object to the `templates` array in root `templates-manifest.json`
+1. Fork [CharmAIOS/charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin)
+2. Append your object to the `templates` array in `templates/registry.json`
 3. Submit a PR for review
 
 After merge to `main`, your template appears in `charm init` (interactive menu or `--template <id>`).

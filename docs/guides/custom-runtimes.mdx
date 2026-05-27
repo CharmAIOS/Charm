@@ -15,7 +15,7 @@ Use a **custom runtime** when the official Charm base images are not enough — 
 |------|----------------|
 | Extra Python/system deps only | `type: custom` + `custom_image` |
 | Third-party adapter plugin | `type: your_plugin` + `custom_image` with plugin installed |
-| Telemetry or memory plugin on cloud | Same — plugin package must be in the image |
+| Telemetry plugin on cloud | Typically **no custom_image needed** (runner auto-installs via `requirements.txt`) |
 | Private or pinned `charmos` version | Extend base image and install your SDK build |
 
 You do **not** need `custom_image` for a normal `charm init` Python agent that runs on the default `runner-base` image.
@@ -96,7 +96,7 @@ Users trigger runs from the Store; the runner pulls `custom_image` and executes 
 | Public (GHCR public, etc.) | Runner pulls without extra IAM |
 | Private | Grant the cloud runner service account **read** access to your registry |
 
-The runner does **not** run `pip install` for your agent or plugins after the container starts — everything required at runtime must be in the image (except the agent bundle mounted/downloaded by the runner).
+> **Note on dynamic installation**: The cloud runner **does** run `uv pip install -r requirements.txt` at boot time for lightweight dependencies (like Telemetry plugins). However, if your agent requires heavy ML packages, long compile times, or system-level dependencies (like `ffmpeg`), you **must** use a `custom_image` to avoid the 300-second boot timeout.
 
 ## Community Plugins
 

@@ -24,6 +24,9 @@ You do **not** need `custom_image` for a normal `charm init` Python agent that r
 
 Extend the official base image:
 
+> [!WARNING]
+> **You must inherit from an official Charm base image.** The cloud runner injects a bootstrap script and expects `bash`, `python3`, and the core `charmos` SDK to be pre-installed. Do not build from scratch (e.g., `FROM ubuntu` or `FROM python:3.11`).
+
 ```dockerfile
 FROM ghcr.io/charmaios/charm-base:latest
 
@@ -37,8 +40,11 @@ RUN uv pip install charm-adapter-ag2 charm-telemetry-datadog
 
 Build and push to a registry the runner can reach:
 
+> [!CAUTION]
+> **Always build for `linux/amd64`**. The cloud runners (Google Cloud Run / Fly.io) run on `amd64` architecture. If you are on an Apple Silicon Mac (M1/M2/M3) and build without the `--platform linux/amd64` flag, your agent will crash with an `exec format error`.
+
 ```bash
-docker build -t ghcr.io/your-org/my-agent-runtime:prod .
+docker build --platform linux/amd64 -t ghcr.io/your-org/my-agent-runtime:prod .
 docker push ghcr.io/your-org/my-agent-runtime:prod
 ```
 

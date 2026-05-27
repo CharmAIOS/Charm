@@ -1,45 +1,35 @@
 ---
-title: Store Listing Best Practices
-summary: Optimize your agent's presence on the Charm Store.
+title: Charm Studio
+summary: Monitor performance, track usage, and manage earnings for your deployed agents via the Creator Studio.
 ---
 
-A strong Store listing helps users understand what your agent does, when to use it, and what they will get back.
+**Charm Studio** is a comprehensive analytics and observability dashboard designed for Agent developers. It provides deep insights into how your published agents are performing, who is using them, and how much revenue they are generating.
 
-## Listing Metadata
+## Core Features
 
-Store metadata comes from `persona` in `charm.yaml`:
+The Studio is divided into three main sections:
 
-```yaml
-persona:
-  name: "Research Assistant"
-  version: "0.1.0"
-  description: "Create concise research briefs from a topic."
-  authors: ["Your Name"]
-  tags: ["productivity", "research"]
-```
+### 1. Analytics (Data & Insights)
+This section gives you a bird's-eye view of your agent's performance through high-level metrics and detailed trend charts.
 
-## Description
+*   **Key Metrics:** View your agent's Total Runs, Average Duration, Estimated Cost, and overall Success Rate.
+*   **Trend Graphs:** Track Execution Runs and New Installations over time (7 days, 30 days, or 6 months).
+*   **Behavioral Insights:**
+    *   **Token Usage:** A distribution chart showing how tokens are being consumed by underlying LLMs.
+    *   **Top Errors:** Identifies the most frequent causes of execution failure, helping you debug and improve your agent.
+    *   **Latency Distribution:** Shows a histogram of how long tasks typically take to complete.
+    *   **Session Depth:** Reveals user engagement by tracking how many conversational turns happen per session.
 
-Use `description` for a short one-line summary. Use `full_description` for:
+### 2. Usage & Logs
+For granular debugging and auditing, the Usage tab provides paginated, invocation-level logs.
 
-- use cases,
-- examples,
-- limitations,
-- expected output,
-- setup requirements.
+*   **Invocation Details:** See exactly who called your agent, when, and what the outcome was.
+*   **Resource Tracking:** Detailed breakdown of LLM Tokens vs. Tool Tokens used, alongside the specific cost of that single run.
+*   **Event Timeline:** View the exact sequence of events (status updates, tool calls, etc.) that occurred during the execution.
 
-## Assets
+### 3. Earnings (Creator Economy)
+If your agent is monetized, the Earnings tab helps you track your financial performance. For more details on how monetization works, see the [Earn As You Go](../platform/earn-as-you-go) guide.
 
-Recommended assets:
+*   **Wallet & Balance:** Integrates directly with **Stripe Connect** to show your available and pending balances.
+*   **Revenue:** A ledger of transactions and payouts related to user subscriptions or pay-per-use interactions with your agent.
 
-- square icon,
-- wide banner,
-- screenshots or examples when supported.
-
-## Tags
-
-Choose tags that match what users are searching for. Avoid stuffing unrelated tags.
-
-## Version Updates
-
-Update `persona.version` when you publish a new agent version. Use release notes or changelog entries for user-visible changes.

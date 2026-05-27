@@ -62,10 +62,10 @@
     "navigation": {
         "tabs": [
             {
-                "tab": "Tutorials",
+                "tab": "Get Started",
                 "groups": [
                     {
-                        "group": "Getting Started",
+                        "group": " ",
                         "pages": [
                             "index",
                             "quickstart/overview",
@@ -89,6 +89,47 @@
                             "templates/interactive",
                             "templates/daemon",
                             "templates/oauth-integration"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Platform",
+                "groups": [
+                    {
+                        "group": "Overview",
+                        "pages": [
+                            "platform/overview",
+                            "platform/execution-modes",
+                            "platform/base-images",
+                            "adapters/overview",
+                            "guides/interface",
+                            "guides/state-and-memory"
+                        ]
+                    },
+                    {
+                        "group": "Capabilities",
+                        "pages": [
+                            "platform/features",
+                            "platform/ui-protocol",
+                            "platform/observability",
+                            "platform/skills",
+                            "platform/keys",
+                            "platform/oauth",
+                            "platform/threads",
+                            "platform/agentic-merge"
+                        ]
+                    },
+                    {
+                        "group": "Store",
+                        "pages": [
+                            "platform/store",
+                            "platform/studio",
+                            "platform/listing",
+                            "platform/ambient-desktop-companion",
+                            "platform/app",
+                            "platform/platform",
+                            "platform/earn-as-you-go"
                         ]
                     }
                 ]
@@ -123,17 +164,6 @@
                             "guides/push",
                             "guides/version-control"
                         ]
-                    },
-                    {
-                        "group": "Open Source",
-                        "pages": [
-                            "oss/dev-setup",
-                            "oss/adapter",
-                            "oss/base-image",
-                            "oss/documentation",
-                            "oss/release-process",
-                            "oss/docs-versioning"
-                        ]
                     }
                 ]
             },
@@ -141,7 +171,7 @@
                 "tab": "Reference",
                 "groups": [
                     {
-                        "group": "Core References",
+                        "group": "Core",
                         "pages": [
                             "references/overview",
                             "references/sdk",
@@ -150,7 +180,7 @@
                         ]
                     },
                     {
-                        "group": "CLI Commands",
+                        "group": "CLI",
                         "pages": [
                             "cli/init",
                             "cli/run",
@@ -218,44 +248,21 @@
                 ]
             },
             {
-                "tab": "Explanation",
+                "tab": "Open Source",
                 "groups": [
                     {
-                        "group": "Architecture",
+                        "group": "Ecosystem",
                         "pages": [
-                            "platform/overview",
-                            "platform/execution-modes",
-                            "platform/base-images",
-                            "adapters/overview",
-                            "guides/interface",
-                            "guides/state-and-memory"
+                            "oss/dev-setup",
+                            "oss/adapter",
+                            "oss/base-image",
+                            "oss/documentation",
+                            "oss/release-process",
+                            "oss/docs-versioning"
                         ]
                     },
                     {
-                        "group": "Platform Features",
-                        "pages": [
-                            "platform/features",
-                            "platform/ui-protocol",
-                            "platform/observability",
-                            "platform/skills",
-                            "platform/keys",
-                            "platform/oauth",
-                            "platform/threads"
-                        ]
-                    },
-                    {
-                        "group": "Charm Store & Payments",
-                        "pages": [
-                            "platform/store",
-                            "platform/studio",
-                            "platform/ambient-desktop-companion",
-                            "platform/app",
-                            "platform/platform",
-                            "platform/earn-as-you-go"
-                        ]
-                    },
-                    {
-                        "group": "Community & Ecosystem",
+                        "group": "Community",
                         "pages": [
                             "guides/community-templates",
                             "oss/overview",

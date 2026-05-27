@@ -20,6 +20,12 @@ Use semantic versioning where possible:
 - minor: new compatible features,
 - major: breaking changes.
 
+## Agentic Merge Upgrade Process
+
+Charm uses an intelligent "Agentic Merge" approach for OTA updates to preserve your local workspace modifications while applying new bundle changes. 
+
+For detailed information on how this process works under the hood, including execution logic and fallback mechanisms, see the [Agentic Merge documentation](../platform/agentic-merge).
+
 ## Upgrade Safety
 
 Before publishing:
@@ -32,7 +38,7 @@ Before publishing:
 
 ## Daemon Agents
 
-Daemon agents may need restart or upgrade handling because they run persistently. Test daemon upgrades in staging before production.
+Daemon agents may need restart or upgrade handling because they run persistently. Test daemon upgrades in preview before production.
 
 ## Best Practices
 

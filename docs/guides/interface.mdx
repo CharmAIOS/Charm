@@ -48,9 +48,12 @@ Map fields to Store components with `interface.ui`:
 
 | Widget | Description |
 |--------|-------------|
-| `text` | Single-line input (default) |
+| `text` | Single-line input (default). Shows number spinner if type is integer/number. |
 | `textarea` | Multi-line input |
 | `file` | File upload — runner receives the uploaded file path in inputs |
+| `select` | Dropdown menu based on the `enum` property in your schema |
+| `checkbox`| Boolean toggle switch |
+| `slider` | Slider based on `minimum` and `maximum` schema properties |
 
 Legacy templates may use `x-ui-widget` on individual properties; the Store still resolves those for backward compatibility.
 
@@ -67,16 +70,15 @@ def agent(inputs):
 
 File fields are injected by the runner/store pipeline — use the key name from your schema.
 
-## Adding new widget types (platform contributors)
+## Adding custom UI Widgets (Community Plugins)
 
-New widgets are **not** runtime plugins. They require a **charm-store** change and deploy:
+If you need a specialized input widget (like a code editor, color picker, or map selector), you can build and share it dynamically using the Charm Community Plugin registry.
 
-1. Create a React field component (accepts `value`, `onChange`, etc.)
-2. Register it in `WidgetRegistry` inside `charm-store/app/components/DynamicForm.tsx`
-3. Document the widget name here and in [UI Protocol](/platform/ui-protocol)
-4. Deploy the store
+1. **Build a React Component**: Your component must implement the `FieldProps` interface and be exported as the default export.
+2. **Publish**: Publish your component as an ESM-compatible NPM package.
+3. **Register**: Submit a Pull Request to the [charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin) repository. Add your widget to `widgets/registry.json`.
 
-Agent authors can then reference the new name in `interface.ui`.
+Once your PR is merged, any agent developer can use your widget instantly by specifying its `id` in their `ui:widget` config. The Charm Store will dynamically download and render your NPM package on the fly—no platform redeploys required!
 
 ## Related
 

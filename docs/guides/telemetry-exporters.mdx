@@ -9,6 +9,9 @@ Charm dispatches execution lifecycle events (run start/end, tool calls, LLM toke
 
 > Telemetry plugins run **inside the agent container**, not in the store or cloud-runner API process.
 
+> [!TIP]
+> **Want to build a new exporter?** Use the [charm-telemetry-template](https://github.com/CharmAIOS/charm-telemetry-template) to bootstrap your project. It includes the correct entry points and `BaseTelemetryExporter` setup.
+
 ## 1. Implement `BaseTelemetryExporter`
 
 Subclass `charm.core.telemetry.BaseTelemetryExporter`. **All abstract hook methods must be implemented** (use `pass` for hooks you do not need):
@@ -69,24 +72,33 @@ runtime:
 
 The default `CharmEmitterExporter` always runs; listed plugins are added to the dispatch list.
 
-## 4. Cloud deployment
+## 4. Zero-Config Cloud Deployment
 
-1. **Install the exporter package in your `custom_image`** — same requirement as [Custom Adapters](/guides/custom-adapters)
-2. **Inject secrets via environment variables** (e.g. `DATADOG_API_KEY`) through the Store agent settings or runner env resolution — never hard-code keys in `charm.yaml`
+Unlike heavy adapters, **Telemetry plugins are typically lightweight** (e.g. `requests`, API clients). This means the Charm Cloud Runner can install them dynamically at boot time without timing out.
 
-```dockerfile
-FROM ghcr.io/charmaios/charm-base:latest
-RUN uv pip install charm-telemetry-datadog
+**You do NOT need a `custom_image` to use a Telemetry Exporter!**
+
+1. Add the package to your agent's `requirements.txt`:
+```txt
+charm-telemetry-datadog
 ```
 
+2. Enable it in `charm.yaml`:
 ```yaml
 runtime:
-  custom_image: "ghcr.io/your-org/my-runtime:prod"
   telemetry:
     - datadog
 ```
 
-View exporter output in **container logs** (Cloud Run / Docker), not in Store SSE unless your exporter also writes via `CharmEmitter`.
+3. **Inject secrets via environment variables** (e.g. `DATADOG_API_KEY`) through the Store agent settings or runner env resolution — never hard-code keys in `charm.yaml`.
+
+When you deploy, the runner will execute `uv pip install -r requirements.txt` in a fraction of a second, and your agent will start sending telemetry immediately.
+
+## 5. Share with the Community
+
+Once your telemetry exporter is working and published to PyPI, you can list it in the official **Charm Store**!
+
+Submit a Pull Request to the [charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin) repository to add your package to `telemetry/registry.json`. Your integration will immediately appear on the [Plugins](/plugins) page for other developers to discover.
 
 ## Related
 

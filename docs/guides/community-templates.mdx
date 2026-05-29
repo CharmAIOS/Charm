@@ -12,7 +12,7 @@ description: Contribute starter agent templates to the Charm CLI scaffold regist
 When you run `charm init`, the CLI fetches:
 
 ```
-https://raw.githubusercontent.com/charmaios/charm/main/templates-manifest.json
+https://raw.githubusercontent.com/CharmAIOS/charm-community-plugin/main/templates/registry.json
 ```
 
 Each manifest entry lists files (as JSON strings) to write into the new project directory. After a PR merges to **`main`**, the template is available globally on the next `charm init`.
@@ -25,10 +25,16 @@ You **do not** write Python loader code — only a JSON entry in the manifest.
 
 ### Step 1: Prepare your template entry
 
+> [!TIP]
+> **Discoverability:** Templates merged into this manifest are automatically displayed in the **[Charm Store Templates Registry](https://store.charmos.io/templates)** for the whole community to discover and scaffold.
+
 ```json
 {
   "id": "my-sales-agent",
   "description": "Sales outreach agent starter",
+  "author": "Your Name",
+  "tags": ["sales", "outreach"],
+  "github_url": "https://github.com/YourOrg/your-repo",
   "post_init_message": "  ├── charm.yaml\n  ├── .charmignore\n  └── src/\n      └── main.py\n\nNext: charm push",
   "files": [
     {
@@ -54,6 +60,7 @@ You **do not** write Python loader code — only a JSON entry in the manifest.
 **Tips:**
 
 - `id` must be unique **kebab-case** — used as `charm init my-agent --template my-sales-agent`
+- `author`, `tags`, and `github_url` help users discover your template in the Store Registry.
 - Include `version: "0.4.2"` in `charm.yaml` content (required contract version)
 - Use `type: custom` (or `python`, an alias) for standard Python agents — not a fictional adapter name unless you document a required plugin
 - Escape newlines as `\n` and quotes as `\"` inside JSON strings
@@ -61,8 +68,8 @@ You **do not** write Python loader code — only a JSON entry in the manifest.
 
 ### Step 2: Open a pull request
 
-1. Fork [CharmAIOS/Charm](https://github.com/CharmAIOS/Charm)
-2. Append your object to the `templates` array in root `templates-manifest.json`
+1. Fork [CharmAIOS/charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin)
+2. Append your object to the `templates` array in `templates/registry.json`
 3. Submit a PR for review
 
 After merge to `main`, your template appears in `charm init` (interactive menu or `--template <id>`).

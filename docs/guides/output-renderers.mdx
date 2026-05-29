@@ -99,18 +99,19 @@ def agent(inputs):
     }
 ```
 
-## Adding **new** renderer types (platform contributors)
+## Sharing Custom Output Renderers with the Community
 
-Built-in types are registered in the **charm-store** app at build time (`registerRenderer` in `CharmRenderers.tsx`). There is **no runtime npm plugin loader** today.
+You can now build and share your own custom UI components (like a specialized stock chart, a unique data grid, or a 3D molecule viewer) without waiting for a store deployment! Charm supports dynamic ESM module loading for community output renderers.
 
-To add a new component type:
+To share a custom renderer:
 
-1. Implement a React renderer in `charm-store`
-2. Call `registerRenderer("my_type", ...)` 
-3. Deploy the store
-4. Document the JSON schema in [UI Protocol](/platform/ui-protocol)
+1. **Build a React Component**: Write a React component that takes a `payload` prop and export it as your default export. 
+2. **Publish to NPM**: Package your component and publish it to NPM. Ensure your package is ESM compatible.
+3. **Register in the Community Plugin**: Submit a Pull Request to the [charm-community-plugin](https://github.com/CharmAIOS/charm-community-plugin) repository. Add your renderer's details (including the `id` which corresponds to your `_charm_render_type`, and the `npm_package` name) into `renderers/registry.json`.
 
-Agent authors can then use `"_charm_render_type": "my_type"` after that deploy.
+Once your PR is merged, the Charm Store will dynamically fetch your component from `esm.sh` directly in the browser whenever an agent emits your `_charm_render_type`!
+
+You can also browse all community renderers on the **Plugins** page in the Charm Store.
 
 ## Related
 

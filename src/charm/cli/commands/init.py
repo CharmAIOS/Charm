@@ -11,7 +11,7 @@ from rich.prompt import Prompt
 app = typer.Typer(help="Initialize a new Charm agent")
 console = Console()
 
-MANIFEST_URL = "https://raw.githubusercontent.com/charmaios/charm/main/templates-manifest.json"
+MANIFEST_URL = "https://raw.githubusercontent.com/CharmAIOS/charm-community-plugin/main/templates/registry.json"
 
 def fetch_manifest() -> Dict[str, Any]:
     try:

@@ -15,11 +15,11 @@ Use this page to pick the right path before you start building.
 |----------------------|--------------|------------|----------------------------------|---------------------|
 | [Custom adapter plugin](/guides/custom-adapters) | `charm.adapters` entry point | Agent container | **Yes** | No |
 | [Custom runtime only](/guides/custom-runtimes) | `runtime.custom_image` in YAML | Agent container | **Yes** | No |
-| [Telemetry exporter](/guides/telemetry-exporters) | `charm.telemetry` entry point | Agent container | **Yes** | No |
-| [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Yes** (if not built-in) | No |
-| [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | Only for **new** widget types |
-| [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | Only for **new** renderer types |
-| [Starter templates](/guides/community-templates) | PR to `templates-manifest.json` | `charm init` | No | No (manifest merge) |
+| [Telemetry exporter](/guides/telemetry-exporters) | `charm.telemetry` entry point | Agent container | **Typically No** (dynamic install) | No |
+| [Memory backend](/guides/state-and-memory) | `charm.memory` entry point | Agent container | **Typically No** (dynamic install) | No |
+| [Input form widgets](/guides/interface) | `interface.ui` in YAML | Store UI | No | **Typically No** (dynamic ESM install) |
+| [Output renderers](/guides/output-renderers) | `_charm_render_type` in agent output | Store UI | No | **Typically No** (dynamic ESM install) |
+| [Starter templates](/guides/community-templates) | PR to `charm-community-plugin` | `charm init` | No | No (manifest merge) |
 
 ## Two kinds of “custom” (important)
 
@@ -28,7 +28,7 @@ These names overlap — they are **not** the same thing:
 | Term | Meaning |
 |------|---------|
 | **`runtime.adapter.type: custom`** | Built-in Charm adapter for plain Python agents (`CharmCustomAdapter` in core). Good default for `charm init` projects. |
-| **`runtime.custom_image`** | Docker image override for the cloud runner. Required for third-party adapter/telemetry/memory plugins. |
+| **`runtime.custom_image`** | Docker image override for the cloud runner. Required for heavy dependencies, custom system packages, or third-party adapters. |
 | **Third-party adapter plugin** | New adapter name (e.g. `ag2`, `plugin_test`) registered via `[project.entry-points."charm.adapters"]`. |
 
 Scenario: you can use **`type: custom`** with **`custom_image`** (extra deps, no new adapter class).  
@@ -39,11 +39,11 @@ Scenario: you can use **`type: ag2`** with **`custom_image`** (new adapter plugi
 1. **Start from a normal agent** — `charm init my-agent --template python`
 2. **Add a pip package** with your adapter/telemetry/memory classes and `pyproject.toml` entry points
 3. **Point `charm.yaml` at your plugin** — `runtime.adapter.type: your_plugin_name`
-4. **Build a Docker image** that installs your package (and compatible `charmos`) — see [Custom Runtimes](/guides/custom-runtimes)
-5. **Set `runtime.custom_image`** to that image URI
+4. **Add to requirements.txt** (if lightweight like Telemetry or Memory) **OR** Build a `custom_image` (if heavy like Adapters)
+5. **Set `runtime.custom_image`** in `charm.yaml` (if you built a Docker image)
 6. **`charm validate`** → **`charm push`** → run on the Store
 
-The cloud runner **does not `pip install` your plugin at runtime**. Your package must already be in the container image.
+> **Note:** The cloud runner **will** execute `uv pip install -r requirements.txt` at runtime. For lightweight plugins, this is all you need. For heavy plugins (like third-party adapters), you must bake them into a `custom_image` to avoid boot timeouts.
 
 ## Built-in vs third-party
 
@@ -52,8 +52,8 @@ The cloud runner **does not `pip install` your plugin at runtime**. Your package
 | Python agent logic | `charm init` + `type: custom` | Same |
 | Adapter type | `custom`, `langchain`, `openclaw`, … | New name via entry points |
 | Runtime image | Official `runner-*` images | Your `custom_image` |
-| Store form widgets | `text`, `textarea`, `file` | New widgets → store PR |
-| Rich output UI | Built-in `_charm_render_type` values | New types → store PR |
+| Store form widgets | `text`, `textarea`, `file`, `select`, `checkbox`, `slider` | New widgets → community plugin PR |
+| Rich output UI | Built-in `_charm_render_type` values | New types → community plugin PR |
 
 ## Cloud prerequisites
 

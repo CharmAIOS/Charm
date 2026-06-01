@@ -1,9 +1,7 @@
 ---
 title: Telemetry Exporters
-description: Monitor agent lifecycle by registering custom telemetry exporter plugins.
+summary: Monitor agent lifecycle by registering custom telemetry exporter plugins.
 ---
-
-# Telemetry Exporters
 
 Charm dispatches execution lifecycle events (run start/end, tool calls, LLM tokens, errors) to a **`TelemetryManager`** inside the agent container. By default, events stream to stdout for the cloud runner to forward as SSE. You can add **custom exporters** to forward the same events to Datadog, LangSmith, Sentry, etc.
 

@@ -102,9 +102,7 @@
                             "platform/overview",
                             "platform/execution-modes",
                             "platform/base-images",
-                            "adapters/overview",
-                            "guides/interface",
-                            "guides/state-and-memory"
+                            "adapters/overview"
                         ]
                     },
                     {
@@ -155,6 +153,8 @@
                             "guides/custom-adapters",
                             "guides/telemetry-exporters",
                             "guides/output-renderers",
+                            "guides/interface",
+                            "guides/state-and-memory",
                             "guides/charmignore"
                         ]
                     },

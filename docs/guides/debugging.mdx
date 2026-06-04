@@ -21,23 +21,23 @@ charm run . --input "Hello" --debug
 
 ## Common Issues
 
-### Import or Entry Point Error
+### 1. Import or Entry Point Error
 
 Check `runtime.adapter.entry_point` and make sure the module/object exists.
 
-### Missing Environment Variable
+### 2. Missing Environment Variable
 
 Declare required keys in `charm.yaml` and provide local values in `.env`.
 
-### Timeout
+### 3. Timeout
 
 Reduce long-running work or move persistent behavior to daemon lifecycle.
 
-### Out of Memory
+### 4. Out of Memory
 
 Avoid loading large local models or large datasets into memory.
 
-### Works Locally but Fails in Cloud
+### 5. Works Locally but Fails in Cloud
 
 Run Docker sandbox mode:
 

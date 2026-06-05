@@ -9,7 +9,9 @@ Base images define the runtime environment used to execute agents.
 
 Charm currently provides several pre-built base images depending on the adapter type:
 
-<Snippet file="snippets/base-image-mapping.mdx" />
+import BaseImageMapping from '/snippets/base-image-mapping.mdx';
+
+<BaseImageMapping />
 
 Agents automatically select the correct base image based on their `adapter.type`, or explicitly override it using `custom_image`:
 

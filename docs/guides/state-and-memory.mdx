@@ -1,9 +1,7 @@
 ---
 title: Custom Memory Storage
-description: Persist agent memory and state with pluggable storage backends.
+summary: Persist agent memory and state with pluggable storage backends.
 ---
-
-# State & Memory Storage
 
 By default, Charm uses **local file-backed memory** (`runtime.memory.provider: local`). On the cloud runner, workspace files are persisted under a managed workspace path (backed by cloud storage for serverless/daemon workloads).
 

@@ -1,9 +1,7 @@
 ---
 title: Custom Adapters
-description: Build and register a third-party framework adapter using Python entry points.
+summary: Build and register a third-party framework adapter using Python entry points.
 ---
-
-# Custom Adapters
 
 Use this guide when you are a **plugin author** integrating a new Python framework (AG2, AutoGen, an internal runtime, etc.) — not when you only need a plain Python function agent.
 
@@ -15,7 +13,7 @@ Charm loads adapters from Python **`entry_points`** in the `charm.adapters` grou
 
 Official adapters (`langchain`, `crewai`, `openclaw`, `custom`, …) use the same mechanism in the `charmos` package. Third-party packages add more names without forking core.
 
-## 1. Get the Boilerplate
+### 1. Get the Boilerplate
 
 > [!TIP]
 > **Fastest Path:** You do not need to write this from scratch. Use the official **[charm-adapter-template](https://github.com/CharmAIOS/charm-adapter-template)** repository on GitHub. Click **Use this template**, rename the folder, and jump straight to implementing your `invoke` method.
@@ -29,7 +27,7 @@ cd my-ag2-agent
 
 This scaffolds `charm.yaml`, `src/main.py`, and `.charmignore`. You will add a **separate installable package** (or a `pyproject.toml` in the same repo) for the adapter plugin.
 
-## 2. Implement `BaseAdapter`
+### 2. Implement `BaseAdapter`
 
 Your class must inherit from `charm.adapters.base.BaseAdapter` and implement `invoke`.
 
@@ -53,7 +51,7 @@ The loader constructs your adapter as `AdapterClass(agent_instance=..., config=.
 
 Return a dict with `"status": "success"` and `"output"` for standard Store rendering, or include structured keys like `_charm_render_type` (see [Output Renderers](/guides/output-renderers)).
 
-## 3. Register via entry points
+### 3. Register via entry points
 
 In your plugin package's `pyproject.toml`:
 
@@ -82,7 +80,7 @@ python -c "from importlib.metadata import entry_points; print([e.name for e in e
 
 `charm validate` should accept `runtime.adapter.type: ag2` after your package is installed.
 
-## 4. Configure `charm.yaml`
+### 4. Configure `charm.yaml`
 
 ```yaml
 version: "0.4.2"
@@ -108,7 +106,7 @@ runtime:
   lifecycle: serverless
 ```
 
-## 5. Cloud execution requires a custom image
+### 5. Cloud execution requires a custom image
 
 The cloud runner **will automatically `uv pip install` your adapter if it is listed in the user's `requirements.txt`**. However, if your adapter depends on massive libraries (like PyTorch or large LLM frameworks), `uv pip install` might timeout during Cloud Run startup.
 
@@ -126,7 +124,7 @@ runtime:
     entry_point: src.main:my_agent
 ```
 
-## 6. Submit to the Charm Store
+### 6. Submit to the Charm Store
 
 To make your adapter discoverable by the global Charm community:
 

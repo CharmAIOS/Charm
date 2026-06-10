@@ -63,8 +63,24 @@ class CharmLangGraphAdapter(BaseAdapter):
         )
 
         config: Dict[str, Any] = {"configurable": {"thread_id": thread_id}, "recursion_limit": 50}
-        if callbacks:
-            config["callbacks"] = callbacks
+        
+        _cbs = list(callbacks) if callbacks else []
+        try:
+            from langchain_core.callbacks import BaseCallbackHandler
+            class CharmToolUsageCallback(BaseCallbackHandler):
+                def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+                    from ..core.io import CharmEmitter
+                    tool_name = serialized.get("name") if serialized else None
+                    if not tool_name and "name" in kwargs:
+                        tool_name = kwargs["name"]
+                    if tool_name:
+                        CharmEmitter.emit_tool_usage(tool_name, 1)
+            _cbs.append(CharmToolUsageCallback())
+        except ImportError:
+            pass
+
+        if _cbs:
+            config["callbacks"] = _cbs
 
         native_input = inputs.copy()
 

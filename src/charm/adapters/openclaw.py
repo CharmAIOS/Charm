@@ -382,6 +382,9 @@ class CharmOpenClawAdapter(BaseAdapter):
             CharmEmitter.emit_thinking(content)
         elif re.match(r"^(Calling|Executing|Tool):", clean_line, re.IGNORECASE):
             CharmEmitter.emit_thinking(f"🛠️ {clean_line}")
+            match = re.search(r"^(?:Calling|Executing|Tool):\s*(?:tool\s*)?['\"]?([@\w/:-]+)", clean_line, re.IGNORECASE)
+            if match:
+                CharmEmitter.emit_tool_usage(match.group(1), 1)
         elif "Created artifact:" in clean_line:
             match = re.search(r"Created artifact:\s*(.+)", clean_line)
             if match:

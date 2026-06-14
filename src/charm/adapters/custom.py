@@ -35,6 +35,23 @@ class CharmCustomAdapter(BaseAdapter):
 
         # Copy inputs to avoid side effects
         native_input = inputs.copy()
+        
+        _cbs = list(callbacks) if callbacks else []
+        try:
+            from langchain_core.callbacks import BaseCallbackHandler
+            class CharmToolUsageCallback(BaseCallbackHandler):
+                def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+                    from ..core.io import CharmEmitter
+                    tool_name = serialized.get("name") if serialized else None
+                    if not tool_name and "name" in kwargs:
+                        tool_name = kwargs["name"]
+                    if tool_name:
+                        CharmEmitter.emit_tool_usage(tool_name, 1)
+            _cbs.append(CharmToolUsageCallback())
+        except ImportError:
+            pass
+        
+        callbacks_to_use = _cbs if _cbs else None
 
         try:
             sig = inspect.signature(self.execution_method)
@@ -45,7 +62,7 @@ class CharmCustomAdapter(BaseAdapter):
                     if name == "inputs":
                         kwargs["inputs"] = native_input
                     elif name == "callbacks":
-                        kwargs["callbacks"] = callbacks
+                        kwargs["callbacks"] = callbacks_to_use
 
                     # Destructuring Injection
                     elif name in native_input:
@@ -96,10 +113,27 @@ class CharmCustomAdapter(BaseAdapter):
 
             # Prepare Inputs for Stream (Same logic as invoke)
             native_input = inputs.copy()
+            
+            _cbs = list(callbacks) if callbacks else []
+            try:
+                from langchain_core.callbacks import BaseCallbackHandler
+                class CharmToolUsageCallback(BaseCallbackHandler):
+                    def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
+                        from ..core.io import CharmEmitter
+                        tool_name = serialized.get("name") if serialized else None
+                        if not tool_name and "name" in kwargs:
+                            tool_name = kwargs["name"]
+                        if tool_name:
+                            CharmEmitter.emit_tool_usage(tool_name, 1)
+                _cbs.append(CharmToolUsageCallback())
+            except ImportError:
+                pass
+            
+            callbacks_to_use = _cbs if _cbs else None
 
             if len(sig.parameters) > 0:
                 if "callbacks" in sig.parameters:
-                    kwargs["callbacks"] = callbacks
+                    kwargs["callbacks"] = callbacks_to_use
                 if "inputs" in sig.parameters:
                     kwargs["inputs"] = native_input
                 else:

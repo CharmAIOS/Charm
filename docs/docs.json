@@ -126,8 +126,7 @@
                             "platform/listing",
                             "platform/ambient-desktop-companion",
                             "platform/app",
-                            "platform/platform",
-                            "platform/earn-as-you-go"
+                            "platform/platform"
                         ]
                     }
                 ]

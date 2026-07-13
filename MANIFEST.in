@@ -1,6 +1,3 @@
 include src/charm/contracts/*.json
-include src/charm/templates/*.yaml
-include src/charm/templates/*.txt
-include src/charm/templates/charm.ignore.template
 include src/charm/py.typed
-include Dockerfile*
+recursive-include docker Dockerfile*

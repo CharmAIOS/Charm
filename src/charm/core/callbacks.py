@@ -1,11 +1,14 @@
 from typing import Any, Dict, Optional
 
-from langchain_core.callbacks import BaseCallbackHandler
-
 from .telemetry import TelemetryManager
 
+try:
+    from langchain_core.callbacks import BaseCallbackHandler as _LCBase
+except ImportError:
+    _LCBase = object  # type: ignore[assignment,misc]
 
-class CharmCallbackHandler(BaseCallbackHandler):
+
+class CharmCallbackHandler(_LCBase):  # type: ignore[misc]
     """
     Custom LangChain Callback to capture execution events and stream them via TelemetryManager.
     """

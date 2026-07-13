@@ -10,7 +10,7 @@ Please do not report security vulnerabilities through public GitHub issues.
 
 To report a vulnerability, contact the Charm team privately:
 
-- Email: team@charmos.io
+- Email: <team@charmos.io>
 - Discord: use a private message with a maintainer if email is unavailable
 
 Include:
@@ -45,4 +45,3 @@ Security-sensitive areas include:
 - deployment workflows,
 - package publishing,
 - database policies and migrations.
-

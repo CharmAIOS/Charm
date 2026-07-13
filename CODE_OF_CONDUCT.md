@@ -1,76 +1,76 @@
-# Code of Conduct
+# Charm Code of Conduct
 
-## Purpose
+## 1. Purpose
 
-Charm is an open-source project for people building AI agents, tools, documentation, runtime infrastructure, and developer workflows. We want contributors to feel safe asking questions, proposing changes, reviewing code, and disagreeing constructively.
+Charm is an open-source project for developers building AI agents, tools, documentation, runtime infrastructure, and workflows. We are committed to providing a welcoming, inclusive, and harassment-free experience for everyone. We want contributors to feel safe asking questions, proposing changes, reviewing code, and disagreeing constructively.
 
-This code of conduct applies to all Charm community spaces, including GitHub repositories, pull requests, issues, discussions, Discord, docs contributions, release planning, and other project-managed channels.
+This Code of Conduct applies to all Charm community spaces, including GitHub repositories, pull requests, issues, discussions, Discord, documentation contributions, release planning, and any other project-managed channels.
 
-## Our Pledge
+## 2. Our Pledge
 
-We pledge to make participation in Charm respectful, inclusive, and productive for contributors of all backgrounds and experience levels.
+We pledge to make participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-Maintainers and contributors are expected to act with empathy, patience, professionalism, and care for the broader community.
+Maintainers and contributors are expected to act with empathy, patience, professionalism, and care for the broader community at all times.
 
-## Expected Behavior
+## 3. Expected Behavior
 
-- Be respectful and constructive.
-- Keep feedback focused on the work, not the person.
-- Assume good intent, but be willing to adjust when your words or actions cause harm.
-- Ask clarifying questions before escalating disagreement.
-- Credit others for ideas, bug reports, designs, and contributions.
-- Help newcomers find the right docs, issues, discussions, or maintainers.
-- Respect project scope, maintainer time, and review boundaries.
-- Disclose conflicts of interest when relevant to a technical or governance decision.
+- **Be respectful and constructive.**
+- **Keep feedback focused** on the work, not the person.
+- **Assume good intent**, but be willing to adjust when your words or actions cause harm.
+- **Ask clarifying questions** before escalating a disagreement.
+- **Credit others** for ideas, bug reports, designs, and contributions.
+- **Help newcomers** find the right documentation, issues, discussions, or maintainers.
+- **Respect project scope**, maintainer time, and review boundaries.
+- **Disclose conflicts of interest** when relevant to a technical or governance decision.
 
-## Unacceptable Behavior
+## 4. Unacceptable Behavior
+
+Instances of unacceptable behavior by participants include:
 
 - Harassment, threats, intimidation, or personal attacks.
 - Discriminatory language or behavior.
 - Sexualized language, imagery, or attention.
-- Publishing private information without clear permission.
+- Publishing others' private information without explicit permission.
 - Repeatedly derailing technical discussions.
 - Insulting, dismissive, or bad-faith review behavior.
 - Spam, trolling, or deliberately disruptive activity.
-- Pressure to bypass security, review, release, or safety processes.
-- Any behavior that makes the project unsafe for contributors.
+- Pressuring others to bypass security, review, release, or safety processes.
+- Any other conduct which could reasonably be considered inappropriate in a professional setting.
 
-## Reporting a Concern
+## 5. Reporting a Concern
 
-If you experience or witness behavior that violates this code of conduct, contact the maintainers privately:
+If you experience or witness behavior that violates this Code of Conduct, please contact the maintainers privately:
 
-- Email: team@charmos.io
-- Discord: privately contact a Charm maintainer if email is unavailable
+- **Email**: <team@charmos.io>
+- **Discord**: Privately contact a Charm maintainer if email is unavailable.
 
 Please include:
 
 - What happened.
-- Where it happened.
+- Where it happened (with relevant links, screenshots, or timestamps).
 - Who was involved.
-- Any relevant links, screenshots, or timestamps.
 - Whether there is an immediate safety concern.
 
-Do not post sensitive reports publicly in GitHub issues or Discord channels.
+> **Important:** Do not post sensitive reports publicly in GitHub issues or public Discord channels.
 
-## Enforcement
+## 6. Enforcement
 
-Maintainers may take action to protect the community, including:
+Maintainers may take action to protect the community, including but not limited to:
 
-- clarifying expectations,
-- editing or removing comments,
-- closing or locking issues and pull requests,
-- requesting a behavior change,
-- issuing a warning,
-- temporarily restricting participation,
-- permanently banning a participant from project spaces.
+- Clarifying expectations.
+- Editing or removing comments.
+- Closing or locking issues and pull requests.
+- Requesting a behavior change.
+- Issuing a formal warning.
+- Temporarily restricting participation.
+- Permanently banning a participant from project spaces.
 
-Enforcement decisions should be proportionate to the behavior, the impact on others, and any pattern of repeated conduct.
+Enforcement decisions will be proportionate to the behavior, the impact on others, and any pattern of repeated conduct.
 
-## Appeals
+## 7. Appeals
 
-If you believe an enforcement action was made in error, you may contact team@charmos.io with context. A maintainer who was not directly involved in the original decision should review the appeal when possible.
+If you believe an enforcement action was made in error or was unjustified, you may appeal by contacting `team@charmos.io` with context. A maintainer who was not directly involved in the original decision will review the appeal when possible.
 
-## Relationship to Security Reports
+## 8. Relationship to Security Reports
 
-Security vulnerabilities should be reported using the private process in `SECURITY.md`, not through public issues or public community channels.
-
+> **Security Vulnerabilities:** Security vulnerabilities should be reported using the private process detailed in `SECURITY.md`. Do not report security vulnerabilities through public issues or public community channels.

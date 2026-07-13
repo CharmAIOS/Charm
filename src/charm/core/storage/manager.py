@@ -45,7 +45,7 @@ class StorageManager:
                         logger.error(f"Plugin '{provider_name}' does not inherit from BaseMemoryStore.")
                         break
                     cls._instance = plugin_class(config)
-                    logger.info(f"💾 Storage Provider loaded: {provider_name}")
+                    logger.info(f"Storage Provider loaded: {provider_name}")
                     return cls._instance
                 except Exception as e:
                     logger.error(f"Failed to load memory plugin '{provider_name}': {e}")

@@ -8,6 +8,8 @@ Contributions are always welcome. We’d love to build the future with you, whet
 
 We’re active on [Discord](https://discord.gg/gdakynHUEb). Jump in to share ideas, ask questions, and connect with others.
 
+> If you’re interested in contributing to the core development of the project, please don’t hesitate to [reach out to the team](mailto:team@charmos.io). We’d love to invite you to our developer group and collaborate closely!
+
 ## How to Contribute
 
 1. Fork the repository.

@@ -24,7 +24,7 @@ class SupabaseMemory(BaseMemoryStore):
             try:
                 self.supabase = create_client(sb_url, sb_key)
             except Exception as e:
-                logger.error(f"❌ [Charm] Supabase Checkpointer init failed: {e}")
+                logger.error(f"[Charm] Supabase Checkpointer init failed: {e}")
 
     def load_messages(self, thread_id: str) -> List[Dict[str, Any]]:
         # Usually handled internally by LangGraph for now.

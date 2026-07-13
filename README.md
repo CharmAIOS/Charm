@@ -10,7 +10,6 @@
   <a href="https://x.com/charm_labs"><img src="https://img.shields.io/twitter/follow/charm_labs?label=FOLLOW%20@CHARM_LABS&style=flat-square&color=000000&logo=x&logoColor=white" alt="X" /></a>
 </p>
 
-
 # Charm: The Unified Platform for Agentic Intelligence
 
 **Charm** is a **Unified Application Layer** that enables agents to distribute, run, and scale across heterogeneous ecosystems, turning them into real, commercial-ready applications.
@@ -72,7 +71,6 @@ Please report vulnerabilities privately using the process in [SECURITY.md](./SEC
 ## Contact
 
 - Support and Questions: [Community](https://discord.gg/gdakynHUEb) / [Email](mailto:team@charmos.io)
-- Join us: [Chat with the team](mailto:team@charmos.io)
 
 ## Changelog
 

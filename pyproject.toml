@@ -91,7 +91,7 @@ langchain = "charm.adapters.langchain:CharmLangChainAdapter"
 langgraph = "charm.adapters.langgraph:CharmLangGraphAdapter"
 custom = "charm.adapters.custom:CharmCustomAdapter"
 python = "charm.adapters.custom:CharmCustomAdapter"
-node = "charm.adapters.process:CharmProcessAdapter"
+
 
 [dependency-groups]
 dev = [

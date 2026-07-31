@@ -1,12 +1,7 @@
 import os
-import sys
+from importlib.metadata import entry_points
 
 import yaml  # type: ignore
-
-if sys.version_info >= (3, 10):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points  # type: ignore
 
 from ..adapters.base import BaseAdapter
 from ..contracts.uac import CharmConfig

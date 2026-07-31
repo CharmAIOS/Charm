@@ -80,11 +80,7 @@ class TelemetryManager:
         self._load_plugins()
 
     def _load_plugins(self):
-        import sys
-        if sys.version_info >= (3, 10):
-            from importlib.metadata import entry_points
-        else:
-            from importlib_metadata import entry_points  # type: ignore
+        from importlib.metadata import entry_points
         try:
             eps = entry_points(group="charm.telemetry")
             for ep in eps:

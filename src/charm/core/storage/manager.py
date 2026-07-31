@@ -1,9 +1,8 @@
+from importlib.metadata import entry_points
 from typing import Any, Dict, Optional
 
 from ..logger import logger
 from .base import BaseMemoryStore
-
-from importlib.metadata import entry_points
 
 
 class StorageManager:

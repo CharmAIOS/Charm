@@ -1,9 +1,7 @@
 import os
-import sys
+from importlib.metadata import entry_points
 
 import yaml  # type: ignore
-
-from importlib.metadata import entry_points
 
 from ..adapters.base import BaseAdapter
 from ..contracts.uac import CharmConfig

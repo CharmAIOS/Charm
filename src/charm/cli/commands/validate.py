@@ -18,11 +18,7 @@ console = Console()
 
 # Valid adapter types (from UAC contract)
 def get_valid_adapter_types() -> List[str]:
-    import sys
-    if sys.version_info >= (3, 10):
-        from importlib.metadata import entry_points
-    else:
-        from importlib_metadata import entry_points
+    from importlib.metadata import entry_points
     try:
         eps = entry_points(group="charm.adapters")
         return [ep.name for ep in eps]

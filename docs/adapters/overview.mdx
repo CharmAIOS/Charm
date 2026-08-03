@@ -16,6 +16,7 @@ Different frameworks expose different runtime objects, so the adapter bridges yo
 | `langgraph` | LangGraph graphs | `module:graph` |
 | `crewai` | CrewAI crews | `module:crew` |
 | `openclaw` | OpenClaw/browser-tool agents | OpenClaw host |
+| `hermes` | Self-improving agents with persistent memory | `module:agent` |
 
 ## Configure an Adapter
 
@@ -31,6 +32,7 @@ runtime:
 - Use `custom` for Python agent that do not use any frameworks.
 - Use `langchain`, `langgraph`, or `crewai` when you already use that framework.
 - Use `openclaw` for OpenClaw based agents.
+- Use `hermes` for Nous Research Hermes agents with self-improving skills and persistent memory.
 
 ## Third-party adapter plugins
 
@@ -43,3 +45,4 @@ Any pip package can register additional `runtime.adapter.type` values via `[proj
 - [LangGraph](/adapters/langgraph)
 - [CrewAI](/adapters/crewai)
 - [OpenClaw](/adapters/openclaw)
+- [Hermes](/adapters/hermes)

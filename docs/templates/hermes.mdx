@@ -1,0 +1,79 @@
+---
+title: Hermes Agent Template
+summary: Get started with a self-improving Hermes agent running as a daemon on Charm.
+---
+
+The Hermes Agent template creates a ready-to-publish agent powered by [Nous Research Hermes Agent](https://github.com/NousResearch/hermes-agent). It runs as a daemon with persistent memory, self-improving skills, and cross-session recall.
+
+## Create
+
+```bash
+charm init my-hermes-agent --template hermes-agent
+```
+
+## What You Get
+
+```
+my-hermes-agent/
+├── charm.yaml           # lifecycle: daemon, adapter: hermes
+├── .charmignore
+├── requirements.txt     # charm-adapter-hermes dependency
+└── src/
+    ├── __init__.py
+    └── main.py           # AIAgent instance — customize here
+```
+
+## Prerequisites
+
+- Charm CLI installed.
+- An LLM API key (OpenRouter, OpenAI, or Anthropic).
+- For production: a daemon-capable runner (Fly.io backend configured).
+
+## Configuration
+
+Set your API key before running:
+
+```bash
+export OPENROUTER_API_KEY="sk-or-..."
+```
+
+### Changing the model
+
+Edit `src/main.py` or set the environment variable:
+
+```bash
+export CHARM_HERMES_MODEL="anthropic/claude-sonnet-4-20250514"
+```
+
+### Key charm.yaml fields
+
+```yaml
+runtime:
+  adapter:
+    type: "hermes"
+    entry_point: "src.main:agent"
+  lifecycle: "daemon"       # persistent container on Fly.io
+```
+
+## Run Locally
+
+```bash
+charm run --input '{"query": "Hello, who are you?"}'
+```
+
+## Publish
+
+```bash
+charm validate .
+charm push
+```
+
+## Why Daemon?
+
+Hermes agents store conversation history, auto-generated skills, and user models in an SQLite database. The `daemon` lifecycle ensures this data persists across interactions by mounting a shared workspace (`CHARM_WORKSPACE_DIR`). Without daemon mode, the database would be lost after each serverless invocation.
+
+## Further Reading
+
+- [Hermes Adapter reference](/adapters/hermes)
+- [Daemon Agent lifecycle](/templates/daemon)
+- [charm-adapter-hermes on GitHub](https://github.com/CharmAIOS/charm-adapter-hermes)

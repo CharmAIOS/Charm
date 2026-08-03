@@ -1,0 +1,64 @@
+---
+title: Hermes Agent Adapter
+summary: Run self-improving Hermes agents on the Charm platform with persistent memory and daemon lifecycle.
+---
+
+Use the Hermes adapter to run [Nous Research Hermes Agent](https://github.com/NousResearch/hermes-agent) on the Charm platform. Hermes is a self-improving AI agent with built-in learning loops, cross-session memory (SQLite FTS5), and multi-provider LLM support.
+
+## Manifest
+
+```yaml
+runtime:
+  adapter:
+    type: "hermes"
+    entry_point: "src.main:agent"
+```
+
+For always-on agents with persistent memory:
+
+```yaml
+runtime:
+  lifecycle: "daemon"
+```
+
+## Best For
+
+- Agents that learn and improve across sessions.
+- Long-running daemon agents with persistent state.
+- Multi-provider LLM workflows (OpenRouter, OpenAI, Anthropic, local endpoints).
+- Agents needing built-in tools (terminal, browser, code search).
+
+## How It Works
+
+The adapter bridges Hermes's `AIAgent` class to the Charm Runner:
+
+1. **Persistence** — `HERMES_HOME` is redirected to `CHARM_WORKSPACE_DIR/.hermes`, so SQLite session databases, FTS5 search indexes, auto-generated skills, and memory files all persist across daemon restarts.
+2. **Streaming** — Hermes's `stream_delta_callback` is wired to Charm's SSE emitter for real-time token output in the Store frontend.
+3. **Headless mode** — The agent runs with `quiet_mode=True` to suppress TUI spinners and terminal chrome.
+4. **Tool tracking** — Hermes's `tool_start_callback` and `tool_complete_callback` feed into Charm's tool usage analytics.
+
+## Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `OPENROUTER_API_KEY` | Default LLM provider key |
+| `CHARM_HERMES_MODEL` | Override the model (e.g., `anthropic/claude-sonnet-4-20250514`) |
+| `CHARM_HERMES_BASE_URL` | Override the LLM API endpoint |
+
+## Runtime Image
+
+For production, use the pre-built Hermes runtime image:
+
+```yaml
+runtime:
+  custom_image: "ghcr.io/charmaios/charm-runner-hermes:latest"
+```
+
+This image pre-installs Hermes and its system dependencies (git, ripgrep, ffmpeg, sqlite3) on top of the Charm base image.
+
+## Operational Notes
+
+- Use `lifecycle: "daemon"` for agents that need persistent memory across sessions.
+- Always set LLM API keys via `charm.yaml` `environment_variables` section, not hardcoded in source.
+- Test with `charm validate` before publishing.
+- The adapter is distributed as a separate pip package (`charm-adapter-hermes`). Install it in your runtime image or let the runner install it from `requirements.txt`.

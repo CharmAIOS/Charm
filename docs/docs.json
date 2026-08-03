@@ -86,6 +86,7 @@
                             "templates/data-pipeline",
                             "templates/slack-bot",
                             "templates/openclaw",
+                            "templates/hermes",
                             "templates/interactive",
                             "templates/daemon",
                             "templates/oauth-integration"

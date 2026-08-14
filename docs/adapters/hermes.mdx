@@ -11,6 +11,7 @@ Use the Hermes adapter to run [Nous Research Hermes Agent](https://github.com/No
 runtime:
   adapter:
     type: "hermes"
+    # Entry point can be an AIAgent instance, a class, or a factory function
     entry_point: "src.main:agent"
 ```
 
@@ -36,6 +37,8 @@ The adapter bridges Hermes's `AIAgent` class to the Charm Runner:
 2. **Streaming** — Hermes's `stream_delta_callback` is wired to Charm's SSE emitter for real-time token output in the Store frontend.
 3. **Headless mode** — The agent runs with `quiet_mode=True` to suppress TUI spinners and terminal chrome.
 4. **Tool tracking** — Hermes's `tool_start_callback` and `tool_complete_callback` feed into Charm's tool usage analytics.
+5. **Threaded Streaming** — Because Hermes executes synchronously, the adapter wraps `run_conversation` in a background thread and bridges `stream_delta_callback` to Charm Runner via a thread-safe Queue, ensuring real-time token output.
+6. **Lazy Configuration** — If `entry_point` points to a factory function, the adapter automatically injects environment variables like `model` (from `CHARM_HERMES_MODEL`) before instantiation.
 
 ## Environment Variables
 

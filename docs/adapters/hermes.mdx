@@ -40,6 +40,11 @@ The adapter bridges Hermes's `AIAgent` class to the Charm Runner:
 5. **Threaded Streaming** — Because Hermes executes synchronously, the adapter wraps `run_conversation` in a background thread and bridges `stream_delta_callback` to Charm Runner via a thread-safe Queue, ensuring real-time token output.
 6. **Lazy Configuration** — If `entry_point` points to a factory function, the adapter automatically injects environment variables like `model` (from `CHARM_HERMES_MODEL`) before instantiation.
 
+## Plugin Compatibility Notes
+
+- **State and Memory Plugins**: Hermes manages its own memory system natively using a localized SQLite FTS5 database (`CHARM_WORKSPACE_DIR/.hermes/memory.db`). **It does not support and will completely ignore any custom memory plugins** configured in `charm.yaml` (e.g., `memory: { provider: "postgres" }`). 
+- **Output Renderers (Custom UI)**: The adapter automatically parses `_charm_render_type` JSON objects outputted by Hermes, allowing you to render dynamic UI components in the Charm frontend.
+
 ## Environment Variables
 
 | Variable | Description |

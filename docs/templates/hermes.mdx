@@ -20,7 +20,7 @@ my-hermes-agent/
 ├── requirements.txt     # charm-adapter-hermes dependency
 └── src/
     ├── __init__.py
-    └── main.py           # AIAgent instance — customize here
+    └── main.py           # Factory function `create_agent` — customize here
 ```
 
 ## Prerequisites
@@ -39,7 +39,8 @@ export OPENROUTER_API_KEY="sk-or-..."
 
 ### Changing the model
 
-Edit `src/main.py` or set the environment variable:
+The template uses a factory function in `src/main.py` to instantiate the agent *after* the workspace is mounted. 
+You can edit the `create_agent` function in `src/main.py` to change parameters, or set the environment variable:
 
 ```bash
 export CHARM_HERMES_MODEL="anthropic/claude-sonnet-4-20250514"

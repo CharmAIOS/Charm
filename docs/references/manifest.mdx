@@ -178,6 +178,15 @@ runtime:
   # --------------------------------------------------------------
   telemetry:
     - "datadog" # Enable custom telemetry exporters
+
+  # --------------------------------------------------------------
+  # Capabilities (Optional)
+  # --------------------------------------------------------------
+  capabilities:
+    # If True, declares that this agent/adapter manages its own persistent conversation
+    # history and state (e.g. SQLite, local memory files, continuous daemon sessions).
+    # Charm Store and Desktop mini-chat will hide external thread-switching and treat it as stateful.
+    manages_own_history: false
   
   # --------------------------------------------------------------
   # Base Image

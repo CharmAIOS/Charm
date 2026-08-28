@@ -104,9 +104,30 @@ runtime:
     type: ag2
     entry_point: src.main:my_agent
   lifecycle: serverless
+
+  # Optional: Declare capabilities if your adapter manages its own memory/sessions
+  capabilities:
+    manages_own_history: false  # Set to true for self-managing agents (e.g. MemGPT, continuous daemons)
 ```
 
-### 5. Cloud execution requires a custom image
+### 5. Self-Managing History & Stateful Agents (Capabilities)
+
+If your framework manages its own conversation persistence internally (e.g. SQLite database, local JSON files, continuous daemon session memory) rather than relying on Charm's caller-injected thread messages:
+
+1. Add `capabilities.manages_own_history: true` to `charm.yaml`.
+2. This signals the Charm Store Web UI and Desktop Mini-Chat client to hide external thread-switching sidebars and treat the agent as stateful with continuous session state.
+
+```yaml
+runtime:
+  adapter:
+    type: my_stateful_framework
+    entry_point: src.main:agent
+  lifecycle: daemon
+  capabilities:
+    manages_own_history: true
+```
+
+### 6. Cloud execution requires a custom image
 
 The cloud runner **will automatically `uv pip install` your adapter if it is listed in the user's `requirements.txt`**. However, if your adapter depends on massive libraries (like PyTorch or large LLM frameworks), `uv pip install` might timeout during Cloud Run startup.
 
@@ -124,7 +145,7 @@ runtime:
     entry_point: src.main:my_agent
 ```
 
-### 6. Submit to the Charm Store
+### 7. Submit to the Charm Store
 
 To make your adapter discoverable by the global Charm community:
 

@@ -167,6 +167,14 @@ class RuntimeAdapter(BaseModel):
         return v
 
 
+class RuntimeCapabilities(BaseModel):
+    """Capabilities declared by the agent/adapter."""
+    manages_own_history: bool = Field(
+        False, 
+        description="If True, the agent manages its own chat history (UI will hide thread switching)."
+    )
+
+
 class RuntimeConfig(BaseModel):
     adapter: RuntimeAdapter
 
@@ -182,6 +190,10 @@ class RuntimeConfig(BaseModel):
     memory: MemoryConfig = Field(
         default_factory=MemoryConfig,
         description="Configuration for persistent memory and state storage.",
+    )
+
+    capabilities: Optional[RuntimeCapabilities] = Field(
+        None, description="Optional capabilities declared by the agent/adapter."
     )
 
     # Add the config field here

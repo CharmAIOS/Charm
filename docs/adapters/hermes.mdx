@@ -13,6 +13,8 @@ runtime:
     type: "hermes"
     # Entry point can be an AIAgent instance, a class, or a factory function
     entry_point: "src.main:agent"
+  capabilities:
+    manages_own_history: true
 ```
 
 For always-on agents with persistent memory:
@@ -20,6 +22,8 @@ For always-on agents with persistent memory:
 ```yaml
 runtime:
   lifecycle: "daemon"
+  capabilities:
+    manages_own_history: true
 ```
 
 ## Best For

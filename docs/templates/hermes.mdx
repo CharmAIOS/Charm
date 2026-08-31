@@ -54,6 +54,8 @@ runtime:
     type: "hermes"
     entry_point: "src.main:agent"
   lifecycle: "daemon"       # persistent container on Fly.io
+  capabilities:
+    manages_own_history: true
 ```
 
 ## Run Locally

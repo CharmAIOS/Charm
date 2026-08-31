@@ -411,6 +411,19 @@
       "title": "RuntimeAdapter",
       "type": "object"
     },
+    "RuntimeCapabilities": {
+      "description": "Capabilities declared by the agent/adapter.",
+      "properties": {
+        "manages_own_history": {
+          "default": false,
+          "description": "If True, the agent manages its own chat history (UI will hide thread switching).",
+          "title": "Manages Own History",
+          "type": "boolean"
+        }
+      },
+      "title": "RuntimeCapabilities",
+      "type": "object"
+    },
     "RuntimeConfig": {
       "properties": {
         "adapter": {
@@ -435,6 +448,18 @@
         "memory": {
           "$ref": "#/$defs/MemoryConfig",
           "description": "Configuration for persistent memory and state storage."
+        },
+        "capabilities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional capabilities declared by the agent/adapter."
         },
         "config": {
           "anyOf": [
